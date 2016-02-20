@@ -1,0 +1,140 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN">
+<html lang="en">
+<head>
+
+<style>
+
+.node {
+  stroke: #fff;
+  stroke-width: 1.5px;
+}
+
+.link {
+  stroke: #999;
+  stroke-opacity: .6;
+  marker-end: url(#arrow-marker);
+}
+
+
+
+</style>
+<title>Force based label placement</title>
+<script type="text/javascript"
+	src="//cdnjs.cloudflare.com/ajax/libs/d3/3.5.14/d3.min.js"></script>
+</head>
+<body>
+
+	<script type="text/javascript" charset="utf-8">
+	var width = 1200,
+    height = 800;
+
+var color = d3.scale.category20();
+
+var force = d3.layout.force()
+    .linkDistance(350)
+    .charge(-5000)
+    .friction(.1)
+    .gravity( .2 ) 
+    .size([width, height]);
+
+var svg = d3.select("body").append("svg")
+    .attr("width", width)
+    .attr("height", height);
+
+var marker = svg.append( "marker" )
+.attr( "id", "arrow-marker" )
+.attr( "markerWidth", "50"  ) 
+.attr( "markerHeight", "50" )  
+.attr( "refX", "20"  ) 
+.attr( "refY", "5" ) 
+.attr( "orient", "auto" ) 
+.attr( "markerUnits", "userSpaceOnUse" ) ;
+
+marker.append( "path" )
+.attr( "d", "M 0 0 L 10 5 L 0 10 z" )
+.style( {fill: "#000000" } ) ;
+
+ 
+			d3.json("data", function(error, graph) {
+  				if (error) return console.warn(error);
+
+force
+      .nodes(graph.nodes)
+      .links(graph.links)
+      .start();
+      
+  var link = svg.selectAll(".link")
+      .data(graph.links)
+    .enter().append("line")
+      .attr("class", "link")
+      //.style("stroke", function(d) { return color( (d.weight+1.0) * 10 ) ; });
+
+  var node = svg.selectAll(".node")
+      .data(graph.nodes)
+    .enter().append("polygon")
+      .attr("id", function(d) { 
+      		return "NEURON" + d.index ;
+      		} )
+      .attr("class", "node")
+      .attr("points", function(d) { 
+      			if( d.type=='OUTPUT' ) return "-0.83,-11.67 -8.17,11.67 11.83,-4.33 -11.83,-4.33 6.50,11.67" ;  // star
+      			if( d.type=='INPUT' ) return "-10.00,-8.75 -10.00,8.75 10.00,-6.25" ;  // triangle
+      			return "-7,-7 7,-7 7,7 -7,7" ;  // square
+      		} )
+      .style("fill", function(d) { return color(d.potential / 5.0); })
+      .call(force.drag);
+
+  node.append("title")
+      .text(function(d) { return d.name; });
+
+  force.on("tick", function() {
+     link.attr("x1", function(d) { return d.source.x; })
+        .attr("y1", function(d) { return d.source.y; })
+        .attr("x2", function(d) { return d.target.x; })
+        .attr("y2", function(d) { return d.target.y; });
+
+    node.attr("transform", function(d) { return "translate(" + d.x+ "," + d.y + ")"; })
+        
+  });
+});
+
+		</script>
+		
+		<script>
+// establish the communication channel over a websocket
+var ws = new WebSocket("ws://localhost:8088/live-data");
+ 
+// called when socket connection established
+ws.onopen = function() {
+    console.log("Connected to stock service! Press 'Start' to get stock info.")
+};
+ 
+// called when a message received from server
+ws.onmessage = function (evt) {
+	var colors = JSON.parse( evt.data ) ;
+	for( var i=0 ; i<colors.length ; i++ ) {
+		var n = document.getElementById( "NEURON" + i ) ;
+		if( n ) {
+			n.style.fill = color( colors[i] ) ; 
+		}
+	}
+};
+ 
+// called when socket connection closed
+ws.onclose = function() {
+    console.log("Disconnected from stock service!")
+};
+ 
+// called in case of an error
+ws.onerror = function(err) {
+    console.log("ERROR!", err )
+};
+ 
+// sends msg to the server over websocket
+function sendToServer(msg) {
+    ws.send(msg);
+}		
+		
+		</script>
+</body>
+</html>
