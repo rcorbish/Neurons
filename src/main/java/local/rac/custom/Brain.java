@@ -7,6 +7,9 @@ public class Brain {
 	final public static double STANDARD = -1 ;
 	final public static double FULL = 0 ;
 
+	private double outputHistory[][] ;
+	private int historyIndex ;
+	
 	private Neuron[] neurons ;
 	private int [] brainDimensions ;
 	private int [] inputs ;
@@ -18,7 +21,7 @@ public class Brain {
 		this.rng = new Random( 100 ) ;
 
 		this.brainDimensions = brainDimensions ;
-
+		
 		int numNeurons = 1 ;
 		for( int i=0 ; i<brainDimensions.length ; i++ ) {
 			numNeurons *= brainDimensions[i] ; 
@@ -71,6 +74,12 @@ public class Brain {
 			outputs[i] = neurons.length-i-1 ;		
 			neurons[outputs[i]].setType( NeuronType.OUTPUT ) ;
 		}		
+		
+		outputHistory = new double[ 100 ][] ;
+		for( int i=0 ; i<outputHistory.length ; i++ ) {
+			outputHistory[i] = new double[ outputs.length ] ;
+		}
+		this.historyIndex = 0 ;
 	}
 
 
@@ -85,8 +94,18 @@ public class Brain {
 		for( Neuron n : neurons ) {
 			n.clock() ;
 		}
+		for( int i=0 ; i<outputs.length ; i++ ) {
+			outputHistory[historyIndex][i] = neurons[this.outputs[i]].getPotential() ; 
+		}
+		historyIndex++ ;
+		if( historyIndex >= outputHistory.length ) {
+			historyIndex=0 ;
+		}
 	}
 
+	public double[][] getOutputHistory() {
+		return outputHistory ;
+	}
 
 	public int[] getLocationFromIndex( int index ) {
 		int [] rc = new int[ brainDimensions.length ] ;
@@ -112,15 +131,28 @@ public class Brain {
 
 
 	public CharSequence getNeuronPotentials() {
-		StringBuilder rc  = new StringBuilder( "[" ) ;
+		StringBuilder rc  = new StringBuilder( "{ \"potentials\": [" ) ;
 
 		char sep = ' '  ;
 		for( Neuron n : neurons ) {
-			rc.append( sep ) ;
+			rc.append( sep ).append( Double.isFinite( n.getPotential() ) ? n.getPotential() : 0 ) ;				
 			sep = ',' ;
-			rc.append( Double.isFinite( n.getPotential() ) ? n.getPotential() : 0 ) ;				
 		}
-		return rc.append( ']' ) ;
+		if( (historyIndex%10)==0 ) {
+			rc.append( "], \"history\": [" ) ;
+			sep = ' ' ;
+			for( int i=0 ; i<outputHistory.length ; i++ ) {
+				rc.append( sep ).append( '[' );
+				char sep2 = ' ' ;
+				for( int j=0 ; j<outputHistory[i].length ; j++ ) {
+					rc.append( sep2 ).append( outputHistory[i][j] ) ;
+					sep2 = ',' ;
+				}
+				rc.append( ']' ) ;
+				sep = ',' ;
+			}
+		}
+		return rc.append( "] }" ) ;
 	}
 
 	public CharSequence toJson() {

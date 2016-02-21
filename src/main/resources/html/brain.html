@@ -24,6 +24,8 @@
 </head>
 <body>
 
+<canvas id="chart" width="1200" height="150"></canvas>
+
 	<script type="text/javascript" charset="utf-8">
 	var width = 1200,
     height = 800;
@@ -97,10 +99,14 @@ force
         
   });
 });
+</script>
 
-		</script>
 		
-		<script>
+<script>
+var c = document.getElementById("chart");
+var ctx = c.getContext("2d");
+ctx.fillStyle = "#FF0000";
+
 // establish the communication channel over a websocket
 var ws = new WebSocket("ws://localhost:8088/live-data");
  
@@ -111,12 +117,23 @@ ws.onopen = function() {
  
 // called when a message received from server
 ws.onmessage = function (evt) {
-	var colors = JSON.parse( evt.data ) ;
-	for( var i=0 ; i<colors.length ; i++ ) {
+	var data = JSON.parse( evt.data ) ;
+	for( var i=0 ; i<data.potentials.length ; i++ ) {
 		var n = document.getElementById( "NEURON" + i ) ;
 		if( n ) {
-			n.style.fill = color( colors[i] ) ; 
+			n.style.fill = color( data.potentials[i] ) ; 
 		}
+	}
+	if( data.history ) {
+		c.width = c.width;
+		
+		for( var j=0 ; j<data.history[0].length ; j++ ) {
+			ctx.moveTo( 0, 125-data.history[j][0] );
+			for( var i=1 ; i<data.history.length ; i++ ) {
+				ctx.lineTo( i*12, 125-data.history[i][j] ) ;
+			}
+		}
+		ctx.stroke();
 	}
 };
  

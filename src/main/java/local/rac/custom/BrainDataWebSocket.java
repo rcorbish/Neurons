@@ -29,7 +29,7 @@ public class BrainDataWebSocket extends WebSocketAdapter {
     public void onWebSocketConnect(Session session) {
     	System.out.println( "Connected WebSocket !!!!!" ) ;
         this.session = session;
-        executor.scheduleAtFixedRate(() ->  sendBrainState(), 0, 100, TimeUnit.MILLISECONDS);
+        executor.scheduleAtFixedRate(() ->  sendBrainState(), 0, 75, TimeUnit.MILLISECONDS);
     }
     
     // called when the connection closed

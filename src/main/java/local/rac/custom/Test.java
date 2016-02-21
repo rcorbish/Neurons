@@ -25,7 +25,6 @@ public class Test {
 					brain.clock();
 				}
 			}
-
 		} catch( Throwable t ) {
 			t.printStackTrace();
 		}
