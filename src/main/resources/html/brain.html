@@ -126,11 +126,16 @@ ws.onmessage = function (evt) {
 	}
 	if( data.history ) {
 		c.width = c.width;
+		var offset = data.historyIndex ;
 		
 		for( var j=0 ; j<data.history[0].length ; j++ ) {
-			ctx.moveTo( 0, 125-data.history[j][0] );
-			for( var i=1 ; i<data.history.length ; i++ ) {
-				ctx.lineTo( i*12, 125-data.history[i][j] ) ;
+			ctx.moveTo( 0, 125 );
+			for( var i=0 ; i<data.history.length ; i++ ) {
+				var k = i + offset ;
+				if( k >= data.history.length ) {
+					k -= data.history.length ;
+				}
+				ctx.lineTo( i*12, 125-data.history[k][j] ) ;
 			}
 		}
 		ctx.stroke();

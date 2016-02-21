@@ -4,7 +4,7 @@ import scala.util.Random;
 
 public class Brain {
 
-	final public static double STANDARD = -1 ;
+	final public static double STANDARD = -1.8 ;
 	final public static double FULL = 0 ;
 
 	private double outputHistory[][] ;
@@ -138,8 +138,9 @@ public class Brain {
 			rc.append( sep ).append( Double.isFinite( n.getPotential() ) ? n.getPotential() : 0 ) ;				
 			sep = ',' ;
 		}
-		if( (historyIndex%10)==0 ) {
-			rc.append( "], \"history\": [" ) ;
+		if( (historyIndex%5)==0 ) {
+			rc.append( "], \"historyIndex\": " ).append( historyIndex ) ;
+			rc.append( ", \"history\": [" ) ;
 			sep = ' ' ;
 			for( int i=0 ; i<outputHistory.length ; i++ ) {
 				rc.append( sep ).append( '[' );

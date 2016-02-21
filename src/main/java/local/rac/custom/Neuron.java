@@ -35,11 +35,11 @@ public class Neuron implements Iterable<NeuronWeight> {
 		// 		Potentials	(The resting potential is 0mV instead of -70mV)
 		this.activePotential = 100 ;	// largest potential after triggering
 		this.thresholdPotential = 15 ;	// threshold above which an activation spike occurs
-		this.repolarizationCount = 50 ;	// number of clock before another spike can occur
+		this.repolarizationCount = 30 ;	// number of clock before another spike can occur
 		
 		// 		Other Constants
-		this.membraneTransmissionFactor = 0.65 ;	// input weight
-		this.decayRate = 0.85 ;			// charge leaks at this rate 
+		this.membraneTransmissionFactor = 0.50 ;	// input weight
+		this.decayRate = 0.50 ;			// charge leaks at this rate 
 		this.activationCount = 3 ;		// How long to wait before firing a spike
 
 		// instance data

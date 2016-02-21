@@ -16,7 +16,7 @@ public class Test {
 			/*RestServer server = */new WebServer( brain ) ;
 			double inputs[] = new double[INPUT_COUNT] ;
 			for( ; ; ) {
-				if( rng.nextInt( 20 ) == 0 ) {
+				if( rng.nextInt( 10 ) == 0 ) {
 					for( int i=0 ; i<INPUT_COUNT ; i++ ) {
 						inputs[i] = rng.nextDouble() * 100 ;
 					}
@@ -24,6 +24,7 @@ public class Test {
 				} else {
 					brain.clock();
 				}
+				Thread.sleep(50);
 			}
 		} catch( Throwable t ) {
 			t.printStackTrace();
