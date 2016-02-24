@@ -5,8 +5,8 @@
 <style>
 
 .node {
-  stroke: #fff;
-  stroke-width: 1.5px;
+  stroke: none;
+  xstroke-width: 1.5px;
 }
 
 .link {
@@ -33,8 +33,8 @@
 var color = d3.scale.category20();
 
 var force = d3.layout.force()
-    .linkDistance(350)
-    .charge(-5000)
+    .linkDistance(190)
+    .charge(-500)
     .friction(.1)
     .gravity( .2 ) 
     .size([width, height]);
@@ -107,55 +107,66 @@ var c = document.getElementById("chart");
 var ctx = c.getContext("2d");
 ctx.fillStyle = "#FF0000";
 
-// establish the communication channel over a websocket
-var ws = new WebSocket("ws://localhost:8088/live-data");
+var ws = null ;
+var intervalTimer = null ;
+
+function resetWebSocket() {
+	ws = new WebSocket( "ws://localhost:8088/live-data" ) ;
+	clearInterval( intervalTimer ) ;
+	
+	// called when socket connection established
+	ws.onopen = function() {
+    	console.log("Connected to stock service! Press 'Start' to get stock info.")
+	};
  
-// called when socket connection established
-ws.onopen = function() {
-    console.log("Connected to stock service! Press 'Start' to get stock info.")
-};
- 
-// called when a message received from server
-ws.onmessage = function (evt) {
-	var data = JSON.parse( evt.data ) ;
-	for( var i=0 ; i<data.potentials.length ; i++ ) {
-		var n = document.getElementById( "NEURON" + i ) ;
-		if( n ) {
-			n.style.fill = color( data.potentials[i] ) ; 
-		}
-	}
-	if( data.history ) {
-		c.width = c.width;
-		var offset = data.historyIndex ;
-		
-		for( var j=0 ; j<data.history[0].length ; j++ ) {
-			ctx.moveTo( 0, 125 );
-			for( var i=0 ; i<data.history.length ; i++ ) {
-				var k = i + offset ;
-				if( k >= data.history.length ) {
-					k -= data.history.length ;
-				}
-				ctx.lineTo( i*12, 125-data.history[k][j] ) ;
+	// called when a message received from server
+	ws.onmessage = function (evt) {
+		var data = JSON.parse( evt.data ) ;
+		for( var i=0 ; i<data.potentials.length ; i++ ) {
+			var n = document.getElementById( "NEURON" + i ) ;
+			if( n ) {
+				n.style.fill = color( data.potentials[i] ) ; 
 			}
 		}
-		ctx.stroke();
-	}
-};
- 
-// called when socket connection closed
-ws.onclose = function() {
-    console.log("Disconnected from stock service!")
-};
- 
-// called in case of an error
-ws.onerror = function(err) {
-    console.log("ERROR!", err )
-};
+		if( data.history ) {
+			c.width = c.width;
+			var offset = data.historyIndex ;
+		
+			for( var j=0 ; j<data.history[0].length ; j++ ) {
+				ctx.moveTo( 0, 125 );
+				for( var i=0 ; i<data.history.length ; i++ ) {
+					var k = i + offset ;
+					if( k >= data.history.length ) {
+						k -= data.history.length ;
+					}
+					ctx.lineTo( i*12, 125-data.history[k][j] ) ;
+				}
+			}
+			ctx.stroke();
+		}
+	};
+	 
+	// called when socket connection closed
+	ws.onclose = function() {
+	    console.log("Disconnected from stock service!")
+	    intervalTimer = setInterval( resetWebSocket, 1000 ) ;
+	};
+	 
+	// called in case of an error
+	ws.onerror = function(err) {
+	    console.log("ERROR!", err )
+	};
+	
+}
+
+intervalTimer = setInterval( resetWebSocket, 1000 ) ;
+
  
 // sends msg to the server over websocket
 function sendToServer(msg) {
-    ws.send(msg);
+	if( ws ) ws.send(msg);
 }		
+
 		
 		</script>
 </body>

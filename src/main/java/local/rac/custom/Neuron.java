@@ -13,7 +13,7 @@ public class Neuron implements Iterable<NeuronWeight> {
 	
 	// Static data defining a neuron
 	final private double activePotential ;
-	final private double thresholdPotential ;	
+	private double thresholdPotential ;	
 	final private int repolarizationCount;
 	final private int activationCount ;
 
@@ -34,13 +34,13 @@ public class Neuron implements Iterable<NeuronWeight> {
 		
 		// 		Potentials	(The resting potential is 0mV instead of -70mV)
 		this.activePotential = 100 ;	// largest potential after triggering
-		this.thresholdPotential = 15 ;	// threshold above which an activation spike occurs
-		this.repolarizationCount = 30 ;	// number of clock before another spike can occur
+		this.thresholdPotential = 35 ;	// threshold above which an activation spike occurs
+		this.repolarizationCount = 25 ;	// number of clock before another spike can occur
 		
 		// 		Other Constants
-		this.membraneTransmissionFactor = 0.50 ;	// input weight
-		this.decayRate = 0.50 ;			// charge leaks at this rate 
-		this.activationCount = 3 ;		// How long to wait before firing a spike
+		this.membraneTransmissionFactor = 0.75 ;	// input weight
+		this.decayRate = 0.30 ;						// charge leaks at this rate 
+		this.activationCount = 2 ;					// How long to wait before firing a spike
 
 		// instance data
 		this.currentPotential = 0 ;		// starting potentials
@@ -79,6 +79,7 @@ public class Neuron implements Iterable<NeuronWeight> {
 			if( futurePotential<0.0 ) futurePotential = 0.0 ;
 			
 			if( futurePotential > thresholdPotential ) {	
+				futurePotential -= inputExcitement ;		
 				activationClock = activationCount ;
 			}
 		}
@@ -96,23 +97,44 @@ public class Neuron implements Iterable<NeuronWeight> {
 	
 	public double getPotential() { return currentPotential ; }
 	public void setPotential(double potential) { if( repolarizationClock==0 ) this.futurePotential = potential; }
+	
 	public int size() { return inputNeurons.size() ; } 
 	public Iterator<NeuronWeight> iterator() { return this.inputNeurons.iterator() ; }
 
-
-	public int getIndexInBrain() {
-		return indexInBrain;
+	public double getMembraneTransmissionFactor() {	return membraneTransmissionFactor; }
+	public void adjustMembraneTransmissionFactor(double membraneTransmissionFactorFactor ) {
+		if( this.membraneTransmissionFactor <= 0.1 ) {
+			this.membraneTransmissionFactor = 0.1 ;
+		}
+		if( this.membraneTransmissionFactor >= 0.9 ) {
+			this.membraneTransmissionFactor = 0.9 ;
+		}
+	}
+	
+	public double getDecayRate() { return decayRate; }
+	public void adjustDecayRate(double decayRateFactor ) { 
+		this.decayRate += decayRateFactor ;
+		if( this.decayRate <= 0.1 ) {
+			this.decayRate = 0.1 ;
+		}
+		if( this.decayRate >= 1.0 ) {
+			this.decayRate = 1.0 ;
+		}
+	}
+	public void adjustThreshold( double thresholdFactor ) { 
+		this.thresholdPotential += thresholdFactor ;
+		if( this.thresholdPotential <= 10.0 ) {
+			this.thresholdPotential = 10.0 ;
+		}
+		if( this.thresholdPotential >= 75.0 ) {
+			this.thresholdPotential = 75.0 ;
+		}
 	}
 
-
-	public NeuronType getType() {
-		return type;
-	}
-
-
-	public void setType(NeuronType type) {
-		this.type = type;
-	}
+	public int getIndexInBrain() { return indexInBrain; }
+	
+	public NeuronType getType() { return type; }
+	public void setType(NeuronType type) { this.type = type; }
 }
 
 
@@ -135,6 +157,15 @@ class NeuronWeight {
 
 	public double getMembraneTransmissionFactor() {
 		return membraneTransmissionFactor;
+	}
+	public void adjustMembraneTransmissionFactor(double membraneTransmissionFactorFactor ) {
+		this.membraneTransmissionFactor += membraneTransmissionFactorFactor;
+		if( this.membraneTransmissionFactor <= 0.1 ) {
+			this.membraneTransmissionFactor = 0.1 ;
+		}
+		if( this.membraneTransmissionFactor >= 1.0 ) {
+			this.membraneTransmissionFactor = 1.0 ;
+		}
 	}
 
 	public Neuron getNeuron() {

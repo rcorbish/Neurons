@@ -1,27 +1,32 @@
 package local.rac.custom;
 
+import java.util.Iterator;
+
 import scala.util.Random;
 
-public class Brain {
+public class Brain implements Iterable<Neuron>{
 
-	final public static double STANDARD = -1.8 ;
+	final public static double STANDARD = -1.5 ;
 	final public static double FULL = 0 ;
+
+	final private EvolutionRules evolutionRules ;
 
 	private double outputHistory[][] ;
 	private int historyIndex ;
-	
+
 	private Neuron[] neurons ;
 	private int [] brainDimensions ;
-	private int [] inputs ;
-	private int [] outputs ;
+	private int [] inputIndices ;
+	private int [] outputIndices ;
 
 	private final Random rng ;
 
 	public Brain( double inhibitorProbability, double connectivityFactor, int inputCount, int outputCount, int [] brainDimensions ) {
 		this.rng = new Random( 100 ) ;
+		this.evolutionRules = new EvolutionRules() ;
 
 		this.brainDimensions = brainDimensions ;
-		
+
 		int numNeurons = 1 ;
 		for( int i=0 ; i<brainDimensions.length ; i++ ) {
 			numNeurons *= brainDimensions[i] ; 
@@ -63,29 +68,51 @@ public class Brain {
 			}
 		}		
 
-		inputs = new int[inputCount] ;
-		outputs = new int[outputCount] ;
+		inputIndices = new int[inputCount] ;
+		outputIndices = new int[outputCount] ;
 
-		for( int i=0 ; i<inputs.length ; i++ ) {
-			inputs[i] = i ;
-			neurons[inputs[i]].setType( NeuronType.INPUT ) ;
+		for( int i=0 ; i<inputIndices.length ; i++ ) {
+			inputIndices[i] = i ;
+			neurons[inputIndices[i]].setType( NeuronType.INPUT ) ;
 		}
-		for( int i=0 ; i<outputs.length ; i++ ) {
-			outputs[i] = neurons.length-i-1 ;		
-			neurons[outputs[i]].setType( NeuronType.OUTPUT ) ;
+		for( int i=0 ; i<outputIndices.length ; i++ ) {
+			outputIndices[i] = neurons.length-i-1 ;		
+			neurons[outputIndices[i]].setType( NeuronType.OUTPUT ) ;
 		}		
-		
+
 		outputHistory = new double[ 100 ][] ;
 		for( int i=0 ; i<outputHistory.length ; i++ ) {
-			outputHistory[i] = new double[ outputs.length ] ;
+			outputHistory[i] = new double[ outputIndices.length ] ;
 		}
 		this.historyIndex = 0 ;
 	}
 
+	public double train( double[] inputs, double[] outputs ) {
+		for( int i=0 ; i<inputs.length ; i++ ) {
+			neurons[this.inputIndices[i]].setPotential( inputs[i] );
+		}
+		clock() ;
+
+		boolean [] visitedNeuronIndex = new boolean[neurons.length] ;
+
+		double [] outputError = new double[ outputs.length ] ;
+		for( int i=0 ; i<outputs.length ; i++ ) {
+			outputError[i] = outputs[i] - neurons[ this.outputIndices[i] ].getPotential() ;
+
+			Neuron n = neurons[ this.outputIndices[i] ] ;
+			evolutionRules.evolve( outputError[i], n, visitedNeuronIndex ) ;
+		}
+		
+		double rc = 0.0 ;
+		for( int i=0 ; i<outputError.length ; i++ ) {
+			rc += outputError[i] * outputError[i] ;
+		}
+		return Math.sqrt( rc ) ;
+	}
 
 	public void clock( double[] inputs ) {
 		for( int i=0 ; i<inputs.length ; i++ ) {
-			neurons[this.inputs[i]].setPotential( inputs[i] );
+			neurons[this.inputIndices[i]].setPotential( inputs[i] );
 		}
 		clock() ;
 	}
@@ -94,8 +121,8 @@ public class Brain {
 		for( Neuron n : neurons ) {
 			n.clock() ;
 		}
-		for( int i=0 ; i<outputs.length ; i++ ) {
-			outputHistory[historyIndex][i] = neurons[this.outputs[i]].getPotential() ; 
+		for( int i=0 ; i<this.outputIndices.length ; i++ ) {
+			outputHistory[historyIndex][i] = neurons[this.outputIndices[i]].getPotential() ; 
 		}
 		historyIndex++ ;
 		if( historyIndex >= outputHistory.length ) {
@@ -206,6 +233,25 @@ public class Brain {
 				rc.append( " }" ) ;
 			}
 		}
+	}
+
+	@Override
+	public Iterator<Neuron> iterator() {
+		return new Iterator<Neuron>() {
+			private int p=0;
+
+			public boolean hasNext() {
+				return neurons.length>p;
+			}
+
+			public Neuron next() {
+				return neurons[p++];
+			}
+
+			public void remove() {
+				throw new UnsupportedOperationException("Cannot remove an element of an array.");
+			}
+		} ;
 	}
 
 }
