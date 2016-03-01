@@ -12,6 +12,7 @@ public class Brain implements Iterable<Neuron>{
 	final private EvolutionRules evolutionRules ;
 
 	private double outputHistory[][] ;
+	private double desiredOutputHistory[][] ;
 	private int historyIndex ;
 
 	private Neuron[] neurons ;
@@ -19,12 +20,15 @@ public class Brain implements Iterable<Neuron>{
 	private int [] inputIndices ;
 	private int [] outputIndices ;
 
+	private int outputHistoryClock ;
+	
 	private final Random rng ;
 
 	public Brain( double inhibitorProbability, double connectivityFactor, int inputCount, int outputCount, int [] brainDimensions ) {
 		this.rng = new Random( 100 ) ;
 		this.evolutionRules = new EvolutionRules() ;
-
+		this.outputHistoryClock = 0 ;
+		
 		this.brainDimensions = brainDimensions ;
 
 		int numNeurons = 1 ;
@@ -58,11 +62,7 @@ public class Brain implements Iterable<Neuron>{
 
 					if( rng.nextDouble() < chanceOfConnection ) {
 						Neuron input = neurons[inputNeuronIndex] ;
-						if( rng.nextDouble() < inhibitorProbability ) {
-							target.connectInhibitor(input, rng.nextDouble() );
-						} else {
-							target.connectExcitor(input, rng.nextDouble());
-						}
+						target.connectNeuron(input, rng.nextGaussian() );
 					}
 				}
 			}
@@ -81,8 +81,10 @@ public class Brain implements Iterable<Neuron>{
 		}		
 
 		outputHistory = new double[ 100 ][] ;
+		desiredOutputHistory = new double[ 100 ][] ;
 		for( int i=0 ; i<outputHistory.length ; i++ ) {
 			outputHistory[i] = new double[ outputIndices.length ] ;
+			desiredOutputHistory[i] = new double[ outputIndices.length ] ;
 		}
 		this.historyIndex = 0 ;
 	}
@@ -94,19 +96,34 @@ public class Brain implements Iterable<Neuron>{
 		clock() ;
 
 		boolean [] visitedNeuronIndex = new boolean[neurons.length] ;
-
-		double [] outputError = new double[ outputs.length ] ;
+				
+		double []outputError = new double[ outputs.length ] ;		
 		for( int i=0 ; i<outputs.length ; i++ ) {
-			outputError[i] = outputs[i] - neurons[ this.outputIndices[i] ].getPotential() ;
-
+			outputHistory[outputHistoryClock][i] = neurons[ this.outputIndices[i] ].getPotential() ;			
+			desiredOutputHistory[outputHistoryClock][i] = outputs[i] ;			
+		}
+		
+		for( int i=0 ; i<outputHistory.length ; i++ ) {
+			for( int j=0 ; j<outputError.length ; j++ ) {
+				outputError[j] += desiredOutputHistory[i][j] - outputHistory[i][j] ; 
+			}
+		}
+		
+		for( int i=0 ; i<outputs.length ; i++ ) {
 			Neuron n = neurons[ this.outputIndices[i] ] ;
 			evolutionRules.evolve( outputError[i], n, visitedNeuronIndex ) ;
 		}
 		
 		double rc = 0.0 ;
-		for( int i=0 ; i<outputError.length ; i++ ) {
-			rc += outputError[i] * outputError[i] ;
+		for( int i=0 ; i<outputHistory[outputHistoryClock].length ; i++ ) {
+			rc += outputHistory[outputHistoryClock][i] * outputHistory[outputHistoryClock][i] ;
 		}
+		
+		outputHistoryClock++ ;
+		if( outputHistoryClock>=outputHistory.length ) {
+			outputHistoryClock = 0 ;
+		}
+		
 		return Math.sqrt( rc ) ;
 	}
 

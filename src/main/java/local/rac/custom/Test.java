@@ -12,21 +12,24 @@ public class Test {
 		final int OUTPUT_COUNT = 1 ;
 		int clock = 0 ;
 		try {
-			Brain brain = new Brain( 0.15, Brain.FULL, INPUT_COUNT, OUTPUT_COUNT, new int[] { 2, 3 } ) ;
+			Brain brain = new Brain( 0.15, Brain.FULL, INPUT_COUNT, OUTPUT_COUNT, new int[] { 2, 4, 2 } ) ;
 
 			/*RestServer server = */new WebServer( brain ) ;
 			double inputs[] = new double[INPUT_COUNT] ;
-			double outputs[][] = new double[20][OUTPUT_COUNT] ;
+			double outputs[][] = new double[50][OUTPUT_COUNT] ;
 			
 			for( ; ; ) {
 				if( clock == outputs.length ) {
-					clock = 0 ;
+					clock=0 ;					
 				}
+				outputs[clock][0] = 0.0 ;
 				for( int i=0 ; i<INPUT_COUNT ; i++ ) {
-					inputs[i] = rng.nextDouble() * 60 ;
+					inputs[i] = rng.nextDouble() * 40 ;
 					outputs[clock][0] += inputs[i] ;
 				}
-				System.out.println( "Error:" + brain.train( inputs, outputs[clock] ) ) ;
+				int clk = clock - 35 ;
+				if( clk<0 ) clk += outputs.length ;
+				System.out.println( "Error:" + brain.train( inputs, outputs[clk] ) ) ;
 				clock++ ;
 		
 				Thread.sleep(50);

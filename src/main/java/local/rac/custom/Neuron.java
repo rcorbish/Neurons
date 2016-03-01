@@ -23,14 +23,16 @@ public class Neuron implements Iterable<NeuronWeight> {
 
 	// Immediate attributes as a result of stimulii
 	private double futurePotential ;
-	private double currentPotential ;
+	private double [] currentPotential ;
 	private int repolarizationClock ;
 	private int activationClock ;
+	
+	private int clock ;
 	
 	public Neuron( int indexInBrain ) {
 		
 		this.indexInBrain = indexInBrain ;
-		// These are to simulate a neuron. 
+		this.clock = 0 ;
 		
 		// 		Potentials	(The resting potential is 0mV instead of -70mV)
 		this.activePotential = 100 ;	// largest potential after triggering
@@ -43,7 +45,7 @@ public class Neuron implements Iterable<NeuronWeight> {
 		this.activationCount = 2 ;					// How long to wait before firing a spike
 
 		// instance data
-		this.currentPotential = 0 ;		// starting potentials
+		this.currentPotential = new double[100] ;		// starting potentials
 		this.futurePotential = 0 ;		
 		
 		this.inputNeurons = new ArrayList<NeuronWeight>() ;
@@ -52,17 +54,15 @@ public class Neuron implements Iterable<NeuronWeight> {
 	}
 	
 
-	public void connectInhibitor( Neuron inputNeuron, double weight ) {
-		this.inputNeurons.add( new NeuronWeight(inputNeuron, weight * -1.0) ) ;
-	}
-	
-	public void connectExcitor( Neuron inputNeuron, double weight ) {
+	public void connectNeuron( Neuron inputNeuron, double weight ) {
 		this.inputNeurons.add( new NeuronWeight(inputNeuron, weight ) ) ;
 	}
 	
 
 	public void clock() {
-		currentPotential = futurePotential ;
+		clock++ ;
+		if( clock>=currentPotential.length ) clock=0 ; 
+		currentPotential[clock] = futurePotential ;
 		
 		futurePotential *= decayRate ;
 		
@@ -95,7 +95,7 @@ public class Neuron implements Iterable<NeuronWeight> {
 	}
 	
 	
-	public double getPotential() { return currentPotential ; }
+	public double getPotential() { return currentPotential[clock] ; }
 	public void setPotential(double potential) { if( repolarizationClock==0 ) this.futurePotential = potential; }
 	
 	public int size() { return inputNeurons.size() ; } 
@@ -103,6 +103,7 @@ public class Neuron implements Iterable<NeuronWeight> {
 
 	public double getMembraneTransmissionFactor() {	return membraneTransmissionFactor; }
 	public void adjustMembraneTransmissionFactor(double membraneTransmissionFactorFactor ) {
+		this.membraneTransmissionFactor += membraneTransmissionFactorFactor ;
 		if( this.membraneTransmissionFactor <= 0.1 ) {
 			this.membraneTransmissionFactor = 0.1 ;
 		}
