@@ -14,7 +14,7 @@ public class Neuron implements Iterable<Axon> {
 
 	// Immediate attributes as a result of stimulii
 	private double futurePotential ;
-	private double [] currentPotential ;
+	private double [] currentPotential ;	
 	
 	private int clock ;
 	
@@ -32,13 +32,17 @@ public class Neuron implements Iterable<Axon> {
 		this.futurePotential = 0 ;		
 	}
 	
-
+	// Moves the future potential into the current potential.
+	// this is done so that all outputs are updated simultaneously, all input 
+	// during a 'clock' is based on T0 before T1 is established 
 	public void lockOutput() {
 		clock++ ;
 		if( clock>=currentPotential.length ) clock=0 ; 
 		currentPotential[clock] = futurePotential ;
 	}
 	
+	
+	// Based on all current inputs at T0 - set the T1 output value of the neuron
 	public void clock() {		
 		futurePotential = 0.0 ;
 		for( Axon axon : this ) {
@@ -48,9 +52,9 @@ public class Neuron implements Iterable<Axon> {
 	}
 	
 
-	public double getFuturePotential() { return futurePotential ; }
+	public double getPotential(int index) { return currentPotential[index] ; }
 	public double getPotential() { return currentPotential[clock] ; }
-	public void setPotential(double potential) { this.futurePotential = potential; lockOutput(); }
+	public void setPotential(double potential) { this.futurePotential = potential; }
 	
 	public void addInput( Axon axon ) { inputs.add(axon) ; }
 	public Iterator<Axon> iterator() { return inputs.iterator() ; }
@@ -66,8 +70,7 @@ public class Neuron implements Iterable<Axon> {
 		}
 	}
 	
-
-
+	
 	public int getIndexInBrain() { return indexInBrain; }
 	
 	public NeuronType getType() { return NeuronType.INTERNAL ; }

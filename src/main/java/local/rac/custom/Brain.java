@@ -6,29 +6,27 @@ import scala.util.Random;
 
 public class Brain implements Iterable<Neuron>{
 
-	final public static double STANDARD = -1.5 ;
-	final public static double FULL = 0 ;
+	final public static double STANDARD = -1.5 ;			// reasonable value for network connections 
+	final public static double FULL = 0 ;					// all neurons connected to each other
 
-	final private EvolutionRules evolutionRules ;
+	final public static int HISTORY_LENGTH = 100 ;
+	
+	final private EvolutionRules evolutionRules ;			// How to train the network
 
-	private double outputHistory[][] ;
-	private double desiredOutputHistory[][] ;
-	private int historyIndex ;
+	private double desiredOutputHistory[][] ;				// in train mode - this is the target state
+	private int clock ;								
 
-	private Neuron[] neurons ;
+	private Neuron[] neurons ;								// list of neurons in the brain 
 
-	private int [] brainDimensions ;
-	private int [] inputIndices ;
-	private int [] outputIndices ;
+	private int [] brainDimensions ;						// the grid size(s) of the brain ( e.g. a 3x3 brain has 3 layes of 3 neurons )
+	private InputNeuron[] inputs ;							// which nodes are .. inputs 
+	private OutputNeuron [] outputs ;						// .. and outputs
 
-	private int outputHistoryClock ;
-
-	private final Random rng ;
+	private final Random rng ;								// utility randon number generator
 
 	public Brain( double connectivityFactor, int inputCount, int outputCount, int [] brainDimensions ) {
 		this.rng = new Random( 100 ) ;
 		this.evolutionRules = new EvolutionRules() ;
-		this.outputHistoryClock = 0 ;
 
 		this.brainDimensions = brainDimensions ;
 
@@ -46,16 +44,18 @@ public class Brain implements Iterable<Neuron>{
 			neurons[neuronIndex] = new Neuron( neuronIndex ) ;
 		}
 
-		inputIndices = new int[inputCount] ;
-		outputIndices = new int[outputCount] ;
+		inputs = new InputNeuron[inputCount] ;
+		outputs = new OutputNeuron[outputCount] ;
 
-		for( int i=0 ; i<inputIndices.length ; i++ ) {
-			inputIndices[i] = i ;
-			neurons[inputIndices[i]] = new InputNeuron( inputIndices[i] ) ; 			
+		for( int i=0 ; i<inputs.length ; i++ ) {
+			int neuronIndex = i ;
+			inputs[i] = new InputNeuron( neuronIndex ) ;
+			neurons[neuronIndex] = inputs[i] ; 			
 		}
-		for( int i=0 ; i<outputIndices.length ; i++ ) {
-			outputIndices[i] = neurons.length-i-1 ;		
-			neurons[outputIndices[i]] = new OutputNeuron( outputIndices[i] ) ; 
+		for( int i=0 ; i<outputs.length ; i++ ) {
+			int neuronIndex = neurons.length-i-1 ;		
+			outputs[i] = new OutputNeuron( neuronIndex ) ;
+			neurons[neuronIndex] = outputs[i] ; 			
 		}		
 
 		for( int targetNeuronIndex = 0 ; targetNeuronIndex<numNeurons ; targetNeuronIndex++ ) {
@@ -85,54 +85,38 @@ public class Brain implements Iterable<Neuron>{
 		}		
 
 
-		outputHistory = new double[ 100 ][] ;
-		desiredOutputHistory = new double[ 100 ][] ;
-		for( int i=0 ; i<outputHistory.length ; i++ ) {
-			outputHistory[i] = new double[ outputIndices.length ] ;
-			desiredOutputHistory[i] = new double[ outputIndices.length ] ;
+		desiredOutputHistory = new double[ HISTORY_LENGTH ][] ;
+		for( int i=0 ; i<desiredOutputHistory.length ; i++ ) {
+			desiredOutputHistory[i] = new double[ outputs.length ] ;
 		}
-		this.historyIndex = 0 ;
+		this.clock = 0 ;
 	}
 
-	public double train( double[] inputs, double[] outputs ) {
+	public void train( double[] inputs, double[] outputs ) {
 		clock( inputs ) ;
 
 		for( int i=0 ; i<outputs.length ; i++ ) {
-			outputHistory[outputHistoryClock][i] = neurons[ this.outputIndices[i] ].getPotential() ;			
-			desiredOutputHistory[outputHistoryClock][i] = outputs[i] ;			
+			desiredOutputHistory[clock][i] = outputs[i] ;			
 		}
 
 		double []outputError = new double[ outputs.length ] ;		
-		for( int i=0 ; i<outputHistory.length ; i++ ) {
-			for( int j=0 ; j<outputError.length ; j++ ) {
-				outputError[j] += desiredOutputHistory[i][j] - outputHistory[i][j] ;  
+		for( int i=0 ; i<desiredOutputHistory.length ; i++ ) {
+			for( int j=0 ; j<outputs.length ; j++ ) {
+				outputError[j] += desiredOutputHistory[i][j] - this.outputs[j].getPotential(i) ;  
 			}
 		}
 
 		boolean [] visitedNeuronIndex = new boolean[neurons.length] ;
 
 		for( int i=0 ; i<outputs.length ; i++ ) {
-			Neuron n = neurons[ this.outputIndices[i] ] ;
-			evolutionRules.evolve( outputError[i], n, visitedNeuronIndex ) ;
+			evolutionRules.evolve( outputError[i], this.outputs[i], visitedNeuronIndex ) ;
 		}
-
-		double rc = 0.0 ;
-		for( int i=0 ; i<outputHistory[outputHistoryClock].length ; i++ ) {
-			rc += outputHistory[outputHistoryClock][i] * outputHistory[outputHistoryClock][i] ;
-		}
-
-		outputHistoryClock++ ;
-		if( outputHistoryClock>=outputHistory.length ) {	
-			outputHistoryClock = 0 ;
-		}
-
-		return Math.sqrt( rc ) ;
 	}
 
 
 	public void clock( double[] inputs ) {
 		for( int i=0 ; i<inputs.length ; i++ ) {
-			neurons[this.inputIndices[i]].setPotential( inputs[i] );
+			this.inputs[i].setPotential( inputs[i] );
 		}
 		clock() ;
 	}
@@ -142,22 +126,17 @@ public class Brain implements Iterable<Neuron>{
 
 		boolean [] visitedNeuronIndex = new boolean[neurons.length] ;
 
-		for( int i=0 ; i<outputIndices.length ; i++ ) {
-			Neuron n = neurons[ outputIndices[i] ] ;
-			clock( n, visitedNeuronIndex ) ;
-		}
-
-		for( int i=0 ; i<this.outputIndices.length ; i++ ) {
-			outputHistory[historyIndex][i] = neurons[this.outputIndices[i]].getPotential() ; 
-		}
-
-		historyIndex++ ;
-		if( historyIndex >= outputHistory.length ) {
-			historyIndex=0 ;
+		for( int i=0 ; i<outputs.length ; i++ ) {
+			clock( outputs[i], visitedNeuronIndex ) ;
 		}
 
 		for( Neuron n : neurons ) {
 			n.lockOutput() ;
+		}
+		
+		clock++ ;
+		if( clock >= HISTORY_LENGTH ) {
+			clock=0 ;
 		}
 	}
 
@@ -171,10 +150,6 @@ public class Brain implements Iterable<Neuron>{
 			clock( axon.getNeuron(), visitedNeuronIndex ) ;
 		}
 		n.clock() ;		
-	}
-
-	public double[][] getOutputHistory() {
-		return outputHistory ;
 	}
 
 	public int[] getLocationFromIndex( int index ) {
@@ -208,15 +183,15 @@ public class Brain implements Iterable<Neuron>{
 			rc.append( sep ).append( Double.isFinite( n.getPotential() ) ? n.getPotential() : 0 ) ;				
 			sep = ',' ;
 		}
-		if( (historyIndex%5)==0 ) {
-			rc.append( "], \"historyIndex\": " ).append( historyIndex ) ;
+		if( (clock%5)==0 ) {
+			rc.append( "], \"historyIndex\": " ).append( clock ) ;
 			rc.append( ", \"history\": [" ) ;
 			sep = ' ' ;
-			for( int i=0 ; i<outputHistory.length ; i++ ) {
+			for( int i=0 ; i<desiredOutputHistory.length ; i++ ) {
 				rc.append( sep ).append( '[' );
 				char sep2 = ' ' ;
-				for( int j=0 ; j<outputHistory[i].length ; j++ ) {
-					rc.append( sep2 ).append( outputHistory[i][j] ) ;
+				for( int j=0 ; j<outputs.length ; j++ ) {
+					rc.append( sep2 ).append( outputs[j].getPotential(i) ) ;
 					sep2 = ',' ;
 				}
 				rc.append( ']' ) ;

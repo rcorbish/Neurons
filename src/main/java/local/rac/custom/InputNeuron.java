@@ -1,7 +1,7 @@
 package local.rac.custom;
 
 public class InputNeuron extends Neuron {
-
+	
 	public InputNeuron( int indexInBrain ) {
 		super( indexInBrain ) ;
 	}
@@ -9,4 +9,9 @@ public class InputNeuron extends Neuron {
 		// not supported for inputs to have other inputs		
 	}
 	public NeuronType getType() { return NeuronType.INPUT ; }
+	
+	public void setPotential(double potential) { 
+		super.setPotential(potential); 
+		super.lockOutput(); 
+	}
 }
