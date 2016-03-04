@@ -12,27 +12,28 @@ public class Test {
 		final int OUTPUT_COUNT = 1 ;
 		int clock = 0 ;
 		try {
-			Brain brain = new Brain( 0.15, Brain.FULL, INPUT_COUNT, OUTPUT_COUNT, new int[] { 2, 4, 2 } ) ;
+			Brain brain = new Brain( Brain.FULL, INPUT_COUNT, OUTPUT_COUNT, new int[] { 2, 3 } ) ;
 
 			/*RestServer server = */new WebServer( brain ) ;
 			double inputs[] = new double[INPUT_COUNT] ;
 			double outputs[][] = new double[50][OUTPUT_COUNT] ;
 			
+			int n = 0 ;
 			for( ; ; ) {
+				if( ++n > 40 ) n = 0 ;
 				if( clock == outputs.length ) {
 					clock=0 ;					
 				}
 				outputs[clock][0] = 0.0 ;
 				for( int i=0 ; i<INPUT_COUNT ; i++ ) {
-					inputs[i] = rng.nextDouble() * 40 ;
+					inputs[i] = n ;
 					outputs[clock][0] += inputs[i] ;
 				}
-				int clk = clock - 35 ;
-				if( clk<0 ) clk += outputs.length ;
-				System.out.println( "Error:" + brain.train( inputs, outputs[clk] ) ) ;
+				System.out.println( "Error:" + brain.train( inputs, outputs[clock] ) ) ;
+				brain.calculateWeightGradients();
 				clock++ ;
 		
-				Thread.sleep(50);
+				Thread.sleep(20);
 			}
 		} catch( Throwable t ) {  
 			t.printStackTrace();

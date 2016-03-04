@@ -24,7 +24,7 @@ public class Brain implements Iterable<Neuron>{
 	
 	private final Random rng ;
 
-	public Brain( double inhibitorProbability, double connectivityFactor, int inputCount, int outputCount, int [] brainDimensions ) {
+	public Brain( double connectivityFactor, int inputCount, int outputCount, int [] brainDimensions ) {
 		this.rng = new Random( 100 ) ;
 		this.evolutionRules = new EvolutionRules() ;
 		this.outputHistoryClock = 0 ;
@@ -95,19 +95,19 @@ public class Brain implements Iterable<Neuron>{
 		}
 		clock() ;
 
-		boolean [] visitedNeuronIndex = new boolean[neurons.length] ;
-				
-		double []outputError = new double[ outputs.length ] ;		
 		for( int i=0 ; i<outputs.length ; i++ ) {
 			outputHistory[outputHistoryClock][i] = neurons[ this.outputIndices[i] ].getPotential() ;			
 			desiredOutputHistory[outputHistoryClock][i] = outputs[i] ;			
 		}
 		
+		double []outputError = new double[ outputs.length ] ;		
 		for( int i=0 ; i<outputHistory.length ; i++ ) {
 			for( int j=0 ; j<outputError.length ; j++ ) {
-				outputError[j] += desiredOutputHistory[i][j] - outputHistory[i][j] ; 
+				outputError[j] += desiredOutputHistory[i][j] - outputHistory[i][j] ;  
 			}
 		}
+		
+		boolean [] visitedNeuronIndex = new boolean[neurons.length] ;
 		
 		for( int i=0 ; i<outputs.length ; i++ ) {
 			Neuron n = neurons[ this.outputIndices[i] ] ;
@@ -120,13 +120,42 @@ public class Brain implements Iterable<Neuron>{
 		}
 		
 		outputHistoryClock++ ;
-		if( outputHistoryClock>=outputHistory.length ) {
+		if( outputHistoryClock>=outputHistory.length ) {	
 			outputHistoryClock = 0 ;
 		}
 		
 		return Math.sqrt( rc ) ;
 	}
+	
 
+	public void calculateWeightGradients() {
+
+		double [] oldOutputs = new double[outputIndices.length] ;
+		for( int i=0 ; i<outputIndices.length ; i++ ) {
+			oldOutputs[i] = neurons[ outputIndices[i] ].getFuturePotential() ;
+		}				
+
+		for( Neuron n : neurons ) {
+			for( NeuronWeight nw : n ) {
+				double oldWeight = nw.getMembraneTransmissionFactor() ;
+				nw.adjustMembraneTransmissionFactor( 0.0001 ) ;
+				
+				double [] gradients = new double[outputIndices.length] ;
+				boolean [] visitedNeuronIndex = new boolean[neurons.length] ;
+				for( int i=0 ; i<outputIndices.length ; i++ ) {
+					Neuron y = neurons[ outputIndices[i] ] ;
+					futureClock( y, visitedNeuronIndex ) ;
+				}
+				
+				for( int i=0 ; i<gradients.length ; i++ ) {
+					 gradients[i] = 0.0001 / ( neurons[ outputIndices[i] ].getFuturePotential() - oldOutputs[i] ) ;
+				}				
+				System.out.println( "Neuron " + n.getIndexInBrain() + " " + nw + " dy/dx=" + gradients[0] ) ;
+				nw.setMembraneTransmissionFactor(oldWeight);
+			}
+		}
+	}
+	
 	public void clock( double[] inputs ) {
 		for( int i=0 ; i<inputs.length ; i++ ) {
 			neurons[this.inputIndices[i]].setPotential( inputs[i] );
@@ -134,18 +163,54 @@ public class Brain implements Iterable<Neuron>{
 		clock() ;
 	}
 
+	
 	public void clock()  {
-		for( Neuron n : neurons ) {
-			n.clock() ;
+		
+		boolean [] visitedNeuronIndex = new boolean[neurons.length] ;
+
+		for( int i=0 ; i<outputIndices.length ; i++ ) {
+			Neuron n = neurons[ outputIndices[i] ] ;
+			clock( n, visitedNeuronIndex ) ;
 		}
+		
 		for( int i=0 ; i<this.outputIndices.length ; i++ ) {
 			outputHistory[historyIndex][i] = neurons[this.outputIndices[i]].getPotential() ; 
 		}
+		
 		historyIndex++ ;
 		if( historyIndex >= outputHistory.length ) {
 			historyIndex=0 ;
 		}
+		
+		for( Neuron n : neurons ) {
+			n.lockOutput() ;
+		}
 	}
+
+	public void clock( Neuron n, boolean [] visitedNeuronIndex )  {
+		if( visitedNeuronIndex[n.getIndexInBrain()] ) {
+			return ;
+		}
+		visitedNeuronIndex[n.getIndexInBrain()] = true ;
+		
+		for( NeuronWeight nw : n ) {
+			clock( nw.getNeuron(), visitedNeuronIndex ) ;
+		}
+		n.clock() ;		
+	}
+	
+	public void futureClock( Neuron n, boolean [] visitedNeuronIndex )  {
+		if( visitedNeuronIndex[n.getIndexInBrain()] ) {
+			return ;
+		}
+		visitedNeuronIndex[n.getIndexInBrain()] = true ;
+		
+		for( NeuronWeight nw : n ) {
+			futureClock( nw.getNeuron(), visitedNeuronIndex ) ;
+		}
+		n.futureClock() ;		
+	}
+		
 
 	public double[][] getOutputHistory() {
 		return outputHistory ;
