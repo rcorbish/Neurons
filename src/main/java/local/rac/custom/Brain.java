@@ -16,19 +16,20 @@ public class Brain implements Iterable<Neuron>{
 	private int historyIndex ;
 
 	private Neuron[] neurons ;
+
 	private int [] brainDimensions ;
 	private int [] inputIndices ;
 	private int [] outputIndices ;
 
 	private int outputHistoryClock ;
-	
+
 	private final Random rng ;
 
 	public Brain( double connectivityFactor, int inputCount, int outputCount, int [] brainDimensions ) {
 		this.rng = new Random( 100 ) ;
 		this.evolutionRules = new EvolutionRules() ;
 		this.outputHistoryClock = 0 ;
-		
+
 		this.brainDimensions = brainDimensions ;
 
 		int numNeurons = 1 ;
@@ -45,40 +46,44 @@ public class Brain implements Iterable<Neuron>{
 			neurons[neuronIndex] = new Neuron( neuronIndex ) ;
 		}
 
+		inputIndices = new int[inputCount] ;
+		outputIndices = new int[outputCount] ;
+
+		for( int i=0 ; i<inputIndices.length ; i++ ) {
+			inputIndices[i] = i ;
+			neurons[inputIndices[i]] = new InputNeuron( inputIndices[i] ) ; 			
+		}
+		for( int i=0 ; i<outputIndices.length ; i++ ) {
+			outputIndices[i] = neurons.length-i-1 ;		
+			neurons[outputIndices[i]] = new OutputNeuron( outputIndices[i] ) ; 
+		}		
+
 		for( int targetNeuronIndex = 0 ; targetNeuronIndex<numNeurons ; targetNeuronIndex++ ) {
 			Neuron target = neurons[targetNeuronIndex] ;
 			int []targetLocation = getLocationFromIndex( targetNeuronIndex ) ;
 
 			for( int inputNeuronIndex = 0 ; inputNeuronIndex<numNeurons ; inputNeuronIndex++ ) {
 				if( inputNeuronIndex != targetNeuronIndex ) {
-					int []sourceLocation = getLocationFromIndex( inputNeuronIndex ) ;
+					Neuron input = neurons[inputNeuronIndex] ;
+					if( input.getType() != NeuronType.OUTPUT ) {
+						int []sourceLocation = getLocationFromIndex( inputNeuronIndex ) ;
 
-					double distance =  0.0 ;
-					for( int i=0 ; i<targetLocation.length ; i++ ) {
-						distance += ( targetLocation[i] - sourceLocation[i] ) * ( targetLocation[i] - sourceLocation[i] ) ;
-					}
-					distance = Math.sqrt( distance ) ;
-					double chanceOfConnection = Math.exp( distance * connectivityFactor ) ;
+						double distance =  0.0 ;
+						for( int i=0 ; i<targetLocation.length ; i++ ) {
+							distance += ( targetLocation[i] - sourceLocation[i] ) * ( targetLocation[i] - sourceLocation[i] ) ;
+						}
+						distance = Math.sqrt( distance ) ;
+						double chanceOfConnection = Math.exp( distance * connectivityFactor ) ;
 
-					if( rng.nextDouble() < chanceOfConnection ) {
-						Neuron input = neurons[inputNeuronIndex] ;
-						target.connectNeuron(input, rng.nextGaussian() );
+						if( rng.nextDouble() < chanceOfConnection && !( target.getType()==NeuronType.OUTPUT && input.getType()==NeuronType.INPUT ) ) {
+							Axon axon = new Axon( input, rng.nextGaussian() ) ;							
+							target.addInput( axon ) ;
+						}
 					}
 				}
 			}
 		}		
 
-		inputIndices = new int[inputCount] ;
-		outputIndices = new int[outputCount] ;
-
-		for( int i=0 ; i<inputIndices.length ; i++ ) {
-			inputIndices[i] = i ;
-			neurons[inputIndices[i]].setType( NeuronType.INPUT ) ;
-		}
-		for( int i=0 ; i<outputIndices.length ; i++ ) {
-			outputIndices[i] = neurons.length-i-1 ;		
-			neurons[outputIndices[i]].setType( NeuronType.OUTPUT ) ;
-		}		
 
 		outputHistory = new double[ 100 ][] ;
 		desiredOutputHistory = new double[ 100 ][] ;
@@ -90,72 +95,41 @@ public class Brain implements Iterable<Neuron>{
 	}
 
 	public double train( double[] inputs, double[] outputs ) {
-		for( int i=0 ; i<inputs.length ; i++ ) {
-			neurons[this.inputIndices[i]].setPotential( inputs[i] );
-		}
-		clock() ;
+		clock( inputs ) ;
 
 		for( int i=0 ; i<outputs.length ; i++ ) {
 			outputHistory[outputHistoryClock][i] = neurons[ this.outputIndices[i] ].getPotential() ;			
 			desiredOutputHistory[outputHistoryClock][i] = outputs[i] ;			
 		}
-		
+
 		double []outputError = new double[ outputs.length ] ;		
 		for( int i=0 ; i<outputHistory.length ; i++ ) {
 			for( int j=0 ; j<outputError.length ; j++ ) {
 				outputError[j] += desiredOutputHistory[i][j] - outputHistory[i][j] ;  
 			}
 		}
-		
+
 		boolean [] visitedNeuronIndex = new boolean[neurons.length] ;
-		
+
 		for( int i=0 ; i<outputs.length ; i++ ) {
 			Neuron n = neurons[ this.outputIndices[i] ] ;
 			evolutionRules.evolve( outputError[i], n, visitedNeuronIndex ) ;
 		}
-		
+
 		double rc = 0.0 ;
 		for( int i=0 ; i<outputHistory[outputHistoryClock].length ; i++ ) {
 			rc += outputHistory[outputHistoryClock][i] * outputHistory[outputHistoryClock][i] ;
 		}
-		
+
 		outputHistoryClock++ ;
 		if( outputHistoryClock>=outputHistory.length ) {	
 			outputHistoryClock = 0 ;
 		}
-		
+
 		return Math.sqrt( rc ) ;
 	}
-	
 
-	public void calculateWeightGradients() {
 
-		double [] oldOutputs = new double[outputIndices.length] ;
-		for( int i=0 ; i<outputIndices.length ; i++ ) {
-			oldOutputs[i] = neurons[ outputIndices[i] ].getFuturePotential() ;
-		}				
-
-		for( Neuron n : neurons ) {
-			for( NeuronWeight nw : n ) {
-				double oldWeight = nw.getMembraneTransmissionFactor() ;
-				nw.adjustMembraneTransmissionFactor( 0.0001 ) ;
-				
-				double [] gradients = new double[outputIndices.length] ;
-				boolean [] visitedNeuronIndex = new boolean[neurons.length] ;
-				for( int i=0 ; i<outputIndices.length ; i++ ) {
-					Neuron y = neurons[ outputIndices[i] ] ;
-					futureClock( y, visitedNeuronIndex ) ;
-				}
-				
-				for( int i=0 ; i<gradients.length ; i++ ) {
-					 gradients[i] = 0.0001 / ( neurons[ outputIndices[i] ].getFuturePotential() - oldOutputs[i] ) ;
-				}				
-				System.out.println( "Neuron " + n.getIndexInBrain() + " " + nw + " dy/dx=" + gradients[0] ) ;
-				nw.setMembraneTransmissionFactor(oldWeight);
-			}
-		}
-	}
-	
 	public void clock( double[] inputs ) {
 		for( int i=0 ; i<inputs.length ; i++ ) {
 			neurons[this.inputIndices[i]].setPotential( inputs[i] );
@@ -163,25 +137,25 @@ public class Brain implements Iterable<Neuron>{
 		clock() ;
 	}
 
-	
+
 	public void clock()  {
-		
+
 		boolean [] visitedNeuronIndex = new boolean[neurons.length] ;
 
 		for( int i=0 ; i<outputIndices.length ; i++ ) {
 			Neuron n = neurons[ outputIndices[i] ] ;
 			clock( n, visitedNeuronIndex ) ;
 		}
-		
+
 		for( int i=0 ; i<this.outputIndices.length ; i++ ) {
 			outputHistory[historyIndex][i] = neurons[this.outputIndices[i]].getPotential() ; 
 		}
-		
+
 		historyIndex++ ;
 		if( historyIndex >= outputHistory.length ) {
 			historyIndex=0 ;
 		}
-		
+
 		for( Neuron n : neurons ) {
 			n.lockOutput() ;
 		}
@@ -192,25 +166,12 @@ public class Brain implements Iterable<Neuron>{
 			return ;
 		}
 		visitedNeuronIndex[n.getIndexInBrain()] = true ;
-		
-		for( NeuronWeight nw : n ) {
-			clock( nw.getNeuron(), visitedNeuronIndex ) ;
+
+		for( Axon axon : n ) {
+			clock( axon.getNeuron(), visitedNeuronIndex ) ;
 		}
 		n.clock() ;		
 	}
-	
-	public void futureClock( Neuron n, boolean [] visitedNeuronIndex )  {
-		if( visitedNeuronIndex[n.getIndexInBrain()] ) {
-			return ;
-		}
-		visitedNeuronIndex[n.getIndexInBrain()] = true ;
-		
-		for( NeuronWeight nw : n ) {
-			futureClock( nw.getNeuron(), visitedNeuronIndex ) ;
-		}
-		n.futureClock() ;		
-	}
-		
 
 	public double[][] getOutputHistory() {
 		return outputHistory ;
@@ -302,7 +263,7 @@ public class Brain implements Iterable<Neuron>{
 	private void printLinks( StringBuilder rc ) {
 		char sep = ' '  ;
 		for( Neuron n : neurons ) {
-			for( NeuronWeight in : n ) {
+			for( Axon in : n ) {
 				rc.append( sep ) ;
 				sep = ',' ;
 				rc.append( "{\"source\":" ) ;				
@@ -335,7 +296,6 @@ public class Brain implements Iterable<Neuron>{
 			}
 		} ;
 	}
-
 }
 
 

@@ -30,7 +30,6 @@ public class Test {
 					outputs[clock][0] += inputs[i] ;
 				}
 				System.out.println( "Error:" + brain.train( inputs, outputs[clock] ) ) ;
-				brain.calculateWeightGradients();
 				clock++ ;
 		
 				Thread.sleep(20);

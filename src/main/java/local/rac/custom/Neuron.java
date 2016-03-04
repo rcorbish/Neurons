@@ -4,12 +4,10 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
-public class Neuron implements Iterable<NeuronWeight> {
-	
-	final private List<NeuronWeight> inputNeurons ;	
+public class Neuron implements Iterable<Axon> {
 	final private int indexInBrain ;
 	
-	private NeuronType type ;
+	private List<Axon> inputs ;
 	
 	// Things that can be adjusted during learning
 	private double membraneTransmissionFactor ;
@@ -21,9 +19,10 @@ public class Neuron implements Iterable<NeuronWeight> {
 	private int clock ;
 	
 	public Neuron( int indexInBrain ) {
-		
 		this.indexInBrain = indexInBrain ;
 		this.clock = 0 ;
+		
+		this.inputs = new ArrayList<Axon>() ;
 		
 		// 		Other Constants
 		this.membraneTransmissionFactor = 0.75 ;	// input weight
@@ -31,15 +30,6 @@ public class Neuron implements Iterable<NeuronWeight> {
 		// instance data
 		this.currentPotential = new double[100] ;		// starting potentials
 		this.futurePotential = 0 ;		
-		
-		this.inputNeurons = new ArrayList<NeuronWeight>() ;
-		
-		this.setType( NeuronType.INTERNAL ) ;
-	}
-	
-
-	public void connectNeuron( Neuron inputNeuron, double weight ) {
-		this.inputNeurons.add( new NeuronWeight(inputNeuron, weight ) ) ;
 	}
 	
 
@@ -51,41 +41,28 @@ public class Neuron implements Iterable<NeuronWeight> {
 	
 	public void clock() {		
 		futurePotential = 0.0 ;
-		for( NeuronWeight nw : inputNeurons ) {
-			futurePotential += nw.getTransmittedPotential() ;
+		for( Axon axon : this ) {
+			futurePotential += axon.getTransmittedPotential() ;
 		}
-
 		futurePotential *= this.membraneTransmissionFactor ;
 	}
 	
-	public void futureClock() {		
-		futurePotential = 0.0 ;
-		for( NeuronWeight nw : inputNeurons ) {
-			futurePotential += nw.getFutureTransmittedPotential() ;
-		}
 
-		futurePotential *= this.membraneTransmissionFactor ;
-	}
-	
-	
 	public double getFuturePotential() { return futurePotential ; }
 	public double getPotential() { return currentPotential[clock] ; }
 	public void setPotential(double potential) { this.futurePotential = potential; lockOutput(); }
 	
-	public int size() { return inputNeurons.size() ; } 
-	public Iterator<NeuronWeight> iterator() { return this.inputNeurons.iterator() ; }
+	public void addInput( Axon axon ) { inputs.add(axon) ; }
+	public Iterator<Axon> iterator() { return inputs.iterator() ; }
 
 	public double getMembraneTransmissionFactor() {	return membraneTransmissionFactor; }
 	public void adjustMembraneTransmissionFactor(double membraneTransmissionFactorFactor ) {
 		this.membraneTransmissionFactor += membraneTransmissionFactorFactor;
-		if( this.membraneTransmissionFactor <= -2.0 ) {
-			this.membraneTransmissionFactor = -2.0 ;
+		if( this.membraneTransmissionFactor <= -1.0 ) {
+			this.membraneTransmissionFactor = -1.0 ;
 		}
-		if( this.membraneTransmissionFactor >= 2.0 ) {
-			this.membraneTransmissionFactor = 2.0 ;
-		}
-		if( Math.abs(this.membraneTransmissionFactor) < 0.00001  ) {
-			this.membraneTransmissionFactor = 0.0001 * Math.signum(0.0000001 + this.membraneTransmissionFactor);
+		if( this.membraneTransmissionFactor >= 1.0 ) {
+			this.membraneTransmissionFactor = 1.0 ;
 		}
 	}
 	
@@ -93,59 +70,11 @@ public class Neuron implements Iterable<NeuronWeight> {
 
 	public int getIndexInBrain() { return indexInBrain; }
 	
-	public NeuronType getType() { return type; }
-	public void setType(NeuronType type) { this.type = type; }
+	public NeuronType getType() { return NeuronType.INTERNAL ; }
 	
 	public String toString() { return "[" + String.valueOf(getIndexInBrain()) + "]" + String.valueOf( getPotential() ) ; } 
 }
 
-
-class NeuronWeight {
-	private double membraneTransmissionFactor ;
-	private Neuron neuron ;
-
-	public NeuronWeight( Neuron neuron ) {
-		this( neuron, 1.0 ) ;
-	}
-	
-	public NeuronWeight( Neuron neuron, double membraneTransmissionFactor ) {
-		this.neuron = neuron ;
-		this.membraneTransmissionFactor  = membraneTransmissionFactor ;
-	}
-	
-	public double getTransmittedPotential() {
-		return neuron.getPotential() * membraneTransmissionFactor ;
-	}
-
-	public double getFutureTransmittedPotential() {
-		return neuron.getFuturePotential() * membraneTransmissionFactor ;
-	}
-
-	public double getMembraneTransmissionFactor() {
-		return membraneTransmissionFactor;
-	}
-	public void setMembraneTransmissionFactor( double membraneTransmissionFactor ) {
-		this.membraneTransmissionFactor = membraneTransmissionFactor ;
-	}
-	public void adjustMembraneTransmissionFactor(double membraneTransmissionFactorFactor ) {
-		this.membraneTransmissionFactor += membraneTransmissionFactorFactor;
-		if( this.membraneTransmissionFactor <= -2.0 ) {
-			this.membraneTransmissionFactor = -2.0 ;
-		}
-		if( this.membraneTransmissionFactor >= 2.0 ) {
-			this.membraneTransmissionFactor = 2.0 ;
-		}
-		if( Math.abs(this.membraneTransmissionFactor) < 0.00001  ) {
-			this.membraneTransmissionFactor = 0.0001 * Math.signum(0.0000001 + this.membraneTransmissionFactor);
-		}
-	}
-
-	public Neuron getNeuron() {
-		return neuron;
-	}
-	public String toString() { return String.valueOf(neuron.getIndexInBrain()) +"->"+String.valueOf(membraneTransmissionFactor) ; } 
-
-}
 
 
 enum NeuronType {
