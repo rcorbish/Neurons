@@ -41,7 +41,7 @@ public class Brain implements Iterable<Neuron>{
 		}
 
 		for( int neuronIndex = 0 ; neuronIndex<numNeurons ; neuronIndex++ ) {
-			neurons[neuronIndex] = new Neuron( neuronIndex ) ;
+			neurons[neuronIndex] = new Neuron( this, neuronIndex ) ;
 		}
 
 		inputs = new InputNeuron[inputCount] ;
@@ -49,12 +49,12 @@ public class Brain implements Iterable<Neuron>{
 
 		for( int i=0 ; i<inputs.length ; i++ ) {
 			int neuronIndex = i ;
-			inputs[i] = new InputNeuron( neuronIndex ) ;
+			inputs[i] = new InputNeuron( this, neuronIndex ) ;
 			neurons[neuronIndex] = inputs[i] ; 			
 		}
 		for( int i=0 ; i<outputs.length ; i++ ) {
 			int neuronIndex = neurons.length-i-1 ;		
-			outputs[i] = new OutputNeuron( neuronIndex ) ;
+			outputs[i] = new OutputNeuron( this, neuronIndex ) ;
 			neurons[neuronIndex] = outputs[i] ; 			
 		}		
 
@@ -130,21 +130,14 @@ public class Brain implements Iterable<Neuron>{
 
 
 	public void clock()  {
-
 		boolean [] visitedNeuronIndex = new boolean[neurons.length] ;
 
 		for( int i=0 ; i<outputs.length ; i++ ) {
 			clock( outputs[i], visitedNeuronIndex ) ;
-		}
-
-		for( Neuron n : neurons ) {
-			n.lockOutput() ;
-		}
+		}	
 		
 		clock++ ;
-		if( clock >= HISTORY_LENGTH ) {
-			clock=0 ;
-		}
+		if( clock >= HISTORY_LENGTH ) clock = 0 ;
 	}
 
 	public void clock( Neuron n, boolean [] visitedNeuronIndex )  {
@@ -190,7 +183,7 @@ public class Brain implements Iterable<Neuron>{
 			rc.append( sep ).append( Double.isFinite( n.getPotential() ) ? n.getPotential() : 0 ) ;				
 			sep = ',' ;
 		}
-		if( (clock%5)==0 ) {
+//		if( (clock%5)==0 ) {
 			rc.append( "], \"historyIndex\": " ).append( clock ) ;
 			rc.append( ", \"history\": [" ) ;
 			sep = ' ' ;
@@ -204,7 +197,7 @@ public class Brain implements Iterable<Neuron>{
 				rc.append( ']' ) ;
 				sep = ',' ;
 			}
-		}
+//		}
 		return rc.append( "] }" ) ;
 	}
 
@@ -277,6 +270,10 @@ public class Brain implements Iterable<Neuron>{
 				throw new UnsupportedOperationException("Cannot remove an element of an array.");
 			}
 		} ;
+	}
+
+	public int getClock() {
+		return clock;
 	}
 }
 

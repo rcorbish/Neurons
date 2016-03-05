@@ -33,7 +33,7 @@ public class Test {
 				System.out.println( "Error:" + err ) ;
 				clock++ ;
 		
-				Thread.sleep(20);
+				Thread.sleep(40);
 			}
 		} catch( Throwable t ) {  
 			t.printStackTrace();

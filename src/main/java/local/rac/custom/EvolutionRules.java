@@ -18,7 +18,7 @@ public class EvolutionRules {
 		visitedNeuronIndex[neuron.getIndexInBrain()] = true ;
 
 		for( Axon nw : neuron ) {
-			nw.adjustMembraneTransmissionFactor( -error * rng.nextDouble() / 100.0 ) ;
+			nw.adjustMembraneTransmissionFactor( error * rng.nextDouble() / 1000000.0 ) ;
 			evolve( error * nw.getMembraneTransmissionFactor(), nw.getNeuron(), visitedNeuronIndex ) ;
 		}			
 	}
