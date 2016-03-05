@@ -24,11 +24,11 @@
 </head>
 <body>
 
-<canvas id="chart" width="1200" height="150"></canvas>
+<canvas id="chart" width="1200" height="250"></canvas>
 
 	<script type="text/javascript" charset="utf-8">
 	var width = 1200,
-    height = 800;
+    height = 650;
 
 var color = d3.scale.category20();
 
@@ -128,10 +128,11 @@ function resetWebSocket() {
 				n.style.fill = color( data.potentials[i] ) ; 
 			}
 		}
-		if( data.history ) {
-			c.width = c.width;
-			var offset = data.historyIndex ;
+		var offset = data.historyIndex ;
+		c.width = c.width;		
 		
+		if( data.history ) {
+			ctx.beginPath() ;
 			for( var j=0 ; j<data.history[0].length ; j++ ) {
 				ctx.moveTo( 0, 125 );
 				for( var i=0 ; i<data.history.length ; i++ ) {
@@ -142,6 +143,22 @@ function resetWebSocket() {
 					ctx.lineTo( i*12, 125-data.history[k][j] ) ;
 				}
 			}
+			ctx.strokeStyle = '#0000ff';
+			ctx.stroke();
+		}
+		if( data.target ) {
+			ctx.beginPath() ;
+			for( var j=0 ; j<data.target[0].length ; j++ ) {
+				ctx.moveTo( 0, 125 );
+				for( var i=0 ; i<data.target.length ; i++ ) {
+					var k = i + offset ;
+					if( k >= data.target.length ) {
+						k -= data.target.length ;
+					}
+					ctx.lineTo( i*12, 125-data.target[k][j] ) ;
+				}
+			}
+			ctx.strokeStyle = '#00ff00';
 			ctx.stroke();
 		}
 	};

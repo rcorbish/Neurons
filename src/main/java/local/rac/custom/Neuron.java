@@ -32,7 +32,7 @@ public class Neuron implements Iterable<Axon> {
 
 
 	// Based on all current inputs at T0 - set the T1 output value of the neuron
-	public void clock() {			
+	public void updatePotential() {			
 		double potential = 0.0 ;
 		for( Axon axon : this ) {
 			potential += axon.getTransmittedPotential() ;
@@ -44,7 +44,11 @@ public class Neuron implements Iterable<Axon> {
 
 	public double getPotential(int index) { return currentPotential[index] ; }
 	public double getPotential() { return getPotential(brain.getClock() ) ; }
-	public void setPotential(double potential) { this.currentPotential[brain.getClock()] = potential ; }
+	public void setPotential(double potential) {
+		if( potential > 100.0 ) potential = 0.0 ;
+		if( potential < -100.0 ) potential = -0.0 ;
+		this.currentPotential[brain.getClock()] = potential ; 
+	}
 
 	public void addInput( Axon axon ) { inputs.add(axon) ; }
 	public Iterator<Axon> iterator() { return inputs.iterator() ; }
@@ -62,6 +66,7 @@ public class Neuron implements Iterable<Axon> {
 
 
 	public int getIndexInBrain() { return indexInBrain; }
+	public Neuron getNeuronByIndex( int ix ) { return brain.getNeuronByIndex(ix); }
 
 	public NeuronType getType() { return NeuronType.INTERNAL ; }
 

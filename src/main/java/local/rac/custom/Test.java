@@ -12,7 +12,7 @@ public class Test {
 		final int OUTPUT_COUNT = 1 ;
 		int clock = 0 ;
 		try {
-			Brain brain = new Brain( Brain.FULL, INPUT_COUNT, OUTPUT_COUNT, new int[] { 2, 3 } ) ;
+			Brain brain = new Brain( Brain.STANDARD, INPUT_COUNT, OUTPUT_COUNT, new int[] { 6, 8 } ) ;
 
 			/*RestServer server = */new WebServer( brain ) ;
 			double inputs[] = new double[INPUT_COUNT] ;
@@ -21,19 +21,20 @@ public class Test {
 			int n = 0 ;
 			for( ; ; ) {
 				if( ++n > 40 ) n = 0 ;
-				if( clock == outputs.length ) {
-					clock=0 ;					
-				}
 				outputs[clock][0] = 0.0 ;
 				for( int i=0 ; i<INPUT_COUNT ; i++ ) {
-					inputs[i] = n ;
+					inputs[i] = rng.nextInt( clock+1 ) ;
 					outputs[clock][0] += inputs[i] ;
 				}
 				double err = brain.train( inputs, outputs[clock] ) ;
 				System.out.println( "Error:" + err ) ;
+
 				clock++ ;
+				if( clock == outputs.length ) {
+					clock=10 ;					
+				}
 		
-				Thread.sleep(40);
+				Thread.sleep(100);
 			}
 		} catch( Throwable t ) {  
 			t.printStackTrace();
