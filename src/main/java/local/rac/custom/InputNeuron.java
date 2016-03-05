@@ -14,4 +14,8 @@ public class InputNeuron extends Neuron {
 		super.setPotential(potential); 
 		super.lockOutput(); 
 	}
+	
+	public void clock() {
+		// No need to do anything - an input neuron just has a constant potential
+	}
 }

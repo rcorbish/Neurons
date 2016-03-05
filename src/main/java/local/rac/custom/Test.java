@@ -29,8 +29,8 @@ public class Test {
 					inputs[i] = n ;
 					outputs[clock][0] += inputs[i] ;
 				}
-				brain.train( inputs, outputs[clock] ) ;
-				//System.out.println( "Error:" + err ) ;
+				double err = brain.train( inputs, outputs[clock] ) ;
+				System.out.println( "Error:" + err ) ;
 				clock++ ;
 		
 				Thread.sleep(20);

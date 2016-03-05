@@ -92,12 +92,13 @@ public class Brain implements Iterable<Neuron>{
 		this.clock = 0 ;
 	}
 
-	public void train( double[] inputs, double[] outputs ) {
-		clock( inputs ) ;
+	public double train( double[] inputs, double[] outputs ) {
 
 		for( int i=0 ; i<outputs.length ; i++ ) {
 			desiredOutputHistory[clock][i] = outputs[i] ;			
 		}
+
+		clock( inputs ) ;
 
 		double []outputError = new double[ outputs.length ] ;		
 		for( int i=0 ; i<desiredOutputHistory.length ; i++ ) {
@@ -111,6 +112,12 @@ public class Brain implements Iterable<Neuron>{
 		for( int i=0 ; i<outputs.length ; i++ ) {
 			evolutionRules.evolve( outputError[i], this.outputs[i], visitedNeuronIndex ) ;
 		}
+		
+		double rc = 0.0 ;
+		for( double d : outputError ) {
+			rc += d * d ;
+		}
+		return Math.sqrt( rc ) ;
 	}
 
 
