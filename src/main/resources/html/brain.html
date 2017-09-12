@@ -18,7 +18,7 @@
 
 
 </style>
-<title>Force based label placement</title>
+<title>SNN</title>
 <script type="text/javascript"
 	src="//cdnjs.cloudflare.com/ajax/libs/d3/3.5.14/d3.min.js"></script>
 </head>
@@ -47,29 +47,27 @@ var marker = svg.append( "marker" )
 .attr( "id", "arrow-marker" )
 .attr( "markerWidth", "50"  ) 
 .attr( "markerHeight", "50" )  
-.attr( "refX", "20"  ) 
-.attr( "refY", "5" ) 
+.attr( "refX", "15"  ) 
+.attr( "refY", "3" ) 
 .attr( "orient", "auto" ) 
 .attr( "markerUnits", "userSpaceOnUse" ) ;
 
 marker.append( "path" )
-.attr( "d", "M 0 0 L 10 5 L 0 10 z" )
+.attr( "d", "M0,0 L0,6 L9,3 z" )
 .style( {fill: "#000000" } ) ;
 
- 
-			d3.json("data", function(error, graph) {
-  				if (error) return console.warn(error);
+d3.json("data", function(error, graph) {
+  if (error) return console.warn(error);
 
-force
+  force
       .nodes(graph.nodes)
       .links(graph.links)
       .start();
       
   var link = svg.selectAll(".link")
       .data(graph.links)
-    .enter().append("line")
-      .attr("class", "link")
-      //.style("stroke", function(d) { return color( (d.weight+1.0) * 10 ) ; });
+	.enter().append("line")
+      .attr("class", "link") ;
 
   var node = svg.selectAll(".node")
       .data(graph.nodes)
@@ -81,7 +79,7 @@ force
       .attr("points", function(d) { 
       			if( d.type=='OUTPUT' ) return "-0.83,-11.67 -8.17,11.67 11.83,-4.33 -11.83,-4.33 6.50,11.67" ;  // star
       			if( d.type=='INPUT' ) return "-10.00,-8.75 -10.00,8.75 10.00,-6.25" ;  // triangle
-      			return "-7,-7 7,-7 7,7 -7,7" ;  // square
+      			return "-4,-4 4,-4 4,4 -4,4" ;  // square
       		} )
       .style("fill", function(d) { return color(d.potential / 5.0); })
       .call(force.drag);
@@ -111,14 +109,17 @@ var ws = null ;
 var intervalTimer = null ;
 
 function resetWebSocket() {
-	ws = new WebSocket( "ws://localhost:8088/live-data" ) ;
+	ws = new WebSocket( "ws://localhost:8111/live-data" ) ;
 	clearInterval( intervalTimer ) ;
 	
 	// called when socket connection established
 	ws.onopen = function() {
-    	console.log("Connected to stock service! Press 'Start' to get stock info.")
+    	console.log("Connected.")
 	};
  
+	const history = []
+	const HistoryLength = 100 ;
+	
 	// called when a message received from server
 	ws.onmessage = function (evt) {
 		var data = JSON.parse( evt.data ) ;
@@ -128,44 +129,25 @@ function resetWebSocket() {
 				n.style.fill = color( data.potentials[i] ) ; 
 			}
 		}
-		var offset = data.historyIndex ;
 		c.width = c.width;		
 		
-		if( data.history ) {
+		history.push( data.outputs ) ;
+		if( history.length > HistoryLength ) history.shift() ;
+		const cols = [ '#0000ff', '#00ff00', , '#ff0000', '#000000', '#ffff00', '#00ffff' ]
+		for( var h=0 ; h<data.outputs.length ; h++ ) {
 			ctx.beginPath() ;
-			for( var j=0 ; j<data.history[0].length ; j++ ) {
-				ctx.moveTo( 0, 125 );
-				for( var i=0 ; i<data.history.length ; i++ ) {
-					var k = i + offset ;
-					if( k >= data.history.length ) {
-						k -= data.history.length ;
-					}
-					ctx.lineTo( i*12, 125-data.history[k][j] ) ;
-				}
+			ctx.moveTo( 0, 125 );
+			for( var i=0 ; i<history.length ; i++ ) {
+				ctx.lineTo( i*12, 125-(125*history[i][h]) ) ;
 			}
-			ctx.strokeStyle = '#0000ff';
-			ctx.stroke();
-		}
-		if( data.target ) {
-			ctx.beginPath() ;
-			for( var j=0 ; j<data.target[0].length ; j++ ) {
-				ctx.moveTo( 0, 125 );
-				for( var i=0 ; i<data.target.length ; i++ ) {
-					var k = i + offset ;
-					if( k >= data.target.length ) {
-						k -= data.target.length ;
-					}
-					ctx.lineTo( i*12, 125-data.target[k][j] ) ;
-				}
-			}
-			ctx.strokeStyle = '#00ff00';
+			ctx.strokeStyle = cols[h] ;
 			ctx.stroke();
 		}
 	};
 	 
 	// called when socket connection closed
 	ws.onclose = function() {
-	    console.log("Disconnected from stock service!")
+	    console.log("Disconnected")
 	    intervalTimer = setInterval( resetWebSocket, 1000 ) ;
 	};
 	 

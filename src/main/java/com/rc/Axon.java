@@ -1,7 +1,7 @@
-package local.rac.custom;
+package com.rc ;
 
 public class Axon {
-	private double membraneTransmissionFactor ;
+	private final double membraneTransmissionFactor ;
 	private Neuron neuron ;
 
 	public Axon( Neuron neuron ) {
@@ -19,18 +19,6 @@ public class Axon {
 
 	public double getMembraneTransmissionFactor() {
 		return membraneTransmissionFactor;
-	}
-	public void setMembraneTransmissionFactor( double membraneTransmissionFactor ) {
-		this.membraneTransmissionFactor = membraneTransmissionFactor ;
-	}
-	public void adjustMembraneTransmissionFactor(double membraneTransmissionFactorFactor ) {
-		this.membraneTransmissionFactor += membraneTransmissionFactorFactor;
-		if( this.membraneTransmissionFactor <= -1.0 ) {
-			this.membraneTransmissionFactor = -1.0 ;
-		}
-		if( this.membraneTransmissionFactor >= 1.0 ) {
-			this.membraneTransmissionFactor = 1.0 ;
-		}
 	}
 
 	public Neuron getNeuron() {

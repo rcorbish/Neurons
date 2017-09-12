@@ -1,1 +1,10 @@
-/target/
+
+build/
+libs/
+bin/
+target/
+.gradle
+.settings
+.project
+.classpath
+sync.sh

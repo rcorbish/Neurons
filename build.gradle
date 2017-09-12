@@ -1,0 +1,32 @@
+apply plugin: 'java'
+apply plugin: 'maven'
+
+group = 'RNNSeries'
+version = '0.0.1-SNAPSHOT'
+
+description = "Neurons - Liquid state machine"
+
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
+
+
+
+repositories {
+        
+     maven { url "http://repo.maven.apache.org/maven2" }
+}
+dependencies {
+    compile group: 'org.deeplearning4j', name: 'deeplearning4j-core', version:'0.4-rc3.8'
+    compile group: 'org.nd4j', name: 'nd4j-x86', version:'0.4-rc3.8'
+    compile group: 'org.deeplearning4j', name: 'deeplearning4j-ui', version:'0.4-rc3.8'
+    compile group: 'com.google.guava', name: 'guava', version:'19.0'
+    compile group: 'org.eclipse.jetty', name: 'jetty-server', version:'9.3.7.v20160115'
+    compile group: 'org.eclipse.jetty', name: 'jetty-security', version:'9.3.7.v20160115'
+    compile group: 'org.eclipse.jetty.websocket', name: 'websocket-server', version:'9.3.7.v20160115'
+}
+
+task copyDependencies(type: Copy) {
+    from configurations.runtime
+    into new File(".", "libs")
+}
+

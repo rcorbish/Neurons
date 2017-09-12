@@ -1,11 +1,11 @@
-package local.rac.custom;
+package com.rc ;
 
 public class InputNeuron extends Neuron {
 	
 	public InputNeuron( Brain brain, int indexInBrain ) {
 		super( brain, indexInBrain ) ;
 	}
-	
+
 	@Override
 	public void addInput( Axon axon ) { 
 		// not supported for inputs to have other inputs		
@@ -15,6 +15,10 @@ public class InputNeuron extends Neuron {
 	
 	@Override
 	public void updatePotential() {
+		// No need to do anything - an input neuron just has a constant potential
+	}
+	@Override
+	public void clock() {
 		// No need to do anything - an input neuron just has a constant potential
 	}
 }
