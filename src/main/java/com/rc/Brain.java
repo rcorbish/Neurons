@@ -1,8 +1,8 @@
 package com.rc ;
 
+import java.lang.reflect.Array;
+import java.util.Arrays;
 import java.util.Iterator;
-import java.util.Stack;
-
 import java.util.Random;
 
 public class Brain implements Iterable<Neuron>{
@@ -163,8 +163,24 @@ public class Brain implements Iterable<Neuron>{
 	public InputNeuron[] getInputs() { return inputs ; }
 	public OutputNeuron[] getOutputs() { return outputs ; }
 
+	public Potentials getNeuronPotentials() {
+		Potentials rc = new Potentials() ;
+		rc.inputs = new double[ inputs.length ] ;
+		for( int i=0 ; i<rc.inputs.length ; i++ ) {
+			rc.inputs[i] = inputs[i].getPotential() ;
+		}
+		rc.outputs = new double[ outputs.length ] ;
+		for( int i=0 ; i<rc.outputs.length ; i++ ) {
+			rc.outputs[i] = outputs[i].getPotential() ;
+		}
+		rc.potentials = new double[ neurons.length ] ;
+		for( int i=0 ; i<rc.potentials.length ; i++ ) {
+			rc.potentials[i] = neurons[i].getPotential() ;
+		}
+		return rc ;
+	}
 
-	public CharSequence getNeuronPotentials() {
+	public CharSequence getNeuronPotentials2() {
 		StringBuilder rc  = new StringBuilder( "{ \"potentials\": [" ) ;
 
 		char sep = ' '  ;
@@ -263,3 +279,8 @@ public class Brain implements Iterable<Neuron>{
 }
 
 
+class Potentials {
+	public double potentials[] ;
+	public double inputs[] ;
+	public double outputs[] ;
+}

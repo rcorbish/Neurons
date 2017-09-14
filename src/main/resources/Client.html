@@ -109,7 +109,7 @@ var ws = null ;
 var intervalTimer = null ;
 
 function resetWebSocket() {
-	ws = new WebSocket( "ws://localhost:8111/live-data" ) ;
+	ws = new WebSocket( "ws://localhost:8111/live" ) ;
 	clearInterval( intervalTimer ) ;
 	
 	// called when socket connection established

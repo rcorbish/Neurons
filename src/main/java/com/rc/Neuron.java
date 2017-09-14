@@ -10,7 +10,7 @@ public class Neuron implements Iterable<Axon> {
 
 	final public static double THRESHOLD_TO_SPIKE = 0.75 ;
 		
-	final static double spike[] = { .80, 1.00, .70, .30, .20, 0, -.10, -.10, -.08, -.08, -.05, -.05, -.05 ,-.03,-.02  } ;
+	final static double spike[] = { 1.00, .70, .30, .20, 0, -.10, -.08, -.08, -.05, -.05 ,-.03, -.02  } ;
 
 	private final List<Axon> inputs ;
 

@@ -2,24 +2,28 @@ package com.rc ;
 
 import java.util.Random;
 
-import org.apache.log4j.Level;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 
 public class Main {
-	static Random rng = new Random( 10 );
+	final static Logger logger = LoggerFactory.getLogger( Monitor.class ) ;
+	final static Random rng = new Random( 10 );
 
 	public static void main(String[] args) {
 		final int INPUT_COUNT = 2 ;
-		final int OUTPUT_COUNT = 6 ;
+		final int OUTPUT_COUNT = 4 ;
 
 		try {
 			Brain brain = new Brain( 
-					-0.35, //Brain.STANDARD, 
+					Brain.STANDARD, 
 					INPUT_COUNT, 
 					OUTPUT_COUNT, 
-					new int[] { 10, 10, 10 }	//  network size 
+					new int[] { 40, 50 }	//  network size 
 					) ;
 
-			/*RestServer server = */new WebServer( brain ) ;
+			Monitor m = new Monitor( brain ) ;
+			m.start();
 			double inputs[] = new double[INPUT_COUNT] ;
 			
 			int clk = 0 ;
@@ -28,9 +32,10 @@ public class Main {
 				for( int i=0 ; i<INPUT_COUNT ; i++ ) {
 					inputs[i] = rng.nextDouble()  ;
 				}
-				inputs[0] = Math.sin( clk / Math.PI ) ;
-				inputs[1] = Math.cos( clk / Math.PI ) ;
-				inputs[1] *= inputs[1] ;
+				//inputs[0] = 1 / ( (clk % 10) + 1 ) ;
+				// inputs[0] = Math.sin( clk / Math.PI ) ;
+				// inputs[1] = Math.cos( 3 * clk / Math.PI ) ;
+				// inputs[1] *= inputs[1] + rng.nextDouble()/10;
 				brain.step( inputs ) ;
 /*
 				for( Neuron neuron : brain.getInputs() ) {
@@ -43,20 +48,11 @@ public class Main {
 					System.out.println( neuron.toString() ) ;
 				}
 */		
-				Thread.sleep(50);
+				m.sendBrainData(); 
+				Thread.sleep(100);
 			}
 		} catch( Throwable t ) {  
 			t.printStackTrace();
-		}
-	}
-
-
-	static {
-		org.apache.log4j.LogManager.getLogger("org.eclipse.jetty").setLevel(Level.WARN);
-		final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger("org.eclipse.jetty");
-		if ((logger instanceof ch.qos.logback.classic.Logger)) {
-			ch.qos.logback.classic.Logger logbackLogger = (ch.qos.logback.classic.Logger) logger;
-			logbackLogger.setLevel(ch.qos.logback.classic.Level.WARN);
 		}
 	}
 }

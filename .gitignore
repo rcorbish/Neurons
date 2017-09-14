@@ -5,6 +5,8 @@ bin/
 target/
 .gradle
 .settings
+.classpath
 .project
 .classpath
+.vscode
 sync.sh
