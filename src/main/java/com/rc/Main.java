@@ -19,7 +19,7 @@ public class Main {
 					Brain.STANDARD, 
 					INPUT_COUNT, 
 					OUTPUT_COUNT, 
-					new int[] { 40, 50 }	//  network size 
+					new int[] { 4, 20 }	//  network size 
 					) ;
 
 			Monitor m = new Monitor( brain ) ;

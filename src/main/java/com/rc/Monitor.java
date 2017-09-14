@@ -66,7 +66,7 @@ public class Monitor implements AutoCloseable {
 			rsp.header("expires", "0" ) ;
 			rsp.header("cache-control", "no-cache" ) ;
 			
-			rc = brain.getNeuronPotentials() ;
+			rc = brain.toJson() ;
 		} catch ( Throwable t ) {
 			logger.warn( "Error processing getItem request", t ) ;
 			rsp.status( 400 ) ;	

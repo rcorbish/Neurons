@@ -1,12 +1,12 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN">
-<html lang="en">
+<!DOCTYPE html>
+<html>
 <head>
+<meta charset="UTF-8">
 
 <style>
 
 .node {
   stroke: none;
-  xstroke-width: 1.5px;
 }
 
 .link {
@@ -19,8 +19,8 @@
 
 </style>
 <title>SNN</title>
-<script type="text/javascript"
-	src="//cdnjs.cloudflare.com/ajax/libs/d3/3.5.14/d3.min.js"></script>
+<xscript src="//cdnjs.cloudflare.com/ajax/libs/d3/3.5.14/d3.min.js"></xscript>
+<script src="/d3.min.js"></script>
 </head>
 <body>
 
@@ -30,9 +30,9 @@
 	var width = 1200,
     height = 650;
 
-var color = d3.scale.category20();
+var color = d3.scaleOrdinal( d3.schemeCategory20b ) ;
 
-var force = d3.layout.force()
+var force = d3.forceSimulation()
     .linkDistance(350)
     .charge(-800)
     .friction(.1)
@@ -77,11 +77,13 @@ d3.json("data", function(error, graph) {
       		} )
       .attr("class", "node")
       .attr("points", function(d) { 
-      			if( d.type=='OUTPUT' ) return "-0.83,-11.67 -8.17,11.67 11.83,-4.33 -11.83,-4.33 6.50,11.67" ;  // star
-      			if( d.type=='INPUT' ) return "-10.00,-8.75 -10.00,8.75 10.00,-6.25" ;  // triangle
-      			return "-4,-4 4,-4 4,4 -4,4" ;  // square
-      		} )
-      .style("fill", function(d) { return color(d.potential / 5.0); })
+      		if( d.type=='OUTPUT' ) return "-0.83,-11.67 -8.17,11.67 11.83,-4.33 -11.83,-4.33 6.50,11.67" ;  // star
+      		if( d.type=='INPUT' ) return "-10.00,-8.75 -10.00,8.75 10.00,-6.25" ;  // triangle
+      		return "-4,-4 4,-4 4,4 -4,4" ;  // square
+      	})
+      .style("fill", function(d) { 
+    	  return color(d.potential / 5.0) ; 
+    	})
       .call(force.drag);
 
   node.append("title")
@@ -133,7 +135,7 @@ function resetWebSocket() {
 		
 		history.push( data.outputs ) ;
 		if( history.length > HistoryLength ) history.shift() ;
-		const cols = [ '#0000ff', '#00ff00', , '#ff0000', '#000000', '#ffff00', '#00ffff' ]
+		const cols = [ '#0000ff', '#00ff00', '#ff0000', '#000000', '#ffff00', '#00ffff' ]
 		for( var h=0 ; h<data.outputs.length ; h++ ) {
 			ctx.beginPath() ;
 			ctx.moveTo( 0, 125 );
