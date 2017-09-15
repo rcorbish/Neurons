@@ -251,8 +251,11 @@ public class Brain implements Iterable<Neuron>{
 				rc.append( n.getIndexInBrain() ) ;
 				rc.append( ",\"weight\":" ) ;
 				rc.append( in.getMembraneTransmissionFactor() ) ;				
-
-				rc.append( " }" ) ;
+				rc.append( ",\"name\":\"" ) ;
+				rc.append( in.getMembraneTransmissionFactor() ) ;				
+				rc.append( "-" ) ;
+				rc.append( n.getIndexInBrain() ) ;
+				rc.append( "\" }" ) ;
 			}
 		}
 	}

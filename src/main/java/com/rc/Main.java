@@ -12,14 +12,14 @@ public class Main {
 
 	public static void main(String[] args) {
 		final int INPUT_COUNT = 2 ;
-		final int OUTPUT_COUNT = 4 ;
+		final int OUTPUT_COUNT = 5 ;
 
 		try {
 			Brain brain = new Brain( 
-					Brain.STANDARD, 
+					-0.5, //Brain.STANDARD, 
 					INPUT_COUNT, 
 					OUTPUT_COUNT, 
-					new int[] { 4, 20 }	//  network size 
+					new int[] { 8, 20 }	//  network size 
 					) ;
 
 			Monitor m = new Monitor( brain ) ;

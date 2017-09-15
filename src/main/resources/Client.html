@@ -15,89 +15,109 @@
   marker-end: url(#arrow-marker);
 }
 
-
-
 </style>
 <title>SNN</title>
-<xscript src="//cdnjs.cloudflare.com/ajax/libs/d3/3.5.14/d3.min.js"></xscript>
 <script src="/d3.min.js"></script>
 </head>
 <body>
 
-<canvas id="chart" width="1200" height="250"></canvas>
+<canvas id="chart" width="1200" height="125"></canvas>
+<script type="text/javascript" charset="utf-8">
+	var width = 600;
+    var height = 450;
 
-	<script type="text/javascript" charset="utf-8">
-	var width = 1200,
-    height = 650;
+	const color = d3.scaleOrdinal( d3.schemeCategory20b ) ;
 
-var color = d3.scaleOrdinal( d3.schemeCategory20b ) ;
+	var svg = d3.select("body").append("svg")
+		.attr("width", width)
+		.attr("height", height);
 
-var force = d3.forceSimulation()
-    .linkDistance(350)
-    .charge(-800)
-    .friction(.1)
-    .gravity( .2 ) 
-    .size([width, height]);
+	var marker = svg.append( "marker" )
+	.attr( "id", "arrow-marker" )
+	.attr( "markerWidth", "50"  ) 
+	.attr( "markerHeight", "50" )  
+	.attr( "refX", "15"  ) 
+	.attr( "refY", "3" ) 
+	.attr( "orient", "auto" ) 
+	.attr( "markerUnits", "userSpaceOnUse" ) ;
 
-var svg = d3.select("body").append("svg")
-    .attr("width", width)
-    .attr("height", height);
-
-var marker = svg.append( "marker" )
-.attr( "id", "arrow-marker" )
-.attr( "markerWidth", "50"  ) 
-.attr( "markerHeight", "50" )  
-.attr( "refX", "15"  ) 
-.attr( "refY", "3" ) 
-.attr( "orient", "auto" ) 
-.attr( "markerUnits", "userSpaceOnUse" ) ;
-
-marker.append( "path" )
-.attr( "d", "M0,0 L0,6 L9,3 z" )
-.style( {fill: "#000000" } ) ;
+	marker.append( "path" )
+	.attr( "d", "M0,0 L0,6 L9,3 z" )
+	.style( {fill: "#000000" } ) ;
 
 d3.json("data", function(error, graph) {
   if (error) return console.warn(error);
 
-  force
-      .nodes(graph.nodes)
-      .links(graph.links)
-      .start();
-      
-  var link = svg.selectAll(".link")
-      .data(graph.links)
-	.enter().append("line")
-      .attr("class", "link") ;
+	function dragstarted(d) {
+		if (!d3.event.active) simulation.alphaTarget(0.3).restart();
+		d.fx = d.x;
+		d.fy = d.y;
+	}
 
-  var node = svg.selectAll(".node")
-      .data(graph.nodes)
-    .enter().append("polygon")
-      .attr("id", function(d) { 
-      		return "NEURON" + d.index ;
-      		} )
-      .attr("class", "node")
-      .attr("points", function(d) { 
-      		if( d.type=='OUTPUT' ) return "-0.83,-11.67 -8.17,11.67 11.83,-4.33 -11.83,-4.33 6.50,11.67" ;  // star
-      		if( d.type=='INPUT' ) return "-10.00,-8.75 -10.00,8.75 10.00,-6.25" ;  // triangle
-      		return "-4,-4 4,-4 4,4 -4,4" ;  // square
-      	})
-      .style("fill", function(d) { 
-    	  return color(d.potential / 5.0) ; 
-    	})
-      .call(force.drag);
+	function dragged(d) {
+		d.fx = d3.event.x;
+		d.fy = d3.event.y;
+	}
 
-  node.append("title")
-      .text(function(d) { return d.name; });
+	function dragended(d) {
+		if (!d3.event.active) simulation.alphaTarget(0);
+		d.fx = null;
+		d.fy = null;
+	}
 
-  force.on("tick", function() {
-     link.attr("x1", function(d) { return d.source.x; })
+
+	const links = svg
+	    .selectAll("line")
+    	.data(graph.links)
+    	.enter().append("line") 
+			.attr( 'class', 'link' )
+    ;
+
+  	const nodes = svg
+    	.selectAll("circle.node")
+    	.data( graph.nodes )
+    	.enter().append("circle")
+			.attr( 'class', 'node' )
+      		.attr("r", function(d) { return 5 } ) 
+      		.attr("fill", function(d) { return color(d.potential); })
+      		.call(d3.drag()
+          		.on("start", dragstarted)
+          		.on("drag", dragged)
+          		.on("end", dragended)) 
+  		;
+
+
+  function tick() {
+    	nodes
+    	.attr("cx", function(d) { return d.x; })
+        .attr("cy", function(d) { return d.y; })
+    	;
+    
+    	links
+        .attr("x1", function(d) { return d.source.x; })
         .attr("y1", function(d) { return d.source.y; })
         .attr("x2", function(d) { return d.target.x; })
-        .attr("y2", function(d) { return d.target.y; });
+        .attr("y2", function(d) { return d.target.y; })
+    	;
+	}
 
-    node.attr("transform", function(d) { return "translate(" + d.x+ "," + d.y + ")"; })
-        
-  });
+  const simulation = d3.forceSimulation()
+	.nodes( graph.nodes ) 	
+	.force( "link", d3.forceLink()
+	 		//.id( function(n) { return n.name ; } )
+	 		.strength( function(l) { return 1 ; }) 
+	 		.distance( function(l) { return 5 ; } )
+	 		.links( graph.links ) 
+	 	)
+	.force( "charge", d3.forceManyBody()
+			.strength( -20 ) 
+		)
+	.force( "center", d3.forceCenter(width/2, height/2) ) 			
+	.force( "collide", d3.forceCollide( 20 ) ) 
+	.on("tick", tick ) 
+	.on("end", tick ) 
+	;
+
 });
 </script>
 
@@ -138,9 +158,9 @@ function resetWebSocket() {
 		const cols = [ '#0000ff', '#00ff00', '#ff0000', '#000000', '#ffff00', '#00ffff' ]
 		for( var h=0 ; h<data.outputs.length ; h++ ) {
 			ctx.beginPath() ;
-			ctx.moveTo( 0, 125 );
+			ctx.moveTo( 0, 100 );
 			for( var i=0 ; i<history.length ; i++ ) {
-				ctx.lineTo( i*12, 125-(125*history[i][h]) ) ;
+				ctx.lineTo( i*12, 100-(100*history[i][h]) ) ;
 			}
 			ctx.strokeStyle = cols[h] ;
 			ctx.stroke();
