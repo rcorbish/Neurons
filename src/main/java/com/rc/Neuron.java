@@ -88,6 +88,7 @@ public class Neuron implements Iterable<Axon> {
 
 
 	public int getIndexInBrain() { return indexInBrain; }
+	public String getName() { return getType().toString() + indexInBrain; }
 	public Neuron getNeuronByIndex( int ix ) { return brain.getNeuronByIndex(ix); }
 
 	public NeuronType getType() { return NeuronType.LIQUID ; }

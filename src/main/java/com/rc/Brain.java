@@ -219,23 +219,40 @@ public class Brain implements Iterable<Neuron>{
 
 	private void printNodes( StringBuilder rc ) {
 		char sep = ' '  ;
-		int nodeIndex=0 ;
+		for( Neuron n : inputs ) {
+			rc.append( sep ) ;
+			sep = ',' ;
+			rc.append( "{\"name\":\"" ) ;
+			rc.append( n.getName() ) ;
+			rc.append( "\",\"potential\":" ) ;
+			rc.append( Double.isFinite( n.getPotential() ) ? n.getPotential() : 0 ) ;				
+			rc.append( ",\"type\":\"" ) ;
+			rc.append( n.getType().toString() ) ;				
+			rc.append( "\",\"fx\":10" ) ;
+			rc.append( " }" ) ;
+		}
+		for( Neuron n : outputs ) {
+			rc.append( sep ) ;
+			sep = ',' ;
+			rc.append( "{\"name\":\"" ) ;
+			rc.append( n.getName() ) ;
+			rc.append( "\",\"potential\":" ) ;
+			rc.append( Double.isFinite( n.getPotential() ) ? n.getPotential() : 0 ) ;				
+			rc.append( ",\"type\":\"" ) ;
+			rc.append( n.getType().toString() ) ;				
+			rc.append( "\",\"fx\":1100" ) ;
+			rc.append( " }" ) ;
+		}
 		for( Neuron n : neurons ) {
 			rc.append( sep ) ;
 			sep = ',' ;
 			rc.append( "{\"name\":\"" ) ;
-			int []loc = getLocationFromIndex(nodeIndex) ;
-
-			for( int i=0 ; i<loc.length ; i++ ) 
-				rc.append( loc[i] ).append( ' ' ) ;
-
+			rc.append( n.getName() ) ;
 			rc.append( "\",\"potential\":" ) ;
 			rc.append( Double.isFinite( n.getPotential() ) ? n.getPotential() : 0 ) ;				
 			rc.append( ",\"type\":\"" ) ;
 			rc.append( n.getType().toString() ) ;				
 			rc.append( "\" }" ) ;
-
-			nodeIndex++ ;
 		}
 	}
 
@@ -245,16 +262,35 @@ public class Brain implements Iterable<Neuron>{
 			for( Axon in : n ) {
 				rc.append( sep ) ;
 				sep = ',' ;
-				rc.append( "{\"source\":" ) ;				
-				rc.append( in.getNeuron().getIndexInBrain() ) ;
-				rc.append( ",\"target\":" ) ;
-				rc.append( n.getIndexInBrain() ) ;
-				rc.append( ",\"weight\":" ) ;
+				rc.append( "{\"source\":\"" ) ;		
+				Neuron source = in.getNeuron() ;
+				rc.append( source.getName() ) ;
+				rc.append( "\",\"target\":\"" ) ;
+				rc.append( n.getName() ) ;
+				rc.append( "\",\"weight\":" ) ;
 				rc.append( in.getMembraneTransmissionFactor() ) ;				
 				rc.append( ",\"name\":\"" ) ;
-				rc.append( in.getMembraneTransmissionFactor() ) ;				
+				rc.append( source.getName() ) ;				
 				rc.append( "-" ) ;
-				rc.append( n.getIndexInBrain() ) ;
+				rc.append( n.getName() ) ;
+				rc.append( "\" }" ) ;
+			}
+		}
+		for( Neuron n : outputs ) {
+			for( Axon in : n ) {
+				rc.append( sep ) ;
+				sep = ',' ;
+				rc.append( "{\"source\":\"" ) ;		
+				Neuron source = in.getNeuron() ;
+				rc.append( source.getName() ) ;
+				rc.append( "\",\"target\":\"" ) ;
+				rc.append( n.getName() ) ;
+				rc.append( "\",\"weight\":" ) ;
+				rc.append( in.getMembraneTransmissionFactor() ) ;				
+				rc.append( ",\"name\":\"" ) ;
+				rc.append( source.getName() ) ;				
+				rc.append( "-" ) ;
+				rc.append( n.getName() ) ;
 				rc.append( "\" }" ) ;
 			}
 		}

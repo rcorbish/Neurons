@@ -19,7 +19,7 @@ public class Main {
 					-0.5, //Brain.STANDARD, 
 					INPUT_COUNT, 
 					OUTPUT_COUNT, 
-					new int[] { 8, 20 }	//  network size 
+					new int[] { 6, 40 }	//  network size 
 					) ;
 
 			Monitor m = new Monitor( brain ) ;
@@ -33,9 +33,9 @@ public class Main {
 					inputs[i] = rng.nextDouble()  ;
 				}
 				//inputs[0] = 1 / ( (clk % 10) + 1 ) ;
-				// inputs[0] = Math.sin( clk / Math.PI ) ;
-				// inputs[1] = Math.cos( 3 * clk / Math.PI ) ;
-				// inputs[1] *= inputs[1] + rng.nextDouble()/10;
+				 inputs[0] = Math.sin( clk / Math.PI ) ;
+				 inputs[1] = Math.cos( 3 * clk / Math.PI ) ;
+				 inputs[1] *= inputs[1] + rng.nextDouble()/10;
 				brain.step( inputs ) ;
 /*
 				for( Neuron neuron : brain.getInputs() ) {
