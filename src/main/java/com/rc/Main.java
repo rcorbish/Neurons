@@ -16,10 +16,10 @@ public class Main {
 
 		try {
 			Brain brain = new Brain( 
-					-0.5, //Brain.STANDARD, 
+					0.95, //Brain.STANDARD, 
 					INPUT_COUNT, 
 					OUTPUT_COUNT, 
-					new int[] { 6, 40 }	//  network size 
+					new int[] { 8, 8 }	//  network size 
 					) ;
 
 			Monitor m = new Monitor( brain ) ;

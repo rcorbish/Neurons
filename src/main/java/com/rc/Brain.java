@@ -1,16 +1,27 @@
 package com.rc ;
 
 import java.lang.reflect.Array;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
+import java.util.Queue;
 import java.util.Random;
+import java.util.Set;
+
+import org.eclipse.jetty.util.ArrayQueue;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class Brain implements Iterable<Neuron>{
 
-	final public static double STANDARD = -0.55 ;			// reasonable value for network connections 
+	final static Logger log = LoggerFactory.getLogger( Monitor.class ) ;
+	
+	final public static double STANDARD = 0.75 ;			// reasonable value for network connections 
 	final public static double FULL = 0 ;					// all neurons connected to each other
 
-	final public static double INHIBITOR_RATIO = 0.4 ;
+	final public static double INHIBITOR_RATIO = 0.2 ;
 		
 	private Neuron[] neurons ;								// list of neurons in the brain 
 
@@ -29,25 +40,26 @@ public class Brain implements Iterable<Neuron>{
 		for( int i=0 ; i<brainDimensions.length ; i++ ) {
 			numNeurons *= brainDimensions[i] ; 
 		}
-		neurons = new Neuron[numNeurons] ;
+		List<Neuron> neurons = new ArrayList<>() ;
 
 		if( numNeurons < ( inputCount+outputCount) ) {
 			throw new RuntimeException( "The total neuron count must be more than the sum of inputs and outputs." ) ;
 		}
 
 		for( int neuronIndex = 0 ; neuronIndex<numNeurons ; neuronIndex++ ) {
-			neurons[neuronIndex] = new Neuron( this, neuronIndex ) ;
+			neurons.add( new Neuron( this, neuronIndex ) ) ;
 		}
 
+		log.info( "Created {} neurons", neurons.size() ) ;
 
 		for( int targetNeuronIndex = 0 ; targetNeuronIndex<numNeurons ; targetNeuronIndex++ ) {
-			Neuron target = neurons[targetNeuronIndex] ;
+			Neuron target = neurons.get( targetNeuronIndex ) ;
 
 			for( int inputNeuronIndex = 0 ; inputNeuronIndex<numNeurons ; inputNeuronIndex++ ) {
-				Neuron input = neurons[inputNeuronIndex] ;
+				Neuron input = neurons.get( inputNeuronIndex ) ;
 
 				double distance =  distance(targetNeuronIndex,inputNeuronIndex) ;
-				double chanceOfConnection = Math.exp( (1+distance) * connectivityFactor ) ;
+				double chanceOfConnection = Math.exp( (1+distance) * -connectivityFactor ) ;
 
 				if( rng.nextDouble() < chanceOfConnection ) { 
 					double weight = ( rng.nextDouble() > INHIBITOR_RATIO ) ?
@@ -63,7 +75,7 @@ public class Brain implements Iterable<Neuron>{
 
 		for( int i=0 ; i<inputs.length ; i++ ) {
 			inputs[i] = new InputNeuron( this, i ) ;
-			for( Neuron n : this ) {
+			for( Neuron n : neurons ) {
 				int ix  = n.getIndexInBrain() ;
 				int loc[] = getLocationFromIndex(ix) ;
 				if( loc[0] == 0 ) {
@@ -76,9 +88,11 @@ public class Brain implements Iterable<Neuron>{
 				}
 			}
 		}
+
+		
 		for( int i=0 ; i<outputs.length ; i++ ) {
 			outputs[i] = new OutputNeuron( this, i ) ;
-			for( Neuron n : this ) {
+			for( Neuron n : neurons ) {
 				int ix  = n.getIndexInBrain() ;
 				int loc[] = getLocationFromIndex(ix) ;
 				if( loc[0] == brainDimensions[0]-1 ) {
@@ -90,7 +104,12 @@ public class Brain implements Iterable<Neuron>{
 					outputs[i].addInput(axon);
 				}
 			}
-		}		
+		}
+		while( removeDeadReferences( neurons ) ) {} ;
+
+		this.neurons = new Neuron[ neurons.size() ] ;
+		neurons.toArray( this.neurons ) ;
+		log.info( "Copied {} neurons", this.neurons.length ) ;
 	}
 
 	public void step( double[] inputs ) {
@@ -111,7 +130,34 @@ public class Brain implements Iterable<Neuron>{
 		}
 	}
 
-	
+	protected boolean removeDeadReferences( List<Neuron> neurons ) {
+		Set<Neuron> visited = new HashSet<>() ; 
+		Queue<Neuron> queue = new ArrayQueue<>() ;
+		for( Neuron output : outputs ) {
+			queue.add( output ) ;
+		}
+		while( !queue.isEmpty() ) {
+			Neuron n = queue.remove() ; 
+			if( visited.add(n) ) {
+				log.info( "Processing {}", n.getName() ) ;
+				for( Axon a : n ) {
+					Neuron n2 = a.getNeuron() ;
+					queue.add( n2 ) ;
+				}
+			}
+		}
+		boolean removed = false ;
+		log.info( "Visited {} neurons", visited.size() ) ;
+		for( Iterator<Neuron> i=neurons.iterator() ; i.hasNext() ; ) {
+			Neuron dead = i.next() ;
+			if( !visited.contains( dead ) ) {
+				i.remove() ;
+				removed = true ;
+			}
+		}
+		return removed ;
+	}
+
 
 	/**
 	 * Determine the coordinates of a neuron in the brain

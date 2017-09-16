@@ -34,7 +34,18 @@ public class Neuron implements Iterable<Axon> {
 
 	}
 
+	protected void removeReferencesTo( Neuron dead ) {
+		for( Iterator<Axon> i=inputs.iterator() ; i.hasNext() ; ) {
+			Axon a = i.next() ;
+			if( a.getNeuron() == dead ) {
+				i.remove(); 
+			}
+		}
+	}
 
+	public boolean isDead() {
+		return this.inputs.isEmpty() ;
+	}
 
 	// Based on all current inputs at T0 - set the T1 output value of the neuron
 	public void updatePotential() {			

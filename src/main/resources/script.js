@@ -215,7 +215,7 @@ function drawView() {
           		.on("end", dragended)) 
   		;
 
-  	const blobs = svgg
+  	const blobs = svg
     	.selectAll("circle.blob")
     	.data(netobj.nodes.filter( e => e.type==='blob' ) )
     	.enter().append("circle")
