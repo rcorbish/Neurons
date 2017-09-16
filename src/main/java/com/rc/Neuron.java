@@ -30,7 +30,7 @@ public class Neuron implements Iterable<Axon> {
 		this.inputs = new ArrayList<Axon>() ;
 
 		// 		Other Constants
-		this.membraneTransmissionFactor = 0.750 ;	// input weight
+		this.membraneTransmissionFactor = 0.950 ;	// input weight
 
 	}
 
@@ -44,7 +44,7 @@ public class Neuron implements Iterable<Axon> {
 	}
 
 	public boolean isDead() {
-		return this.inputs.isEmpty() ;
+		return this.inputs.isEmpty() || ( this.inputs.size()==1 && this.inputs.get(0).getNeuron()==this ) ;
 	}
 
 	// Based on all current inputs at T0 - set the T1 output value of the neuron

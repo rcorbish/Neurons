@@ -11,15 +11,15 @@ public class Main {
 	final static Random rng = new Random( 10 );
 
 	public static void main(String[] args) {
-		final int INPUT_COUNT = 2 ;
+		final int INPUT_COUNT = 3 ;
 		final int OUTPUT_COUNT = 5 ;
 
 		try {
 			Brain brain = new Brain( 
-					0.95, //Brain.STANDARD, 
+					0.65, //Brain.STANDARD, 
 					INPUT_COUNT, 
 					OUTPUT_COUNT, 
-					new int[] { 8, 8 }	//  network size 
+					new int[] { 10,10 }	//  network size 
 					) ;
 
 			Monitor m = new Monitor( brain ) ;
@@ -30,7 +30,7 @@ public class Main {
 			for( ; ; ) {
 				clk++ ;
 				for( int i=0 ; i<INPUT_COUNT ; i++ ) {
-					inputs[i] = rng.nextDouble()  ;
+					inputs[i] = 6 * rng.nextDouble()  ;
 				}
 				//inputs[0] = 1 / ( (clk % 10) + 1 ) ;
 				 inputs[0] = Math.sin( clk / Math.PI ) ;

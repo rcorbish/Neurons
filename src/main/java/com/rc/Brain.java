@@ -1,8 +1,6 @@
 package com.rc ;
 
-import java.lang.reflect.Array;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -21,7 +19,7 @@ public class Brain implements Iterable<Neuron>{
 	final public static double STANDARD = 0.75 ;			// reasonable value for network connections 
 	final public static double FULL = 0 ;					// all neurons connected to each other
 
-	final public static double INHIBITOR_RATIO = 0.2 ;
+	final public static double INHIBITOR_RATIO = 0.25 ;
 		
 	private Neuron[] neurons ;								// list of neurons in the brain 
 
@@ -29,10 +27,10 @@ public class Brain implements Iterable<Neuron>{
 	private InputNeuron  [] inputs ;						// which nodes are .. inputs 
 	private OutputNeuron [] outputs ;						// .. and outputs
 
-	private final Random rng ;								// utility randon number generator
+	private final Random rng ;								// utility random number generator
 
 	public Brain( double connectivityFactor, int inputCount, int outputCount, int ... brainDimensions ) {
-		this.rng = new Random( 20 ) ;
+		this.rng = new Random( 25 ) ;
 
 		this.brainDimensions = brainDimensions ;
 
@@ -58,8 +56,8 @@ public class Brain implements Iterable<Neuron>{
 			for( int inputNeuronIndex = 0 ; inputNeuronIndex<numNeurons ; inputNeuronIndex++ ) {
 				Neuron input = neurons.get( inputNeuronIndex ) ;
 
-				double distance =  distance(targetNeuronIndex,inputNeuronIndex) ;
-				double chanceOfConnection = Math.exp( (1+distance) * -connectivityFactor ) ;
+				double distance =  1 + distance(targetNeuronIndex,inputNeuronIndex) ;
+				double chanceOfConnection = Math.exp( distance * -connectivityFactor ) ;
 
 				if( rng.nextDouble() < chanceOfConnection ) { 
 					double weight = ( rng.nextDouble() > INHIBITOR_RATIO ) ?
@@ -81,7 +79,7 @@ public class Brain implements Iterable<Neuron>{
 				if( loc[0] == 0 ) {
 					double weight = 
 					( rng.nextDouble() > INHIBITOR_RATIO ) ?
-					rng.nextDouble() : -rng.nextDouble() ;
+					rng.nextDouble() : rng.nextDouble() ;
 
 					Axon axon = new Axon( inputs[i], weight ) ;
 					n.addInput(axon);
@@ -131,30 +129,51 @@ public class Brain implements Iterable<Neuron>{
 	}
 
 	protected boolean removeDeadReferences( List<Neuron> neurons ) {
+		boolean removed = false ;
 		Set<Neuron> visited = new HashSet<>() ; 
-		Queue<Neuron> queue = new ArrayQueue<>() ;
+		Queue<Neuron> queue = new ArrayQueue<>(100, 100 ) ;
+		
 		for( Neuron output : outputs ) {
 			queue.add( output ) ;
+			for( Iterator<Axon> j=output.iterator() ; j.hasNext() ; ) {
+				Axon a = j.next() ;
+				Neuron n = a.getNeuron() ;
+				if( !neurons.contains(n)  ) {
+					j.remove();
+					removed = true ;
+				}
+			}
 		}
+		
 		while( !queue.isEmpty() ) {
 			Neuron n = queue.remove() ; 
 			if( visited.add(n) ) {
 				log.info( "Processing {}", n.getName() ) ;
 				for( Axon a : n ) {
 					Neuron n2 = a.getNeuron() ;
-					queue.add( n2 ) ;
+					if( !n2.isDead() && neurons.contains(n2) ) {
+						queue.add( n2 ) ;
+					}
 				}
 			}
 		}
-		boolean removed = false ;
 		log.info( "Visited {} neurons", visited.size() ) ;
 		for( Iterator<Neuron> i=neurons.iterator() ; i.hasNext() ; ) {
 			Neuron dead = i.next() ;
 			if( !visited.contains( dead ) ) {
 				i.remove() ;
 				removed = true ;
+				for( Neuron n : neurons ) {
+					for( Iterator<Axon> j=n.iterator() ; j.hasNext() ; ) {
+						Axon a = j.next() ;
+						if( a.getNeuron() == dead ) {
+							j.remove(); 
+						}
+					}
+				}
 			}
 		}
+		
 		return removed ;
 	}
 
@@ -219,9 +238,9 @@ public class Brain implements Iterable<Neuron>{
 		for( int i=0 ; i<rc.outputs.length ; i++ ) {
 			rc.outputs[i] = outputs[i].getPotential() ;
 		}
-		rc.potentials = new double[ neurons.length ] ;
-		for( int i=0 ; i<rc.potentials.length ; i++ ) {
-			rc.potentials[i] = neurons[i].getPotential() ;
+		rc.states = new NeuronState[ neurons.length ] ;
+		for( int i=0 ; i<rc.states.length ; i++ ) {
+			rc.states[i] = new NeuronState( neurons[i] ) ;
 		}
 		return rc ;
 	}
@@ -274,7 +293,7 @@ public class Brain implements Iterable<Neuron>{
 			rc.append( Double.isFinite( n.getPotential() ) ? n.getPotential() : 0 ) ;				
 			rc.append( ",\"type\":\"" ) ;
 			rc.append( n.getType().toString() ) ;				
-			rc.append( "\",\"fx\":10" ) ;
+			rc.append( "\",\"fx\":100" ) ;
 			rc.append( " }" ) ;
 		}
 		for( Neuron n : outputs ) {
@@ -286,10 +305,11 @@ public class Brain implements Iterable<Neuron>{
 			rc.append( Double.isFinite( n.getPotential() ) ? n.getPotential() : 0 ) ;				
 			rc.append( ",\"type\":\"" ) ;
 			rc.append( n.getType().toString() ) ;				
-			rc.append( "\",\"fx\":1100" ) ;
+			rc.append( "\",\"fx\":600" ) ;
 			rc.append( " }" ) ;
 		}
 		for( Neuron n : neurons ) {
+			int loc[] = getLocationFromIndex( n.getIndexInBrain() ) ; 
 			rc.append( sep ) ;
 			sep = ',' ;
 			rc.append( "{\"name\":\"" ) ;
@@ -298,7 +318,11 @@ public class Brain implements Iterable<Neuron>{
 			rc.append( Double.isFinite( n.getPotential() ) ? n.getPotential() : 0 ) ;				
 			rc.append( ",\"type\":\"" ) ;
 			rc.append( n.getType().toString() ) ;				
-			rc.append( "\" }" ) ;
+			rc.append( "\",\"px\":" ) ;
+			rc.append( loc[0] ) ;
+			rc.append( ",\"py\":" ) ;
+			rc.append( loc[1] ) ;
+			rc.append( " }" ) ;
 		}
 	}
 
@@ -365,7 +389,16 @@ public class Brain implements Iterable<Neuron>{
 
 
 class Potentials {
-	public double potentials[] ;
+	public NeuronState states[] ;
 	public double inputs[] ;
 	public double outputs[] ;
+}
+
+class NeuronState {
+	public double potential ;
+	public String name ;
+	public NeuronState( Neuron n ) {
+		this.potential = n.getPotential() ;
+		this.name = n.getName() ;
+	}
 }
