@@ -13,7 +13,7 @@ import org.slf4j.LoggerFactory;
 
 public class Main {
 	final static Logger logger = LoggerFactory.getLogger( Monitor.class ) ;
-	final static Random rng = new Random( 10 );
+	final static Random rng = new Random( 660 );
 	final static int INPUT_COUNT = 5 ;
 	final static int OUTPUT_COUNT = 5 ;
 
@@ -25,7 +25,7 @@ public class Main {
 			parameters.numOutputs = OUTPUT_COUNT ;
 			parameters.connectivityFactor = 0.85 ;
 			parameters.inhibitorRatio = .25 ;
-			parameters.dimensions = new int[]{ 10, 10 } ;
+			parameters.dimensions = new int[]{ 30, 30 } ;
 			parameters.spikeThreshold = 1.0 ;
 			parameters.transmissionFactor = 0.95 ;
 			parameters.spikeProfile = new double[]{ 0.5, 1, 0.4, 0, 0.1, 0.15, 0.16, 0.17 } ;
@@ -58,7 +58,7 @@ public class Main {
 	}
 	
 	public static Brain evolve() throws Exception {
-		BrainData brainData[] = new BrainData[ 100 ] ;
+		BrainData brainData[] = new BrainData[ 1000 ] ;
 		
 		for( int i=0 ; i<brainData.length ; i++ ) {
 			BitSet bs = new BitSet( BrainParameters.GENOME_SIZE ) ;
@@ -75,11 +75,11 @@ public class Main {
 		logger.info( "Runing epochs ..."  );
 		
 		for( int e=0 ; e<100 ; e++ ) {			
-			for( int s=0 ; s<3_000 ; s++ ) {
-				ExecutorService tpool = Executors.newFixedThreadPool(4) ;
+			for( int s=0 ; s<2_000 ; s++ ) {
 				for( int i=0 ; i<inputs.length ; i++ ) {
 					inputs[i] = rng.nextDouble() ;
 				}
+				ExecutorService tpool = Executors.newFixedThreadPool(4) ;
 				for( int i=0 ; i<brainData.length ; i++ ) {
 					final Brain brain = brainData[i].brain ;
 					tpool.submit( new Thread() {
@@ -89,7 +89,10 @@ public class Main {
 					} ) ;
 				}
 				tpool.shutdown();
-				tpool.awaitTermination( 1000, TimeUnit.MINUTES ) ;
+				boolean oops = tpool.awaitTermination( 1000, TimeUnit.MINUTES ) ;
+				if( !oops  ) {
+					logger.warn( "OMG - too late "); 
+				}
 			}
 			
 			for( int i=0 ; i<brainData.length ; i++ ) {
@@ -107,9 +110,9 @@ public class Main {
 				for( int b=0 ; b<BrainParameters.GENOME_SIZE ; b++ ) {
 					bs.set( b,  rng.nextBoolean() ? p1.get(b) : p2.get(b) ) ;
 				}
-				// Mutation = 5%
+				// Mutation = 8%
 				for( int b=0 ; b<BrainParameters.GENOME_SIZE ; b++ ) {
-					if( rng.nextDouble() < 0.05 ) {
+					if( rng.nextDouble() < 0.08 ) {
 						bs.set( b,  rng.nextBoolean()  ) ;
 					}
 				}

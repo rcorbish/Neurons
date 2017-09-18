@@ -29,7 +29,7 @@ public class Brain implements Iterable<Neuron>{
 	private int scoreClock ;
 	
 	public Brain( BrainParameters parameters ) {
-		this.rng = new Random( 2 ) ;
+		this.rng = new Random( 24 ) ;
 		this.scoreReservoir = new double[1000] ;
 		this.scoreClock = 0 ;
 		

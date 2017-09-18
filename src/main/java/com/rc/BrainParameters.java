@@ -19,11 +19,11 @@ public class BrainParameters {
 	public static BrainParameters fromBits( BitSet genome ) {
 		BrainParameters bp = new BrainParameters() ;
 		
-		bp.connectivityFactor = 1.0 / getValue( genome,  0, 7 ) ; 
-		bp.inhibitorRatio     = 1.0 / getValue( genome,  7, 4 ) ; 
-		bp.spikeThreshold     = 1.0 / getValue( genome, 11, 5 ) ; 
-		bp.transmissionFactor = 1.0 / getValue( genome, 16, 5 ) ; 
-		bp.restingPotential   = 1.0 / getValue( genome, 21, 5 ) ; 
+		bp.connectivityFactor = 1.0 / ( 1 + getValue( genome,  0, 7 ) ) ; 
+		bp.inhibitorRatio     = 1.0 / ( 1 + getValue( genome,  7, 4 ) ) ; 
+		bp.spikeThreshold     = 1.0 / ( 1 + getValue( genome, 11, 5 ) ) ; 
+		bp.transmissionFactor = 1.0 / ( 1 + getValue( genome, 16, 5 ) ) ; 
+		bp.restingPotential   = 1.0 / ( 1 + getValue( genome, 21, 5 ) ) ; 
 		
 		return bp ;
 	}
@@ -40,13 +40,13 @@ public class BrainParameters {
 		StringBuilder sb = new StringBuilder() ;
 		
 		sb
-		.append( "connectivityFactor:" ).append( connectivityFactor )	
-		.append( "\ninhibitorRatio" ).append( inhibitorRatio )
-		.append( "\nspikeThreshold" ). append( spikeThreshold )
-		.append( "\ntransmissionFactor" ).append( transmissionFactor )
-		.append( "\nrestingPotential" ).append( restingPotential )
-		.append( "\nnumInputs" ).append( numInputs )
-		.append( "\nnumOutputs" ).append( numOutputs )
+		.append( "\nconnectivityFactor\t" ).append( connectivityFactor )	
+		.append( "\ninhibitorRatio\t\t" ).append( inhibitorRatio )
+		.append( "\nspikeThreshold\t\t" ). append( spikeThreshold )
+		.append( "\ntransmissionFactor\t" ).append( transmissionFactor )
+		.append( "\nrestingPotential\t" ).append( restingPotential )
+		.append( "\nnumInputs\t\t" ).append( numInputs )
+		.append( "\nnumOutputs\t\t" ).append( numOutputs )
 		;
 		
 		return sb.toString() ;
