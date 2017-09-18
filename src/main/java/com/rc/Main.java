@@ -1,6 +1,11 @@
 package com.rc ;
 
+import java.util.Arrays;
+import java.util.BitSet;
 import java.util.Random;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -9,45 +14,41 @@ import org.slf4j.LoggerFactory;
 public class Main {
 	final static Logger logger = LoggerFactory.getLogger( Monitor.class ) ;
 	final static Random rng = new Random( 10 );
+	final static int INPUT_COUNT = 5 ;
+	final static int OUTPUT_COUNT = 5 ;
 
 	public static void main(String[] args) {
-		final int INPUT_COUNT = 3 ;
-		final int OUTPUT_COUNT = 5 ;
 
 		try {
-			Brain brain = new Brain( 
-					0.65, //Brain.STANDARD, 
-					INPUT_COUNT, 
-					OUTPUT_COUNT, 
-					new int[] { 10,10 }	//  network size 
-					) ;
+			BrainParameters parameters = new BrainParameters() ;
+			parameters.numInputs = INPUT_COUNT ;
+			parameters.numOutputs = OUTPUT_COUNT ;
+			parameters.connectivityFactor = 0.85 ;
+			parameters.inhibitorRatio = .25 ;
+			parameters.dimensions = new int[]{ 10, 10 } ;
+			parameters.spikeThreshold = 1.0 ;
+			parameters.transmissionFactor = 0.95 ;
+			parameters.spikeProfile = new double[]{ 0.5, 1, 0.4, 0, 0.1, 0.15, 0.16, 0.17 } ;
+			parameters.restingPotential = .20 ;
+			
+			Brain brain = new Brain( parameters ) ; 
+			brain = evolve() ;
 
 			Monitor m = new Monitor( brain ) ;
 			m.start();
-			double inputs[] = new double[INPUT_COUNT] ;
-			
+			double inputs[] = new double[parameters.numInputs] ;
+
 			int clk = 0 ;
 			for( ; ; ) {
 				clk++ ;
-				for( int i=0 ; i<INPUT_COUNT ; i++ ) {
-					inputs[i] = 6 * rng.nextDouble()  ;
+				for( int i=0 ; i<inputs.length ; i++ ) {
+					inputs[i] =  rng.nextDouble()  ;
 				}
-				//inputs[0] = 1 / ( (clk % 10) + 1 ) ;
-				 inputs[0] = Math.sin( clk / Math.PI ) ;
-				 inputs[1] = Math.cos( 3 * clk / Math.PI ) ;
-				 inputs[1] *= inputs[1] + rng.nextDouble()/10;
+				inputs[0] = 1 / ( (clk % 10) + 1 ) ;
+				inputs[0] = Math.abs( Math.sin( clk / Math.PI ) ) ;
+				inputs[1] = Math.cos( 3 * clk / Math.PI ) ;
+				inputs[1] *= inputs[1] + rng.nextDouble()/10;
 				brain.step( inputs ) ;
-/*
-				for( Neuron neuron : brain.getInputs() ) {
-					System.out.println( neuron.toString() ) ;
-				}
-				for( Neuron neuron : brain ) {
-					System.out.println( neuron.toString() ) ;
-				}
-				for( Neuron neuron : brain.getOutputs() ) {
-					System.out.println( neuron.toString() ) ;
-				}
-*/		
 				m.sendBrainData(); 
 				Thread.sleep(100);
 			}
@@ -55,4 +56,92 @@ public class Main {
 			t.printStackTrace();
 		}
 	}
+	
+	public static Brain evolve() throws Exception {
+		BrainData brainData[] = new BrainData[ 100 ] ;
+		
+		for( int i=0 ; i<brainData.length ; i++ ) {
+			BitSet bs = new BitSet( BrainParameters.GENOME_SIZE ) ;
+			for( int j=0 ; j<BrainParameters.GENOME_SIZE ; j++ ) {
+				if( rng.nextBoolean() ) {
+					bs.set(j) ; 
+				}
+			}
+			brainData[i] = new BrainData( bs ) ;
+		}
+		
+		double inputs[] = new double[ INPUT_COUNT ] ;
+		
+		logger.info( "Runing epochs ..."  );
+		
+		for( int e=0 ; e<100 ; e++ ) {			
+			for( int s=0 ; s<3_000 ; s++ ) {
+				ExecutorService tpool = Executors.newFixedThreadPool(4) ;
+				for( int i=0 ; i<inputs.length ; i++ ) {
+					inputs[i] = rng.nextDouble() ;
+				}
+				for( int i=0 ; i<brainData.length ; i++ ) {
+					final Brain brain = brainData[i].brain ;
+					tpool.submit( new Thread() {
+						public void run() {
+							brain.step( inputs ) ;
+						}
+					} ) ;
+				}
+				tpool.shutdown();
+				tpool.awaitTermination( 1000, TimeUnit.MINUTES ) ;
+			}
+			
+			for( int i=0 ; i<brainData.length ; i++ ) {
+				brainData[i].score = brainData[i].brain.getScore() ;
+			}
+			Arrays.sort( brainData ) ;
+			int survivingIndex = brainData.length ;
+			for( int i=survivingIndex / 2 ; i<brainData.length ; i++ ) {
+				BitSet p1 = brainData[ rng.nextInt( survivingIndex ) ].genome;
+				BitSet p2 = brainData[ rng.nextInt( survivingIndex ) ].genome;
+				
+				BitSet bs = new BitSet( BrainParameters.GENOME_SIZE ) ;
+				
+				// Inheritance
+				for( int b=0 ; b<BrainParameters.GENOME_SIZE ; b++ ) {
+					bs.set( b,  rng.nextBoolean() ? p1.get(b) : p2.get(b) ) ;
+				}
+				// Mutation = 5%
+				for( int b=0 ; b<BrainParameters.GENOME_SIZE ; b++ ) {
+					if( rng.nextDouble() < 0.05 ) {
+						bs.set( b,  rng.nextBoolean()  ) ;
+					}
+				}
+				
+				brainData[i] = new BrainData( bs ) ;
+			}
+			logger.info( "Epoch {} - best score {}", e, brainData[0].brain.getScore() ) ;
+		}
+		BrainParameters bp = BrainParameters.fromBits( brainData[0].genome ) ;
+		bp.numInputs = Main.INPUT_COUNT ;
+		bp.numOutputs = Main.OUTPUT_COUNT ;
+		logger.info( "Best bp = {}", bp ) ;
+		return brainData[0].brain ;
+	}
+}
+
+class BrainData implements Comparable<BrainData>{
+	BitSet genome ;
+	Brain brain ;
+	double score ;
+	
+	public BrainData( BitSet genome ) {
+		this.genome = genome ;
+		BrainParameters bp = BrainParameters.fromBits( genome ) ;
+		bp.numInputs = Main.INPUT_COUNT ;
+		bp.numOutputs = Main.OUTPUT_COUNT ;
+		this.brain = new Brain( bp ) ;
+	}
+	@Override
+	public int compareTo(BrainData o) {
+		double diff = o.score - brain.getScore()  ;
+		return diff>0 ? 1 : ( diff==0 ? 0 : -1 ) ;
+	}
+	
 }

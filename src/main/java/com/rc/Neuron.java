@@ -7,31 +7,27 @@ import java.util.List;
 public class Neuron implements Iterable<Axon> {
 	final private int indexInBrain ;
 	final Brain brain ;
-
-	final public static double THRESHOLD_TO_SPIKE = 0.75 ;
-		
-	final static double spike[] = { 1.00, .70, .30, .20, 0, -.10, -.08, -.08, -.05, -.05 ,-.03, -.02  } ;
+	
+	final double spike[] ;
 
 	private final List<Axon> inputs ;
 
-	// Things that can be adjusted during learning
 	private double membraneTransmissionFactor ;
-
 	private double currentPotential ;
 	private double futurePotential ;
-	
+	private double threshold  ;
+	private double restingPotential ;
 	private int spikeIndex ;
 
-	public Neuron( Brain brain, int indexInBrain ) {
+	public Neuron( Brain brain, int indexInBrain, BrainParameters parameters ) {
 		this.brain = brain ;
 		this.indexInBrain = indexInBrain ;
 		this.spikeIndex = 0 ;
-
+		this.restingPotential = parameters.restingPotential ;
+		this.threshold = parameters.spikeThreshold ;
+		this.spike = parameters.spikeProfile ;
+		this.membraneTransmissionFactor = parameters.transmissionFactor ;	// input weight
 		this.inputs = new ArrayList<Axon>() ;
-
-		// 		Other Constants
-		this.membraneTransmissionFactor = 0.950 ;	// input weight
-
 	}
 
 	protected void removeReferencesTo( Neuron dead ) {
@@ -71,15 +67,14 @@ public class Neuron implements Iterable<Axon> {
 	}
 
 	public void clock() {
-		if( spikeIndex == 0 && futurePotential > THRESHOLD_TO_SPIKE ) spikeIndex = 1 ;
+		if( spikeIndex == 0 && futurePotential > threshold ) spikeIndex = 1 ;
 		if( spikeIndex > 0 ) { 
 			setPotential( spike[spikeIndex] ) ;
 			spikeIndex++ ;
 			if( spikeIndex == spike.length ) spikeIndex = 0 ;
 		} else {
-			setPotential( 0 )  ;
+			setPotential( this.restingPotential )  ;
 		}
-	//	setPotential( futurePotential ) ;
 	}
 
 	

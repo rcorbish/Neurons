@@ -20,12 +20,18 @@
 .inhibitor {
   stroke: #D11C1C;
 }
-
+.status {
+	position: absolute ;
+	top: 0 ;
+	left: 0 ;
+	margin: 5px ;
+}
 </style>
 <title>SNN</title>
 <script src="/d3.min.js"></script>
 </head>
 <body>
+<div class="status"></div>
 
 <canvas id="chart" width="1200" height="125"></canvas>
 <script type="text/javascript" charset="utf-8">
@@ -156,11 +162,12 @@ function resetWebSocket() {
 	// called when a message received from server
 	ws.onmessage = function (evt) {
 		var data = JSON.parse( evt.data ) ;
-		for( var i=0 ; i<data.states.length ; i++ ) {
-			
+		const status = document.querySelector( ".status" ) ;
+		status.textContent = "Score: " + data.score.toFixed(3) ;
+		for( var i=0 ; i<data.states.length ; i++ ) {			
 			var n = document.getElementById( data.states[i].name ) ;
 			if( n ) {				
-				n.style.fill = color( data.states[i].potential > 0.5 ? 0 : 10 ) ; 
+				n.style.fill = color( data.states[i].potential > 0.0 ? 1.0 : 10 ) ; 
 			}
 		}
 		c.width = c.width;		

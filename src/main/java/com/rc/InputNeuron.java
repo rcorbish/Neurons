@@ -2,8 +2,8 @@ package com.rc ;
 
 public class InputNeuron extends Neuron {
 	
-	public InputNeuron( Brain brain, int indexInBrain ) {
-		super( brain, indexInBrain ) ;
+	public InputNeuron( Brain brain, int indexInBrain, BrainParameters parameters ) {
+		super( brain, indexInBrain, parameters ) ;
 	}
 
 	@Override

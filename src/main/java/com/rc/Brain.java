@@ -15,12 +15,8 @@ import org.slf4j.LoggerFactory;
 public class Brain implements Iterable<Neuron>{
 
 	final static Logger log = LoggerFactory.getLogger( Monitor.class ) ;
-	
-	final public static double STANDARD = 0.75 ;			// reasonable value for network connections 
-	final public static double FULL = 0 ;					// all neurons connected to each other
-
-	final public static double INHIBITOR_RATIO = 0.25 ;
 		
+
 	private Neuron[] neurons ;								// list of neurons in the brain 
 
 	private int [] brainDimensions ;						// the grid size(s) of the brain ( e.g. a 3x3 brain has 3 layes of 3 neurons )
@@ -29,10 +25,15 @@ public class Brain implements Iterable<Neuron>{
 
 	private final Random rng ;								// utility random number generator
 
-	public Brain( double connectivityFactor, int inputCount, int outputCount, int ... brainDimensions ) {
-		this.rng = new Random( 25 ) ;
-
-		this.brainDimensions = brainDimensions ;
+	private final double scoreReservoir[] ;
+	private int scoreClock ;
+	
+	public Brain( BrainParameters parameters ) {
+		this.rng = new Random( 2 ) ;
+		this.scoreReservoir = new double[1000] ;
+		this.scoreClock = 0 ;
+		
+		this.brainDimensions = parameters.dimensions ;
 
 		int numNeurons = 1 ;
 		for( int i=0 ; i<brainDimensions.length ; i++ ) {
@@ -40,15 +41,15 @@ public class Brain implements Iterable<Neuron>{
 		}
 		List<Neuron> neurons = new ArrayList<>() ;
 
-		if( numNeurons < ( inputCount+outputCount) ) {
+		if( numNeurons < ( parameters.numInputs+parameters.numOutputs) ) {
 			throw new RuntimeException( "The total neuron count must be more than the sum of inputs and outputs." ) ;
 		}
 
 		for( int neuronIndex = 0 ; neuronIndex<numNeurons ; neuronIndex++ ) {
-			neurons.add( new Neuron( this, neuronIndex ) ) ;
+			neurons.add( new Neuron( this, neuronIndex, parameters ) ) ;
 		}
 
-		log.info( "Created {} neurons", neurons.size() ) ;
+		log.debug( "Created {} neurons", neurons.size() ) ;
 
 		for( int targetNeuronIndex = 0 ; targetNeuronIndex<numNeurons ; targetNeuronIndex++ ) {
 			Neuron target = neurons.get( targetNeuronIndex ) ;
@@ -57,10 +58,10 @@ public class Brain implements Iterable<Neuron>{
 				Neuron input = neurons.get( inputNeuronIndex ) ;
 
 				double distance =  1 + distance(targetNeuronIndex,inputNeuronIndex) ;
-				double chanceOfConnection = Math.exp( distance * -connectivityFactor ) ;
+				double chanceOfConnection = Math.exp( distance * -parameters.connectivityFactor ) ;
 
 				if( rng.nextDouble() < chanceOfConnection ) { 
-					double weight = ( rng.nextDouble() > INHIBITOR_RATIO ) ?
+					double weight = ( rng.nextDouble() > parameters.inhibitorRatio ) ?
 							distance*rng.nextDouble() : -rng.nextDouble() ;
 
 					Axon axon = new Axon( input, weight ) ;							
@@ -68,17 +69,17 @@ public class Brain implements Iterable<Neuron>{
 				}
 			}
 		}		
-		inputs = new InputNeuron[inputCount] ;
-		outputs = new OutputNeuron[outputCount] ;
+		inputs = new InputNeuron[parameters.numInputs] ;
+		outputs = new OutputNeuron[parameters.numOutputs] ;
 
 		for( int i=0 ; i<inputs.length ; i++ ) {
-			inputs[i] = new InputNeuron( this, i ) ;
+			inputs[i] = new InputNeuron( this, i, parameters ) ;
 			for( Neuron n : neurons ) {
 				int ix  = n.getIndexInBrain() ;
 				int loc[] = getLocationFromIndex(ix) ;
 				if( loc[0] == 0 ) {
 					double weight = 
-					( rng.nextDouble() > INHIBITOR_RATIO ) ?
+					( rng.nextDouble() > parameters.inhibitorRatio) ?
 					rng.nextDouble() : rng.nextDouble() ;
 
 					Axon axon = new Axon( inputs[i], weight ) ;
@@ -89,13 +90,13 @@ public class Brain implements Iterable<Neuron>{
 
 		
 		for( int i=0 ; i<outputs.length ; i++ ) {
-			outputs[i] = new OutputNeuron( this, i ) ;
+			outputs[i] = new OutputNeuron( this, i, parameters ) ;
 			for( Neuron n : neurons ) {
 				int ix  = n.getIndexInBrain() ;
 				int loc[] = getLocationFromIndex(ix) ;
 				if( loc[0] == brainDimensions[0]-1 ) {
 					double weight = 
-					( rng.nextDouble() > INHIBITOR_RATIO ) ?
+					( rng.nextDouble() > parameters.inhibitorRatio ) ?
 					rng.nextDouble() : -rng.nextDouble() ;
 
 					Axon axon = new Axon( n, weight ) ;
@@ -107,7 +108,7 @@ public class Brain implements Iterable<Neuron>{
 
 		this.neurons = new Neuron[ neurons.size() ] ;
 		neurons.toArray( this.neurons ) ;
-		log.info( "Copied {} neurons", this.neurons.length ) ;
+		log.debug( "Copied {} neurons", this.neurons.length ) ;
 	}
 
 	public void step( double[] inputs ) {
@@ -126,8 +127,34 @@ public class Brain implements Iterable<Neuron>{
 		for( Neuron n : outputs ) {
 			n.clock() ;
 		}
+		
+		double score = 0 ;
+		for( Neuron n : outputs ) {
+			double p = n.getPotential() ; 
+			for( Neuron o : outputs ) {
+				if( o != n && o.getPotential()>0 ) {
+					score += ( o.getPotential() - p ) * ( o.getPotential() - p ) ; 
+				}
+			}
+			score += p * p ;
+		}
+		if( scoreClock < scoreReservoir.length ) {
+			scoreReservoir[scoreClock] = score ;
+			scoreClock++ ;
+		} else {
+			int ix = rng.nextInt( scoreReservoir.length ) ;
+			scoreReservoir[ix] = score ;
+		}
 	}
 
+	public double getScore() {
+		double score = 0 ;
+		for( int i=0 ; i<scoreClock ; i++ ) {
+			score += scoreReservoir[i] ;
+		}
+		return score / scoreClock ;
+	}
+	
 	protected boolean removeDeadReferences( List<Neuron> neurons ) {
 		boolean removed = false ;
 		Set<Neuron> visited = new HashSet<>() ; 
@@ -148,7 +175,6 @@ public class Brain implements Iterable<Neuron>{
 		while( !queue.isEmpty() ) {
 			Neuron n = queue.remove() ; 
 			if( visited.add(n) ) {
-				log.info( "Processing {}", n.getName() ) ;
 				for( Axon a : n ) {
 					Neuron n2 = a.getNeuron() ;
 					if( !n2.isDead() && neurons.contains(n2) ) {
@@ -157,7 +183,7 @@ public class Brain implements Iterable<Neuron>{
 				}
 			}
 		}
-		log.info( "Visited {} neurons", visited.size() ) ;
+		log.debug( "Visited {} neurons", visited.size() ) ;
 		for( Iterator<Neuron> i=neurons.iterator() ; i.hasNext() ; ) {
 			Neuron dead = i.next() ;
 			if( !visited.contains( dead ) ) {
@@ -173,7 +199,6 @@ public class Brain implements Iterable<Neuron>{
 				}
 			}
 		}
-		
 		return removed ;
 	}
 
@@ -230,42 +255,21 @@ public class Brain implements Iterable<Neuron>{
 
 	public Potentials getNeuronPotentials() {
 		Potentials rc = new Potentials() ;
-		rc.inputs = new double[ inputs.length ] ;
-		for( int i=0 ; i<rc.inputs.length ; i++ ) {
-			rc.inputs[i] = inputs[i].getPotential() ;
-		}
+		int ix = 0 ;
+		rc.states = new NeuronState[ inputs.length + outputs.length + neurons.length] ;
 		rc.outputs = new double[ outputs.length ] ;
-		for( int i=0 ; i<rc.outputs.length ; i++ ) {
+		
+		for( int i=0 ; i<inputs.length ; i++ ) {
+			rc.states[ix++] = new NeuronState( inputs[i] ) ;
+		}
+		for( int i=0 ; i<outputs.length ; i++ ) {
+			rc.states[ix++] = new NeuronState( outputs[i] ) ;
 			rc.outputs[i] = outputs[i].getPotential() ;
 		}
-		rc.states = new NeuronState[ neurons.length ] ;
-		for( int i=0 ; i<rc.states.length ; i++ ) {
-			rc.states[i] = new NeuronState( neurons[i] ) ;
+		for( int i=0 ; i<neurons.length ; i++ ) {
+			rc.states[ix++] = new NeuronState( neurons[i] ) ;
 		}
-		return rc ;
-	}
-
-	public CharSequence getNeuronPotentials2() {
-		StringBuilder rc  = new StringBuilder( "{ \"potentials\": [" ) ;
-
-		char sep = ' '  ;
-		for( Neuron n : neurons ) {
-			rc.append( sep ).append( Double.isFinite( n.getPotential() ) ? n.getPotential() : 0 ) ;				
-			sep = ',' ;
-		}
-		rc.append( "], \"inputs\": [" ) ;
-		sep = ' '  ;
-		for( Neuron n : inputs ) {
-			rc.append( sep ).append( Double.isFinite( n.getPotential() ) ? n.getPotential() : 0 ) ;				
-			sep = ',' ;
-		}
-		rc.append( "], \"outputs\": [" ) ;
-		sep = ' '  ;
-		for( Neuron n : outputs ) {
-			rc.append( sep ).append( Double.isFinite( n.getPotential() ) ? n.getPotential() : 0 ) ;				
-			sep = ',' ;
-		}
-		rc.append( "] }" ) ;
+		rc.score = getScore() ;
 		return rc ;
 	}
 
@@ -389,8 +393,8 @@ public class Brain implements Iterable<Neuron>{
 
 
 class Potentials {
+	public double score ;
 	public NeuronState states[] ;
-	public double inputs[] ;
 	public double outputs[] ;
 }
 

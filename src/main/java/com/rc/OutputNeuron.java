@@ -3,8 +3,8 @@ package com.rc ;
 public class OutputNeuron extends Neuron {
 	
 	
-	public OutputNeuron( Brain brain, int indexInBrain ) {
-		super( brain, indexInBrain ) ;
+	public OutputNeuron( Brain brain, int indexInBrain, BrainParameters parameters ) {
+		super( brain, indexInBrain, parameters ) ;
 	}
 	
 	@Override
