@@ -3,6 +3,7 @@ package com.rc ;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Queue;
 import java.util.Random;
@@ -16,6 +17,7 @@ public class Brain implements Iterable<Neuron>{
 
 	final static Logger log = LoggerFactory.getLogger( Monitor.class ) ;
 		
+	final static public int HISTORY_LENGTH = 100 ;
 
 	private Neuron[] neurons ;								// list of neurons in the brain 
 
@@ -127,17 +129,21 @@ public class Brain implements Iterable<Neuron>{
 		for( Neuron n : outputs ) {
 			n.clock() ;
 		}
-		
+	}
+
+
+	public void updateScores() {
 		double score = 0 ;
-		for( Neuron n : outputs ) {
+		for( OutputNeuron n : outputs ) {
 			double p = n.getPotential() ; 
 			for( Neuron o : outputs ) {
-				if( o != n && o.getPotential()>0 ) {
-					score += ( o.getPotential() - p ) * ( o.getPotential() - p ) ; 
-				}
+				score += ( o.getPotential() - p ) * ( o.getPotential() - p ) ; 
 			}
-			score += p * p ;
+			int sl = n.spike.length + 1 ;
+			double dp = p - n.getHistory( sl ) ; 
+			score += dp * dp ;
 		}
+
 		if( scoreClock < scoreReservoir.length ) {
 			scoreReservoir[scoreClock] = score ;
 			scoreClock++ ;
@@ -147,6 +153,9 @@ public class Brain implements Iterable<Neuron>{
 		}
 	}
 
+	/**
+	 * Get the average score 
+	 */
 	public double getScore() {
 		double score = 0 ;
 		for( int i=0 ; i<scoreClock ; i++ ) {
@@ -155,6 +164,7 @@ public class Brain implements Iterable<Neuron>{
 		return score / scoreClock ;
 	}
 	
+
 	protected boolean removeDeadReferences( List<Neuron> neurons ) {
 		boolean removed = false ;
 		Set<Neuron> visited = new HashSet<>() ; 

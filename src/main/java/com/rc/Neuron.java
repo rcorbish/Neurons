@@ -57,12 +57,15 @@ public class Neuron implements Iterable<Axon> {
 	public double getPotential() { 
 		return currentPotential ; 
 	}
+	public double getFuturePotential() { 
+		return futurePotential ; 
+	}
 	
 
 
 	public void setPotential( double currentPotential ) { 
 		this.currentPotential = currentPotential ; 
-		if( this.currentPotential > 1.0 ) this.currentPotential = 1.0 ;
+		if( this.currentPotential > 1.20 ) this.currentPotential = 1.20 ;
 		if( this.currentPotential < -.20 ) this.currentPotential = -.20 ;
 	}
 

@@ -23,16 +23,16 @@ public class Main {
 			BrainParameters parameters = new BrainParameters() ;
 			parameters.numInputs = INPUT_COUNT ;
 			parameters.numOutputs = OUTPUT_COUNT ;
-			parameters.connectivityFactor = 0.85 ;
-			parameters.inhibitorRatio = .25 ;
-			parameters.dimensions = new int[]{ 30, 30 } ;
-			parameters.spikeThreshold = 1.0 ;
-			parameters.transmissionFactor = 0.95 ;
+			parameters.connectivityFactor = 0.65 ;
+			parameters.inhibitorRatio = .5 ;
+			parameters.dimensions = new int[]{ 10, 6 } ;
+			parameters.spikeThreshold = 0.8 ;
+			parameters.transmissionFactor = 1 ;
 			parameters.spikeProfile = new double[]{ 0.5, 1, 0.4, 0, 0.1, 0.15, 0.16, 0.17 } ;
-			parameters.restingPotential = .20 ;
+			parameters.restingPotential = .10 ;
 			
 			Brain brain = new Brain( parameters ) ; 
-			brain = evolve() ;
+			//brain = evolve() ;
 
 			Monitor m = new Monitor( brain ) ;
 			m.start();
@@ -42,15 +42,16 @@ public class Main {
 			for( ; ; ) {
 				clk++ ;
 				for( int i=0 ; i<inputs.length ; i++ ) {
-					inputs[i] =  rng.nextDouble()  ;
+					inputs[i] =  rng.nextInt( 1+(clk % 4) )==0 ? 1 : 0 ;
 				}
-				inputs[0] = 1 / ( (clk % 10) + 1 ) ;
-				inputs[0] = Math.abs( Math.sin( clk / Math.PI ) ) ;
-				inputs[1] = Math.cos( 3 * clk / Math.PI ) ;
-				inputs[1] *= inputs[1] + rng.nextDouble()/10;
+				// inputs[0] = 1 / ( (clk % 10) + 1 ) ;
+				// inputs[0] = Math.abs( Math.sin( clk / Math.PI ) ) ;
+				// inputs[1] = Math.cos( 3 * clk / Math.PI ) ;
+				// inputs[1] *= inputs[1] + rng.nextDouble()/10;
 				brain.step( inputs ) ;
+				brain.updateScores() ;
 				m.sendBrainData(); 
-				Thread.sleep(100);
+				Thread.sleep(150);
 			}
 		} catch( Throwable t ) {  
 			t.printStackTrace();
