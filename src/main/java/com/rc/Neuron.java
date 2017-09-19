@@ -65,8 +65,8 @@ public class Neuron implements Iterable<Axon> {
 
 	public void setPotential( double currentPotential ) { 
 		this.currentPotential = currentPotential ; 
-		if( this.currentPotential > 1.20 ) this.currentPotential = 1.20 ;
-		if( this.currentPotential < -.20 ) this.currentPotential = -.20 ;
+		// if( this.currentPotential > 1.20 ) this.currentPotential = 1.20 ;
+		// if( this.currentPotential < -.20 ) this.currentPotential = -.20 ;
 	}
 
 	public void clock() {

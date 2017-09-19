@@ -1,5 +1,9 @@
 package com.rc ;
 
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.Arrays;
 import java.util.BitSet;
 import java.util.Random;
@@ -13,26 +17,34 @@ import org.slf4j.LoggerFactory;
 
 public class Main {
 	final static Logger logger = LoggerFactory.getLogger( Monitor.class ) ;
+
 	final static Random rng = new Random( 660 );
 	final static int INPUT_COUNT = 5 ;
 	final static int OUTPUT_COUNT = 5 ;
 
 	public static void main(String[] args) {
 
+		String parameterFile = args.length > 0 ? args[0] : null ;
+
 		try {
 			BrainParameters parameters = new BrainParameters() ;
 			parameters.numInputs = INPUT_COUNT ;
 			parameters.numOutputs = OUTPUT_COUNT ;
-			parameters.connectivityFactor = 0.65 ;
+			parameters.connectivityFactor = 0.75 ;
 			parameters.inhibitorRatio = .5 ;
 			parameters.dimensions = new int[]{ 10, 6 } ;
-			parameters.spikeThreshold = 0.8 ;
+			parameters.spikeThreshold = 0.6 ;
 			parameters.transmissionFactor = 1 ;
-			parameters.spikeProfile = new double[]{ 0, 0.5, 1, 0.4, 0, 0.1, 0.15, 0.16, 0.17 } ;
+			parameters.spikeProfile = new double[]{ 0, 0.5, 1, 0.4, 0, -0.1, -0.17, -0.16, -0.15 } ;
 			parameters.restingPotential = .10 ;
 			
-			Brain brain = new Brain( parameters ) ; 
-			brain = evolve() ;
+			Brain brain = parameterFile==null ? 
+							new Brain(parameters) : 
+							Brain.load( parameterFile ) ;
+			//brain = evolve() ;
+			if( parameterFile != null ) {
+				brain.save( parameterFile ) ;
+			}
 
 			Monitor m = new Monitor( brain ) ;
 			m.start();

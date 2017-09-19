@@ -1,5 +1,18 @@
 package com.rc ;
 
+import java.io.DataOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
+import java.io.Reader;
+import java.io.Writer;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -12,6 +25,8 @@ import java.util.Set;
 import org.eclipse.jetty.util.ArrayQueue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.google.gson.Gson;
 
 public class Brain implements Iterable<Neuron>{
 
@@ -26,11 +41,13 @@ public class Brain implements Iterable<Neuron>{
 	private OutputNeuron [] outputs ;						// .. and outputs
 
 	private final Random rng ;								// utility random number generator
+	private final BrainParameters parameters ;
 
 	private final double scoreReservoir[] ;
 	private int scoreClock ;
 	
 	public Brain( BrainParameters parameters ) {
+		this.parameters = parameters ;
 		this.rng = new Random( 24 ) ;
 		this.scoreReservoir = new double[1000] ;
 		this.scoreClock = 0 ;
@@ -304,7 +321,7 @@ public class Brain implements Iterable<Neuron>{
 			rc.append( "{\"name\":\"" ) ;
 			rc.append( n.getName() ) ;
 			rc.append( "\",\"potential\":" ) ;
-			rc.append( Double.isFinite( n.getPotential() ) ? n.getPotential() : 0 ) ;				
+			rc.append( n.getPotential() ) ;				
 			rc.append( ",\"type\":\"" ) ;
 			rc.append( n.getType().toString() ) ;				
 			rc.append( "\",\"fx\":100" ) ;
@@ -378,6 +395,35 @@ public class Brain implements Iterable<Neuron>{
 				rc.append( "\" }" ) ;
 			}
 		}
+	}
+
+
+	public boolean save( String fileName ) {
+		boolean rc = false ;
+		Gson gson = new Gson() ;
+		try ( OutputStream os = new FileOutputStream( fileName ))  {
+			String json = gson.toJson( parameters ) ;
+			os.write( json.getBytes( "UTF-8" ) ) ;
+		} catch( IOException ioe ) {
+			rc = false ;
+		}
+		return rc ;
+	}
+
+
+	public static Brain load( String fileName ) {
+		Brain rc  ;
+		File file = new File( fileName ) ;
+		try ( InputStream is = new FileInputStream(fileName) ;
+			  Reader json = new InputStreamReader(is) ) {
+			Gson gson = new Gson() ;
+			BrainParameters bp = (BrainParameters)gson.fromJson( json, BrainParameters.class ) ;
+			rc = new Brain( bp ) ;
+		} catch( Exception e ) {
+			e.printStackTrace();
+			rc = null ;
+		}
+		return rc ;
 	}
 
 	@Override

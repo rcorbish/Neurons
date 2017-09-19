@@ -1,8 +1,9 @@
 package com.rc;
 
+import java.io.Serializable;
 import java.util.BitSet;
 
-public class BrainParameters {
+public class BrainParameters implements Serializable {
 
 	public double connectivityFactor = 0.75 ;	
 	public double inhibitorRatio = 0.25 ;

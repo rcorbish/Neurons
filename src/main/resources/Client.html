@@ -167,7 +167,7 @@ function resetWebSocket() {
 		for( var i=0 ; i<data.states.length ; i++ ) {			
 			var n = document.getElementById( data.states[i].name ) ;
 			if( n ) {				
-				n.style.fill = color( data.states[i].potential > 0.0 ? 1.0 : 10 ) ; 
+				n.style.fill = color( data.states[i].potential > 0.3 ? 1.0 : 10 ) ; 
 			}
 		}
 		c.width = c.width;		
