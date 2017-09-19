@@ -28,11 +28,11 @@ public class Main {
 			parameters.dimensions = new int[]{ 10, 6 } ;
 			parameters.spikeThreshold = 0.8 ;
 			parameters.transmissionFactor = 1 ;
-			parameters.spikeProfile = new double[]{ 0.5, 1, 0.4, 0, 0.1, 0.15, 0.16, 0.17 } ;
+			parameters.spikeProfile = new double[]{ 0, 0.5, 1, 0.4, 0, 0.1, 0.15, 0.16, 0.17 } ;
 			parameters.restingPotential = .10 ;
 			
 			Brain brain = new Brain( parameters ) ; 
-			//brain = evolve() ;
+			brain = evolve() ;
 
 			Monitor m = new Monitor( brain ) ;
 			m.start();
@@ -59,7 +59,7 @@ public class Main {
 	}
 	
 	public static Brain evolve() throws Exception {
-		BrainData brainData[] = new BrainData[ 1000 ] ;
+		BrainData brainData[] = new BrainData[ 5000 ] ;
 		
 		for( int i=0 ; i<brainData.length ; i++ ) {
 			BitSet bs = new BitSet( BrainParameters.GENOME_SIZE ) ;
@@ -76,7 +76,7 @@ public class Main {
 		logger.info( "Runing epochs ..."  );
 		
 		for( int e=0 ; e<100 ; e++ ) {			
-			for( int s=0 ; s<2_000 ; s++ ) {
+			for( int s=0 ; s<3_000 ; s++ ) {
 				for( int i=0 ; i<inputs.length ; i++ ) {
 					inputs[i] = rng.nextDouble() ;
 				}
@@ -86,6 +86,7 @@ public class Main {
 					tpool.submit( new Thread() {
 						public void run() {
 							brain.step( inputs ) ;
+							brain.updateScores() ;
 						}
 					} ) ;
 				}
@@ -109,7 +110,7 @@ public class Main {
 				
 				// Inheritance
 				for( int b=0 ; b<BrainParameters.GENOME_SIZE ; b++ ) {
-					bs.set( b,  rng.nextBoolean() ? p1.get(b) : p2.get(b) ) ;
+					bs.set( b,  rng.nextInt(3)==0 ? p1.get(b) : p2.get(b) ) ;
 				}
 				// Mutation = 8%
 				for( int b=0 ; b<BrainParameters.GENOME_SIZE ; b++ ) {

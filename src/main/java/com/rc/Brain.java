@@ -139,7 +139,7 @@ public class Brain implements Iterable<Neuron>{
 			for( Neuron o : outputs ) {
 				score += ( o.getPotential() - p ) * ( o.getPotential() - p ) ; 
 			}
-			int sl = n.spike.length + 1 ;
+			int sl = n.spike.length ;
 			double dp = p - n.getHistory( sl ) ; 
 			score += dp * dp ;
 		}
