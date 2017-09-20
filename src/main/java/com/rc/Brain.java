@@ -22,7 +22,6 @@ import java.util.Queue;
 import java.util.Random;
 import java.util.Set;
 
-import org.eclipse.jetty.util.ArrayQueue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -185,7 +184,7 @@ public class Brain implements Iterable<Neuron>{
 	protected boolean removeDeadReferences( List<Neuron> neurons ) {
 		boolean removed = false ;
 		Set<Neuron> visited = new HashSet<>() ; 
-		Queue<Neuron> queue = new ArrayQueue<>(100, 100 ) ;
+		Queue<Neuron> queue = new LinkedList<>() ;
 		
 		for( Neuron output : outputs ) {
 			queue.add( output ) ;

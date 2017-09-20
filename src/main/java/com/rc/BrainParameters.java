@@ -1,10 +1,9 @@
 package com.rc;
 
-import java.io.Serializable;
 import java.util.BitSet;
 
-public class BrainParameters implements Serializable {
-
+public class BrainParameters  {
+	
 	public double connectivityFactor = 0.75 ;	
 	public double inhibitorRatio = 0.25 ;
 	public double spikeThreshold = 0.75 ;
@@ -16,15 +15,19 @@ public class BrainParameters implements Serializable {
 	public int numOutputs ;
 	public int dimensions [] = { 10, 10 } ;
 	
-	final public static int GENOME_SIZE = 26 ;
+	
+	final public static int BITS_PER_NUMBER = 6 ; 
+	final public static double NUMBER_GRANULARITY = 1 << BITS_PER_NUMBER ;
+	final public static int GENOME_SIZE = BITS_PER_NUMBER * 5 ;
+
 	public static BrainParameters fromBits( BitSet genome ) {
 		BrainParameters bp = new BrainParameters() ;
 		
-		bp.connectivityFactor = 1.0 / ( 1 + getValue( genome,  0, 7 ) ) ; 
-		bp.inhibitorRatio     = 1.0 / ( 1 + getValue( genome,  7, 4 ) ) ; 
-		bp.spikeThreshold     = 1.0 / ( 1 + getValue( genome, 11, 5 ) ) ; 
-		bp.transmissionFactor = 1.0 / ( 1 + getValue( genome, 16, 5 ) ) ; 
-		bp.restingPotential   = 1.0 / ( 1 + getValue( genome, 21, 5 ) ) ; 
+		bp.connectivityFactor = getValue( genome,  BITS_PER_NUMBER*0, BITS_PER_NUMBER ) / NUMBER_GRANULARITY ; 
+		bp.inhibitorRatio     = getValue( genome,  BITS_PER_NUMBER*1, BITS_PER_NUMBER ) / NUMBER_GRANULARITY ; 
+		bp.spikeThreshold     = getValue( genome,  BITS_PER_NUMBER*2, BITS_PER_NUMBER ) / NUMBER_GRANULARITY ; 
+		bp.transmissionFactor = getValue( genome,  BITS_PER_NUMBER*3, BITS_PER_NUMBER ) / NUMBER_GRANULARITY ; 
+		bp.restingPotential   = ( getValue( genome,  BITS_PER_NUMBER*4, BITS_PER_NUMBER ) / NUMBER_GRANULARITY ) - 0.5 ; 
 		
 		return bp ;
 	}

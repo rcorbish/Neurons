@@ -13,7 +13,7 @@ public class OutputNeuron extends Neuron {
 	@Override
 	public void clock() {
 		super.clock(); 
-		setPotential( getFuturePotential() )  ;
+		//setPotential( getFuturePotential() )  ;
 		this.outputHistory[historyIndex] = getPotential() ;
 		historyIndex++ ;
 		if( historyIndex >= outputHistory.length ) {
