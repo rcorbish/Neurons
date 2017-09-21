@@ -1,6 +1,7 @@
 package com.rc;
 
 import java.util.BitSet;
+import java.util.StringJoiner;
 
 public class BrainParameters  {
 	
@@ -21,20 +22,23 @@ public class BrainParameters  {
 	final public static double NUMBER_GRANULARITY = 1 << BITS_PER_NUMBER ;
 	final public static int GENOME_SIZE = BITS_PER_NUMBER * (5+SPIKE_PROFILE_SIZE) ;
 
-	public static BrainParameters fromBits( BitSet genome ) {
-		BrainParameters bp = new BrainParameters() ;
+	public BrainParameters() {}
+	
+	public BrainParameters( BitSet genome ) {
+			
+		connectivityFactor = getValue( genome,  BITS_PER_NUMBER*0, BITS_PER_NUMBER ) / NUMBER_GRANULARITY ; 
+		inhibitorRatio     = getValue( genome,  BITS_PER_NUMBER*1, BITS_PER_NUMBER ) / NUMBER_GRANULARITY ; 
+		spikeThreshold     = ( getValue( genome,  BITS_PER_NUMBER*2, BITS_PER_NUMBER ) / (0.5*NUMBER_GRANULARITY) ) - 1.0  ; 
+		transmissionFactor = getValue( genome,  BITS_PER_NUMBER*3, BITS_PER_NUMBER ) / NUMBER_GRANULARITY ; 
+		restingPotential   = ( getValue( genome,  BITS_PER_NUMBER*4, BITS_PER_NUMBER ) / NUMBER_GRANULARITY ) - 0.5 ; 
 		
-		bp.connectivityFactor = getValue( genome,  BITS_PER_NUMBER*0, BITS_PER_NUMBER ) / NUMBER_GRANULARITY ; 
-		bp.inhibitorRatio     = getValue( genome,  BITS_PER_NUMBER*1, BITS_PER_NUMBER ) / NUMBER_GRANULARITY ; 
-		bp.spikeThreshold     = getValue( genome,  BITS_PER_NUMBER*2, BITS_PER_NUMBER ) / NUMBER_GRANULARITY ; 
-		bp.transmissionFactor = getValue( genome,  BITS_PER_NUMBER*3, BITS_PER_NUMBER ) / NUMBER_GRANULARITY ; 
-		bp.restingPotential   = ( getValue( genome,  BITS_PER_NUMBER*4, BITS_PER_NUMBER ) / NUMBER_GRANULARITY ) - 0.5 ; 
-		
-		bp.spikeProfile = new double[SPIKE_PROFILE_SIZE] ;
-		for( int i=0 ; i<bp.spikeProfile.length ; i++ ) {
-			 bp.spikeProfile[i] = getValue( genome,  BITS_PER_NUMBER*(i+5), BITS_PER_NUMBER ) / NUMBER_GRANULARITY ;
-		}
-		return bp ;
+		spikeProfile = new double[SPIKE_PROFILE_SIZE+1] ;
+		spikeProfile[0] = 0 ; //		
+		for( int i=1 ; i<spikeProfile.length ; i++ ) {
+			 spikeProfile[i] = spikeProfile[i-1] + ( getValue( genome,  BITS_PER_NUMBER*(i+5), BITS_PER_NUMBER ) / (2*NUMBER_GRANULARITY) ) - 0.25 ;
+			 if( spikeProfile[i]> 1.0 ) spikeProfile[i] = 1.0 ; 
+			 if( spikeProfile[i]< -1.0 ) spikeProfile[i] = -1.0 ; 
+			}
 	}
 	
 	public static int getValue( BitSet bits, int start, int length ) {
@@ -47,13 +51,16 @@ public class BrainParameters  {
 	
 	public String toString() {
 		StringBuilder sb = new StringBuilder() ;
-		
+		StringJoiner sj = new StringJoiner(" ") ;
+		for( double d : spikeProfile ) sj.add( String.valueOf(d) ) ;
+
 		sb
 		.append( "\nconnectivityFactor\t" ).append( connectivityFactor )	
 		.append( "\ninhibitorRatio\t\t" ).append( inhibitorRatio )
 		.append( "\nspikeThreshold\t\t" ). append( spikeThreshold )
 		.append( "\ntransmissionFactor\t" ).append( transmissionFactor )
 		.append( "\nrestingPotential\t" ).append( restingPotential )
+		.append( "\nspikeProfile\t\t" ).append( sj )
 		.append( "\nnumInputs\t\t" ).append( numInputs )
 		.append( "\nnumOutputs\t\t" ).append( numOutputs )
 		;

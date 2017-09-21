@@ -1,25 +1,26 @@
 {
-  "connectivityFactor": 0.859375,
-  "inhibitorRatio": 0.5,
-  "spikeThreshold": 0.484375,
-  "transmissionFactor": 0.953125,
-  "restingPotential": -0.5,
+  "connectivityFactor": 0.59375,
+  "inhibitorRatio": 0.40625,
+  "spikeThreshold": 0.40625,
+  "transmissionFactor": 0.78125,
+  "restingPotential": 0.484375,
   "spikeProfile": [
-    0.203125,
-    0.859375,
-    0.90625,
-    0.953125,
-    0.96875,
-    0.78125,
-    0.984375,
-    0.875,
-    0.90625,
-    0.953125
+    0.0,
+    -0.234375,
+    -0.4609375,
+    -0.7109375,
+    -0.90625,
+    -1.0,
+    -0.9609375,
+    -1.0,
+    -1.0,
+    -0.8203125,
+    -0.578125
   ],
   "numInputs": 5,
   "numOutputs": 5,
   "dimensions": [
-    10,
-    10
+    8,
+    8
   ]
 }

@@ -10,3 +10,4 @@ target/
 .classpath
 .vscode
 sync.sh
+*.json

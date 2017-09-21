@@ -36,19 +36,19 @@ public class WebSocketServer  {
 	private List<Session> sessions = new ArrayList<>() ;
 
 	@OnWebSocketConnect
-	public void connect( Session session )  {
+	public synchronized void connect( Session session )  {
 		this.sessions.add( session ) ;	// keep tabs on the rempote client
 		logger.info( "Opened connection to {} - {} active sessions", session.getRemoteAddress(), sessions.size() ) ;
 	}
 
 	@OnWebSocketClose
-	public void close(Session session, int statusCode, String reason) {
+	public synchronized void close(Session session, int statusCode, String reason) {
 		this.sessions.remove( session ) ;
 		logger.info( "Closed connection to {} - {} active sessions", session.getRemoteAddress(), sessions.size() ) ;
 	}
 
 	@OnWebSocketError
-	public void error(Session session, Throwable error ) {
+	public synchronized void error(Session session, Throwable error ) {
 		this.sessions.remove( session ) ;
 		logger.info( "Error {} connection to {} - {} active sessions", error.getLocalizedMessage(), session.getRemoteAddress(), sessions.size() ) ;
 	}
@@ -68,7 +68,7 @@ public class WebSocketServer  {
 	}	
 
 
-	public void send( String msg ) {
+	public synchronized void send( String msg ) {
 		for( Session session : this.sessions ) {
 			if( session.isOpen() ) {
 				try {

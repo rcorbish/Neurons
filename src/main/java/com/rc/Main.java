@@ -19,9 +19,9 @@ public class Main {
 	final static Random rng = new Random( 660 );
 	final static int INPUT_COUNT = 5 ;
 	final static int OUTPUT_COUNT = 5 ;
-	final static int POPULATION = 1_000 ;
-	final static int EPOCHS = 1_000 ;
-	final static int SIMULATIONS = 2_000 ;
+	final static int POPULATION = 100 ;
+	final static int EPOCHS = 50 ;
+	final static int SIMULATIONS = 1_500 ;
 	
 	public static void main(String[] args) {
 		try {
@@ -141,7 +141,7 @@ public class Main {
 				
 				// Inheritance
 				for( int b=0 ; b<BrainParameters.GENOME_SIZE ; b++ ) {
-					bs.set( b,  rng.nextInt(3)==0 ? p1.get(b) : p2.get(b) ) ;
+					bs.set( b,  rng.nextInt(2)==0 ? p2.get(b) : p1.get(b) ) ;
 				}
 				// Mutation = 8%
 				for( int b=0 ; b<BrainParameters.GENOME_SIZE ; b++ ) {
@@ -161,7 +161,7 @@ public class Main {
 			logger.warn( "OMG - too late "); 
 		}
 		
-		BrainParameters bp = BrainParameters.fromBits( brainData[0].genome ) ;
+		BrainParameters bp = new BrainParameters( brainData[0].genome ) ;
 		bp.numInputs = Main.INPUT_COUNT ;
 		bp.numOutputs = Main.OUTPUT_COUNT ;
 		logger.info( "Best bp = {}", bp ) ;
@@ -176,7 +176,7 @@ class BrainData implements Comparable<BrainData>{
 	
 	public BrainData( BitSet genome, int xdim, int ydim ) {
 		this.genome = genome ;
-		BrainParameters bp = BrainParameters.fromBits( genome ) ;
+		BrainParameters bp = new BrainParameters( genome ) ;
 		bp.numInputs = Main.INPUT_COUNT ;
 		bp.numOutputs = Main.OUTPUT_COUNT ;
 		this.brain = new Brain( bp, xdim, ydim ) ;
