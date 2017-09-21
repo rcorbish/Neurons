@@ -68,10 +68,14 @@ public class WebSocketServer  {
 	}	
 
 
-	public void send( String msg ) throws IOException {
+	public void send( String msg ) {
 		for( Session session : this.sessions ) {
 			if( session.isOpen() ) {
-				session.getRemote().sendString( msg );
+				try {
+					session.getRemote().sendString( msg );
+				} catch( IOException ioe ){
+// nothing to do
+				}
 			} else {
 				this.sessions.remove( session ) ;
 			}

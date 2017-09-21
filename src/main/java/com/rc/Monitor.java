@@ -53,11 +53,7 @@ public class Monitor implements AutoCloseable {
 	}
 
 	public void sendBrainData() {
-		try {
-			wss.send( gson.toJson( brain.getNeuronPotentials() ) ) ;
-		} catch( IOException ioe ) {
-			logger.info( "Can't send data to GUI" ) ;
-		}
+		wss.send( gson.toJson( brain.getNeuronPotentials() ) ) ;
 	}
 	/**
 	 * get 1 slice of compressed data, with random shear

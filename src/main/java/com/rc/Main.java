@@ -1,5 +1,6 @@
 package com.rc ;
 
+import java.io.File;
 import java.util.Arrays;
 import java.util.BitSet;
 import java.util.Random;
@@ -18,31 +19,42 @@ public class Main {
 	final static Random rng = new Random( 660 );
 	final static int INPUT_COUNT = 5 ;
 	final static int OUTPUT_COUNT = 5 ;
-
+	final static int POPULATION = 50 ;
+	final static int EPOCHS = 50 ;
+	final static int SIMULATIONS = 1500 ;
+	
 	public static void main(String[] args) {
-
-		String parameterFile = args.length > 0 ? args[0] : null ;
-
 		try {
+			
+			String parameterFile = args.length > 0 ? args[0] : null ;
+			int xdim = args.length > 1 ? Integer.parseInt(args[1]) : INPUT_COUNT ;
+			int ydim = args.length > 2 ? Integer.parseInt(args[2]) : OUTPUT_COUNT ;
+			logger.info("Using file {}", parameterFile ) ;
+			logger.info("Network size: {} x {}", xdim, ydim );
+
 			BrainParameters parameters = new BrainParameters() ;
 			parameters.numInputs = INPUT_COUNT ;
 			parameters.numOutputs = OUTPUT_COUNT ;
 			parameters.connectivityFactor = 0.75 ;
 			parameters.inhibitorRatio = .5 ;
-			parameters.dimensions = new int[]{ 25, 25 } ;
+			parameters.dimensions = new int[]{ xdim, ydim } ;
 			parameters.spikeThreshold = 0.6 ;
 			parameters.transmissionFactor = 1 ;
 			parameters.spikeProfile = new double[]{ 0, 0.5, 1, 0.4, 0, -0.1, -0.17, -0.16, -0.15 } ;
 			parameters.restingPotential = -.10 ;
 			
-			Brain brain = parameterFile==null ? 
-							new Brain(parameters) : 
-							Brain.load( parameterFile ) ;
-							
-			brain = evolve() ;
-			if( parameterFile != null ) {
-				brain.save( parameterFile ) ;
+			boolean fileExists = false ;
+			if( parameterFile !=null ) {
+				File f = new File( parameterFile ) ;
+				fileExists = f.canRead() ;
 			}
+			Brain brain = fileExists ? 
+							Brain.load( parameterFile, xdim, ydim ) :
+							new Brain(parameters, xdim, ydim ) ; 
+			// brain = evolve( xdim, ydim ) ;
+			// if( parameterFile != null ) {
+			// 	brain.save( parameterFile ) ;
+			// }
 
 			Monitor m = new Monitor( brain ) ;
 			m.start();
@@ -53,6 +65,7 @@ public class Main {
 				clk++ ;
 				for( int i=0 ; i<inputs.length ; i++ ) {
 					inputs[i] =  rng.nextInt( 1+(clk % 4) )==0 ? 1 : 0 ;
+					inputs[i] =  Math.cos(i * clk / Math.PI ) ;
 				}
 				// inputs[0] = 1 / ( (clk % 10) + 1 ) ;
 				// inputs[0] = Math.abs( Math.sin( clk / Math.PI ) ) ;
@@ -68,8 +81,8 @@ public class Main {
 		}
 	}
 	
-	public static Brain evolve() throws Exception {
-		BrainData brainData[] = new BrainData[ 5_000 ] ;
+	public static Brain evolve( final int xdim, final int ydim ) throws Exception {
+		BrainData brainData[] = new BrainData[ POPULATION ] ;
 		
 		for( int i=0 ; i<brainData.length ; i++ ) {
 			BitSet bs = new BitSet( BrainParameters.GENOME_SIZE ) ;
@@ -78,7 +91,7 @@ public class Main {
 					bs.set(j) ; 
 				}
 			}
-			brainData[i] = new BrainData( bs ) ;
+			brainData[i] = new BrainData( bs, xdim, ydim ) ;
 		}
 		
 		double inputs[] = new double[ INPUT_COUNT ] ;
@@ -86,8 +99,8 @@ public class Main {
 		logger.info( "Runing epochs ..."  );
 		
 		ExecutorService tpool = Executors.newFixedThreadPool(6) ;
-		for( int e=0 ; e<100 ; e++ ) {			
-			for( int s=0 ; s<3_000 ; s++ ) {
+		for( int e=0 ; e<EPOCHS ; e++ ) {			
+			for( int s=0 ; s<SIMULATIONS ; s++ ) {
 				for( int i=0 ; i<inputs.length ; i++ ) {
 					inputs[i] = rng.nextDouble() ;
 				}
@@ -137,7 +150,7 @@ public class Main {
 					}
 				}
 				
-				brainData[i] = new BrainData( bs ) ;
+				brainData[i] = new BrainData( bs, xdim, ydim ) ;
 			}
 			logger.info( "Epoch {} - best score {}", e, brainData[0].brain.getScore() ) ;
 		}
@@ -161,12 +174,12 @@ class BrainData implements Comparable<BrainData>{
 	Brain brain ;
 	double score ;
 	
-	public BrainData( BitSet genome ) {
+	public BrainData( BitSet genome, int xdim, int ydim ) {
 		this.genome = genome ;
 		BrainParameters bp = BrainParameters.fromBits( genome ) ;
 		bp.numInputs = Main.INPUT_COUNT ;
 		bp.numOutputs = Main.OUTPUT_COUNT ;
-		this.brain = new Brain( bp ) ;
+		this.brain = new Brain( bp, xdim, ydim ) ;
 	}
 	@Override
 	public int compareTo(BrainData o) {

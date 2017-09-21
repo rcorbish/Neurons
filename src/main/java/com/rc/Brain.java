@@ -7,12 +7,8 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
 import java.io.OutputStream;
-import java.io.OutputStreamWriter;
 import java.io.Reader;
-import java.io.Writer;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -39,19 +35,21 @@ public class Brain implements Iterable<Neuron>{
 	private InputNeuron  [] inputs ;						// which nodes are .. inputs 
 	private OutputNeuron [] outputs ;						// .. and outputs
 
-	private final Random rng ;								// utility random number generator
+	private static final Random rng = new Random(24) ;								// utility random number generator
 	private final BrainParameters parameters ;
 
 	private final double scoreReservoir[] ;
 	private int scoreClock ;
 	
-	public Brain( BrainParameters parameters ) {
+	public Brain( BrainParameters parameters, int xdim, int ydim ) {
 		this.parameters = parameters ;
-		this.rng = new Random( 24 ) ;
 		this.scoreReservoir = new double[1000] ;
 		this.scoreClock = 0 ;
 		
-		this.brainDimensions = parameters.dimensions ;
+		int dims[] = new int[]{ xdim, ydim } ;
+		if( ydim < 1) dims[1] = dims[0] ;
+		if( xdim < 1) dims = parameters.dimensions ;
+		this.brainDimensions = dims ;
 
 		int numNeurons = 1 ;
 		for( int i=0 ; i<brainDimensions.length ; i++ ) {
@@ -401,6 +399,7 @@ public class Brain implements Iterable<Neuron>{
 		boolean rc = false ;
 		Gson gson = new Gson() ;
 		try ( OutputStream os = new FileOutputStream( fileName ))  {
+			parameters.dimensions = this.brainDimensions ;
 			String json = gson.toJson( parameters ) ;
 			os.write( json.getBytes( "UTF-8" ) ) ;
 		} catch( IOException ioe ) {
@@ -411,13 +410,17 @@ public class Brain implements Iterable<Neuron>{
 
 
 	public static Brain load( String fileName ) {
+		return Brain.load( fileName, 0, 0 ) ;
+	}		
+
+	public static Brain load( String fileName, int xdim, int ydim ) {
 		Brain rc  ;
 		File file = new File( fileName ) ;
 		try ( InputStream is = new FileInputStream(fileName) ;
 			  Reader json = new InputStreamReader(is) ) {
 			Gson gson = new Gson() ;
 			BrainParameters bp = (BrainParameters)gson.fromJson( json, BrainParameters.class ) ;
-			rc = new Brain( bp ) ;
+			rc = new Brain( bp, xdim, ydim ) ;
 		} catch( Exception e ) {
 			e.printStackTrace();
 			rc = null ;
