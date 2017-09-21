@@ -22,11 +22,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 
 public class Brain implements Iterable<Neuron>{
 
 	final static Logger log = LoggerFactory.getLogger( Monitor.class ) ;
-		
+
 	final static public int HISTORY_LENGTH = 100 ;
 
 	private Neuron[] neurons ;								// list of neurons in the brain 
@@ -38,14 +39,16 @@ public class Brain implements Iterable<Neuron>{
 	private static final Random rng = new Random(24) ;								// utility random number generator
 	private final BrainParameters parameters ;
 
+	private final double spikeCost ; 
+
 	private final double scoreReservoir[] ;
 	private int scoreClock ;
-	
+
 	public Brain( BrainParameters parameters, int xdim, int ydim ) {
 		this.parameters = parameters ;
 		this.scoreReservoir = new double[1000] ;
 		this.scoreClock = 0 ;
-		
+
 		int dims[] = new int[]{ xdim, ydim } ;
 		if( ydim < 1) dims[1] = dims[0] ;
 		if( xdim < 1) dims = parameters.dimensions ;
@@ -80,8 +83,8 @@ public class Brain implements Iterable<Neuron>{
 					double weight = ( rng.nextDouble() > parameters.inhibitorRatio ) ?
 							distance*rng.nextDouble() : -rng.nextDouble() ;
 
-					Axon axon = new Axon( input, weight ) ;							
-					target.addInput( axon ) ;
+							Axon axon = new Axon( input, weight ) ;							
+							target.addInput( axon ) ;
 				}
 			}
 		}		
@@ -95,16 +98,16 @@ public class Brain implements Iterable<Neuron>{
 				int loc[] = getLocationFromIndex(ix) ;
 				if( loc[0] == 0 ) {
 					double weight = 
-					( rng.nextDouble() > parameters.inhibitorRatio) ?
-					rng.nextDouble() : rng.nextDouble() ;
+							( rng.nextDouble() > parameters.inhibitorRatio) ?
+									rng.nextDouble() : rng.nextDouble() ;
 
-					Axon axon = new Axon( inputs[i], weight ) ;
-					n.addInput(axon);
+									Axon axon = new Axon( inputs[i], weight ) ;
+									n.addInput(axon);
 				}
 			}
 		}
 
-		
+
 		for( int i=0 ; i<outputs.length ; i++ ) {
 			outputs[i] = new OutputNeuron( this, i, parameters ) ;
 			for( Neuron n : neurons ) {
@@ -112,11 +115,11 @@ public class Brain implements Iterable<Neuron>{
 				int loc[] = getLocationFromIndex(ix) ;
 				if( loc[0] == brainDimensions[0]-1 ) {
 					double weight = 
-					( rng.nextDouble() > parameters.inhibitorRatio ) ?
-					rng.nextDouble() : -rng.nextDouble() ;
+							( rng.nextDouble() > parameters.inhibitorRatio ) ?
+									rng.nextDouble() : -rng.nextDouble() ;
 
-					Axon axon = new Axon( n, weight ) ;
-					outputs[i].addInput(axon);
+									Axon axon = new Axon( n, weight ) ;
+									outputs[i].addInput(axon);
 				}
 			}
 		}
@@ -125,6 +128,16 @@ public class Brain implements Iterable<Neuron>{
 		this.neurons = new Neuron[ neurons.size() ] ;
 		neurons.toArray( this.neurons ) ;
 		log.debug( "Copied {} neurons", this.neurons.length ) ;
+
+		// Better score if spike is low
+		double sc = 0 ;
+		if( this.neurons.length > 0 ) {
+			Neuron n = this.neurons[0] ;
+			for( double s : n.spike ) {
+				sc += s/5.0 ;
+			}
+		}
+		spikeCost = sc ;
 	}
 
 	public void step( double[] inputs ) {
@@ -157,6 +170,7 @@ public class Brain implements Iterable<Neuron>{
 			double dp = p - n.getHistory( sl ) ; 
 			score += dp * dp ;
 		}
+		score -= spikeCost ;
 
 		if( scoreClock < scoreReservoir.length ) {
 			scoreReservoir[scoreClock] = score ;
@@ -177,13 +191,13 @@ public class Brain implements Iterable<Neuron>{
 		}
 		return score / scoreClock ;
 	}
-	
+
 
 	protected boolean removeDeadReferences( List<Neuron> neurons ) {
 		boolean removed = false ;
 		Set<Neuron> visited = new HashSet<>() ; 
 		Queue<Neuron> queue = new LinkedList<>() ;
-		
+
 		for( Neuron output : outputs ) {
 			queue.add( output ) ;
 			for( Iterator<Axon> j=output.iterator() ; j.hasNext() ; ) {
@@ -195,7 +209,7 @@ public class Brain implements Iterable<Neuron>{
 				}
 			}
 		}
-		
+
 		while( !queue.isEmpty() ) {
 			Neuron n = queue.remove() ; 
 			if( visited.add(n) ) {
@@ -266,7 +280,7 @@ public class Brain implements Iterable<Neuron>{
 	public double distance( int n0, int n1 ) {
 		int l0[] = getLocationFromIndex( n0 ) ;
 		int l1[] = getLocationFromIndex( n1 ) ;
-		
+
 		double distance =  0.0 ;
 		for( int i=0 ; i<l0.length ; i++ ) {
 			distance += ( l0[i] - l1[i] ) * ( l0[i] - l1[i] ) ;
@@ -282,7 +296,7 @@ public class Brain implements Iterable<Neuron>{
 		int ix = 0 ;
 		rc.states = new NeuronState[ inputs.length + outputs.length + neurons.length] ;
 		rc.outputs = new double[ outputs.length ] ;
-		
+
 		for( int i=0 ; i<inputs.length ; i++ ) {
 			rc.states[ix++] = new NeuronState( inputs[i] ) ;
 		}
@@ -297,7 +311,7 @@ public class Brain implements Iterable<Neuron>{
 		return rc ;
 	}
 
-	
+
 	public CharSequence toJson() {
 		StringBuilder rc  = new StringBuilder() ;
 		rc.append( "{ \"nodes\": [") ;
@@ -397,7 +411,7 @@ public class Brain implements Iterable<Neuron>{
 
 	public boolean save( String fileName ) {
 		boolean rc = false ;
-		Gson gson = new Gson() ;
+		Gson gson = new GsonBuilder().setPrettyPrinting().create();
 		try ( OutputStream os = new FileOutputStream( fileName ))  {
 			parameters.dimensions = this.brainDimensions ;
 			String json = gson.toJson( parameters ) ;
@@ -415,9 +429,8 @@ public class Brain implements Iterable<Neuron>{
 
 	public static Brain load( String fileName, int xdim, int ydim ) {
 		Brain rc  ;
-		File file = new File( fileName ) ;
 		try ( InputStream is = new FileInputStream(fileName) ;
-			  Reader json = new InputStreamReader(is) ) {
+				Reader json = new InputStreamReader(is) ) {
 			Gson gson = new Gson() ;
 			BrainParameters bp = (BrainParameters)gson.fromJson( json, BrainParameters.class ) ;
 			rc = new Brain( bp, xdim, ydim ) ;

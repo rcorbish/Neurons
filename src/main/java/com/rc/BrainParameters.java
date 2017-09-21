@@ -16,9 +16,10 @@ public class BrainParameters  {
 	public int dimensions [] = { 10, 10 } ;
 	
 	
+	final public static int SPIKE_PROFILE_SIZE = 10 ; 
 	final public static int BITS_PER_NUMBER = 6 ; 
 	final public static double NUMBER_GRANULARITY = 1 << BITS_PER_NUMBER ;
-	final public static int GENOME_SIZE = BITS_PER_NUMBER * 5 ;
+	final public static int GENOME_SIZE = BITS_PER_NUMBER * (5+SPIKE_PROFILE_SIZE) ;
 
 	public static BrainParameters fromBits( BitSet genome ) {
 		BrainParameters bp = new BrainParameters() ;
@@ -29,6 +30,10 @@ public class BrainParameters  {
 		bp.transmissionFactor = getValue( genome,  BITS_PER_NUMBER*3, BITS_PER_NUMBER ) / NUMBER_GRANULARITY ; 
 		bp.restingPotential   = ( getValue( genome,  BITS_PER_NUMBER*4, BITS_PER_NUMBER ) / NUMBER_GRANULARITY ) - 0.5 ; 
 		
+		bp.spikeProfile = new double[SPIKE_PROFILE_SIZE] ;
+		for( int i=0 ; i<bp.spikeProfile.length ; i++ ) {
+			 bp.spikeProfile[i] = getValue( genome,  BITS_PER_NUMBER*(i+5), BITS_PER_NUMBER ) / NUMBER_GRANULARITY ;
+		}
 		return bp ;
 	}
 	

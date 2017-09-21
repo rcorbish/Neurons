@@ -19,9 +19,9 @@ public class Main {
 	final static Random rng = new Random( 660 );
 	final static int INPUT_COUNT = 5 ;
 	final static int OUTPUT_COUNT = 5 ;
-	final static int POPULATION = 50 ;
-	final static int EPOCHS = 50 ;
-	final static int SIMULATIONS = 1500 ;
+	final static int POPULATION = 1_000 ;
+	final static int EPOCHS = 1_000 ;
+	final static int SIMULATIONS = 2_000 ;
 	
 	public static void main(String[] args) {
 		try {
@@ -51,10 +51,10 @@ public class Main {
 			Brain brain = fileExists ? 
 							Brain.load( parameterFile, xdim, ydim ) :
 							new Brain(parameters, xdim, ydim ) ; 
-			// brain = evolve( xdim, ydim ) ;
-			// if( parameterFile != null ) {
-			// 	brain.save( parameterFile ) ;
-			// }
+			brain = evolve( xdim, ydim ) ;
+			if( parameterFile != null ) {
+			 	brain.save( parameterFile ) ;
+			}
 
 			Monitor m = new Monitor( brain ) ;
 			m.start();
