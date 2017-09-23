@@ -70,24 +70,46 @@ public class Brain implements Iterable<Neuron>{
 
 		log.debug( "Created {} neurons", neurons.size() ) ;
 
+		int manhattanMax = 0 ;
+		for( int d : dims ) {
+			manhattanMax = Math.max( manhattanMax, d ) ;
+		}
+		
+		int address[] = new int[ dims.length ] ;
+		
 		for( int targetNeuronIndex = 0 ; targetNeuronIndex<numNeurons ; targetNeuronIndex++ ) {
-			Neuron target = neurons.get( targetNeuronIndex ) ;
-
-			for( int inputNeuronIndex = 0 ; inputNeuronIndex<numNeurons ; inputNeuronIndex++ ) {
-				Neuron input = neurons.get( inputNeuronIndex ) ;
-
-				double distance =  1 + distance(targetNeuronIndex,inputNeuronIndex) ;
-				double chanceOfConnection = Math.exp( distance * -parameters.connectivityFactor ) ;
-
-				if( rng.nextDouble() < chanceOfConnection ) { 
-					double weight = ( rng.nextDouble() > parameters.inhibitorRatio ) ?
-							distance*rng.nextDouble() : -rng.nextDouble() ;
-
-							Axon axon = new Axon( input, weight ) ;							
-							target.addInput( axon ) ;
+			final int loc[] = getLocationFromIndex( targetNeuronIndex ) ;
+			
+			for( int link=0 ; link<10 ; link++ ) {
+				int maxLen = Math.abs( (int)( rng.nextGaussian() * manhattanMax / 4.0 ) ) ;
+				
+				for( int i=1 ; i<dims.length ; i++ ) {
+					boolean lhs = rng.nextInt( dims[i] ) < loc[i] ;
+					int move ;
+					if( lhs ) {
+						move = -Math.abs( (int)( rng.nextGaussian() * loc[i] / 2.0  ) ) ;						
+					} else {
+						move = Math.abs( (int)( rng.nextGaussian() * ( dims[i] - loc[i] ) / 2.0 ) ) ;
+					}
+					address[i] = loc[i] + move ;
+					
+					if( address[i] < 0 ) address[i] = 0 ;
+					if( address[i] >= dims[i] ) address[i] = dims[i] - 1 ;
+					
+					maxLen -= Math.abs( move ) ;			
 				}
+				address[0] = maxLen ;
+				if( address[0] < 0 ) address[0] = 0 ;
+				if( address[0] >= dims[0] ) address[0] = dims[0] - 1 ;
+				
+				Neuron target = neurons.get( targetNeuronIndex ) ;
+				Neuron input = neurons.get( getIndexFromLocation(address) ) ;
+				double weight = rng.nextGaussian() ;
+				Axon axon = new Axon( input, weight ) ;							
+				target.addInput( axon ) ;
 			}
 		}		
+		
 		inputs = new InputNeuron[parameters.numInputs] ;
 		outputs = new OutputNeuron[parameters.numOutputs] ;
 

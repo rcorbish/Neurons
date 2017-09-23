@@ -1,8 +1,10 @@
 package com.rc ;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.BitSet;
+import java.util.List;
 import java.util.Random;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -19,9 +21,9 @@ public class Main {
 	final static Random rng = new Random( 660 );
 	final static int INPUT_COUNT = 5 ;
 	final static int OUTPUT_COUNT = 5 ;
-	final static int POPULATION = 100 ;
-	final static int EPOCHS = 50 ;
-	final static int SIMULATIONS = 1_500 ;
+	final static int POPULATION = 1_000 ;
+	final static int EPOCHS = 100 ;
+	final static int SIMULATIONS = 1_200 ;
 	
 	public static void main(String[] args) {
 		try {
@@ -82,6 +84,8 @@ public class Main {
 	}
 	
 	public static Brain evolve( final int xdim, final int ydim ) throws Exception {
+		logger.info( "Evolution starts..." ) ;
+		
 		BrainData brainData[] = new BrainData[ POPULATION ] ;
 		
 		for( int i=0 ; i<brainData.length ; i++ ) {
@@ -93,10 +97,10 @@ public class Main {
 			}
 			brainData[i] = new BrainData( bs, xdim, ydim ) ;
 		}
-		
+
+		logger.info( "Population created." ) ;
+
 		double inputs[] = new double[ INPUT_COUNT ] ;
-		
-		logger.info( "Runing epochs ..."  );
 		
 		ExecutorService tpool = Executors.newFixedThreadPool(6) ;
 		for( int e=0 ; e<EPOCHS ; e++ ) {			
@@ -124,7 +128,13 @@ public class Main {
 			}
 			Arrays.sort( brainData ) ;
 			int survivingIndex = brainData.length ;
-			for( int i=survivingIndex / 2 ; i<brainData.length ; i++ ) {
+			
+			int numNewBrains = brainData.length / 2 ;
+			CountDownLatch cdl = new CountDownLatch(numNewBrains) ;
+			
+			final List<BrainData> newBrains = new ArrayList<>() ;
+			
+			for( int i=0 ; i<numNewBrains ; i++ ) {
 				int ix1 = rng.nextInt( survivingIndex ) ;
 				int ix2 = rng.nextInt( survivingIndex ) ;
 				
@@ -137,7 +147,7 @@ public class Main {
 				BitSet p1 = brainData[ ix1 ].genome;
 				BitSet p2 = brainData[ ix2 ].genome;
 				
-				BitSet bs = new BitSet( BrainParameters.GENOME_SIZE ) ;
+				final BitSet bs = new BitSet( BrainParameters.GENOME_SIZE ) ;
 				
 				// Inheritance
 				for( int b=0 ; b<BrainParameters.GENOME_SIZE ; b++ ) {
@@ -149,8 +159,17 @@ public class Main {
 						bs.set( b,  rng.nextBoolean()  ) ;
 					}
 				}
-				
-				brainData[i] = new BrainData( bs, xdim, ydim ) ;
+				Runnable t = new Runnable() {
+					public void run() {
+						newBrains.add( new BrainData( bs, xdim, ydim ) ) ;
+						cdl.countDown();
+					}
+				} ;
+				tpool.submit( t ) ;
+			}
+			cdl.await() ; 
+			for( int i=0 ; i<newBrains.size() ; i++ ) {
+				brainData[brainData.length - i - 1] = newBrains.get(i) ;
 			}
 			logger.info( "Epoch {} - best score {}", e, brainData[0].brain.getScore() ) ;
 		}
