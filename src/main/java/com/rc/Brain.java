@@ -1,7 +1,5 @@
 package com.rc ;
 
-import java.io.DataOutputStream;
-import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -10,13 +8,9 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.Reader;
 import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.LinkedList;
+import java.util.Arrays;
 import java.util.List;
-import java.util.Queue;
 import java.util.Random;
-import java.util.Set;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -24,167 +18,175 @@ import org.slf4j.LoggerFactory;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
-public class Brain implements Iterable<Neuron>{
+public class Brain  {
 
-	final static Logger log = LoggerFactory.getLogger( Monitor.class ) ;
-
+	final static Logger log = LoggerFactory.getLogger( Brain.class ) ;
+	
 	final static public int HISTORY_LENGTH = 100 ;
 
-	private Neuron[] neurons ;								// list of neurons in the brain 
+	private final double outputHistory[][] ;
+	private int historyIndex ;
+	
+	private final Neuron neurons[] ;
+	private final Edge edges[][] ;								// adjacency list ( directed & weighted )
+	
+	private final int [] brainDimensions ;						// the grid size(s) of the brain ( e.g. a 3x3 brain has 3 layers of 3 neurons )
+	private final Neuron  [] inputs ;								// which nodes are .. inputs 
+	private final Neuron  [] outputs ;							// .. and outputs
 
-	private int [] brainDimensions ;						// the grid size(s) of the brain ( e.g. a 3x3 brain has 3 layes of 3 neurons )
-	private InputNeuron  [] inputs ;						// which nodes are .. inputs 
-	private OutputNeuron [] outputs ;						// .. and outputs
-
-	private static final Random rng = new Random(24) ;								// utility random number generator
-	private final BrainParameters parameters ;
+	private static final Random rng = new Random(24) ;		// utility random number generator
 
 	private final double spikeCost ; 
+	private final BrainParameters parameters ;
 
 	private final double scoreReservoir[] ;
 	private int scoreClock ;
 
-	public Brain( BrainParameters parameters, int xdim, int ydim ) {
+	public Brain( BrainParameters parameters, int ... dims ) {
 		this.parameters = parameters ;
 		this.scoreReservoir = new double[1000] ;
 		this.scoreClock = 0 ;
-
-		int dims[] = new int[]{ xdim, ydim } ;
-		if( ydim < 1) dims[1] = dims[0] ;
-		if( xdim < 1) dims = parameters.dimensions ;
 		this.brainDimensions = dims ;
-
+		this.outputHistory = new double[HISTORY_LENGTH][ parameters.numOutputs] ; 
+		this.historyIndex = 0 ;
+		
 		int numNeurons = 1 ;
 		for( int i=0 ; i<brainDimensions.length ; i++ ) {
 			numNeurons *= brainDimensions[i] ; 
 		}
-		List<Neuron> neurons = new ArrayList<>() ;
-
-		if( numNeurons < ( parameters.numInputs+parameters.numOutputs) ) {
-			throw new RuntimeException( "The total neuron count must be more than the sum of inputs and outputs." ) ;
+	
+		numNeurons += parameters.numInputs ;
+		numNeurons += parameters.numOutputs ;
+		
+		this.neurons = new Neuron[ numNeurons ] ;
+		for( int i = 0 ; i<numNeurons ; i++ ) {
+			neurons[i] = new Neuron( String.valueOf(i), parameters ) ;
 		}
 
-		for( int neuronIndex = 0 ; neuronIndex<numNeurons ; neuronIndex++ ) {
-			neurons.add( new Neuron( this, neuronIndex, parameters ) ) ;
+		this.inputs = new Neuron[parameters.numInputs] ;
+		this.outputs = new Neuron[parameters.numOutputs] ;
+
+		for( int i=0 ; i<inputs.length ; i++ ) {
+			inputs[i] = neurons[i] ;
+		}
+		for( int i=0 ; i<outputs.length ; i++ ) {
+			outputs[i] = neurons[numNeurons-i-1] ;
 		}
 
-		log.debug( "Created {} neurons", neurons.size() ) ;
+		
+		this.edges = new Edge[ numNeurons ][] ;
 
-		int manhattanMax = 0 ;
-		for( int d : dims ) {
-			manhattanMax = Math.max( manhattanMax, d ) ;
+		int leftLiquid[] = new int[brainDimensions.length] ;
+		for( int i=2 ; i<leftLiquid.length ; i++ ) {
+			leftLiquid[i] = brainDimensions[i] - 1 ;
 		}
-				
-		for( int targetNeuronIndex = 0 ; targetNeuronIndex<numNeurons ; targetNeuronIndex++ ) {
+		leftLiquid[0] = 0 ;
+
+		for( int i=0 ; i<inputs.length ; i++ ) {
+			edges[i] = new Edge[ brainDimensions[1] ] ;
+			
+			for( int l=0 ; l<edges[i].length ; l++ ) {
+				leftLiquid[1] = l ;
+				int source = getIndexFromLocation( leftLiquid ) ;
+				edges[i][l] = new Edge( source, rng.nextGaussian() ) ;
+			}
+		}
+		
+		leftLiquid[0] = brainDimensions[0] - 1 ;
+		
+		for( int i=0 ; i<outputs.length ; i++ ) {
+			edges[numNeurons-i-1] = new Edge[ brainDimensions[1] ] ;
+			
+			for( int l=0 ; l<edges[numNeurons-i-1].length ; l++ ) {
+				leftLiquid[1] = l ;
+				int source = getIndexFromLocation( leftLiquid ) ;
+				edges[numNeurons-i-1][l] = new Edge( source, rng.nextGaussian() ) ;
+			}
+		}
+
+		List<Edge> newEdges = new ArrayList<Edge>() ;
+
+		for( int targetNeuronIndex = inputs.length ; targetNeuronIndex<(numNeurons-outputs.length) ; targetNeuronIndex++ ) {
 			final int loc[] = getLocationFromIndex( targetNeuronIndex ) ;
-			Neuron target = neurons.get( targetNeuronIndex ) ;
+			newEdges.clear();
+			
 			
 			for( int d=0 ; d<dims.length ; d++ ) {
 				loc[d]-- ;
 				if( loc[d] >= 0 ) {
-					Neuron input = neurons.get( getIndexFromLocation(loc) ) ;					
 					double weight = rng.nextGaussian() ;
-					Axon axon = new Axon( input, weight ) ;							
-					target.addInput( axon ) ;
+					Edge edge = new Edge( getIndexFromLocation(loc), weight ) ;
+					newEdges.add( edge ) ;
 				}
 				loc[d]++ ;
-				{
-					Neuron input = neurons.get( getIndexFromLocation(loc) ) ;					
+				{					
 					double weight = rng.nextGaussian() ;
-					Axon axon = new Axon( input, weight ) ;							
-					target.addInput( axon ) ;
+					Edge edge = new Edge( getIndexFromLocation(loc), weight ) ;
+					newEdges.add( edge ) ;
 				}
 				loc[d]++ ;
 				if( loc[d] < dims[d] ) {
-					Neuron input = neurons.get( getIndexFromLocation(loc) ) ;					
 					double weight = rng.nextGaussian() ;
-					Axon axon = new Axon( input, weight ) ;							
-					target.addInput( axon ) ;					
+					Edge edge = new Edge( getIndexFromLocation(loc), weight ) ;
+					newEdges.add( edge ) ;
 				}
 				loc[d]-- ;
-			}			
+//				{
+//					int x = loc[0] ;
+//					loc[0] = rng.nextInt( dims[0] ) ;
+//					double weight = rng.nextGaussian() ;
+//					Edge edge = new Edge( getIndexFromLocation(loc), weight ) ;
+//					newEdges.add( edge ) ;
+//					loc[0] = x ;
+//				}
+			}
+			
+			edges[targetNeuronIndex] = new Edge[ newEdges.size() ] ;
+			newEdges.toArray( edges[targetNeuronIndex] ) ;
 		}		
 		
-		inputs = new InputNeuron[parameters.numInputs] ;
-		outputs = new OutputNeuron[parameters.numOutputs] ;
-
-		for( int i=0 ; i<inputs.length ; i++ ) {
-			inputs[i] = new InputNeuron( this, i, parameters ) ;
-			for( Neuron n : neurons ) {
-				int ix  = n.getIndexInBrain() ;
-				int loc[] = getLocationFromIndex(ix) ;
-				if( loc[0] == 0 ) {
-					double weight = 
-							( rng.nextDouble() > parameters.inhibitorRatio) ?
-									rng.nextDouble() : rng.nextDouble() ;
-
-									Axon axon = new Axon( inputs[i], weight ) ;
-									n.addInput(axon);
-				}
-			}
-		}
-
-
-		for( int i=0 ; i<outputs.length ; i++ ) {
-			outputs[i] = new OutputNeuron( this, i, parameters ) ;
-			for( Neuron n : neurons ) {
-				int ix  = n.getIndexInBrain() ;
-				int loc[] = getLocationFromIndex(ix) ;
-				if( loc[0] == brainDimensions[0]-1 ) {
-					double weight = 
-							( rng.nextDouble() > parameters.inhibitorRatio ) ?
-									rng.nextDouble() : -rng.nextDouble() ;
-
-									Axon axon = new Axon( n, weight ) ;
-									outputs[i].addInput(axon);
-				}
-			}
-		}
-		while( removeDeadReferences( neurons ) ) {} ;
-
-		this.neurons = new Neuron[ neurons.size() ] ;
-		neurons.toArray( this.neurons ) ;
-		log.debug( "Copied {} neurons", this.neurons.length ) ;
-
-		// Better score if spike is low
+		
+		// Better score if spike is flat
 		double sc = 0 ;
 		if( this.neurons.length > 0 ) {
-			Neuron n = this.neurons[0] ;
-			for( double s : n.spike ) {
-				sc += s/5.0 ;
+			for( double s : parameters.spikeProfile ) {
+				sc += Math.abs(s)/5.0 ;
 			}
 		}
-		spikeCost = sc ;
+		this.spikeCost = sc ;
 	}
 
 	public void step( double[] inputs ) {
 		for( int i=0 ; i<inputs.length ; i++ ) {
 			this.inputs[i].setPotential( inputs[i] );
 		}
-		for( Neuron n : this ) {
-			n.updatePotential() ;
+		double newPotentials[] = new double[ neurons.length ] ;
+		
+		for( int n=inputs.length ; n<neurons.length; n++ ) {
+			newPotentials[n] = 0 ;
+			for( int e=0 ; e<edges[n].length ; e++ ) {
+				Edge edge = edges[n][e] ;
+				newPotentials[n] += neurons[edge.source].getPotential() * edge.weight ;
+			}
 		}
-		for( Neuron n : outputs ) {
-			n.updatePotential() ;
+		for( int n=inputs.length ; n<neurons.length; n++ ) {
+			neurons[n].setPotential( newPotentials[n] ) ;
 		}
-		for( Neuron n : this ) {
-			n.clock() ;
-		}
-		for( Neuron n : outputs ) {
-			n.clock() ;
+		// For scoring
+		for( int i=0 ; i<outputs.length ; i++ ) {
+			outputHistory[historyIndex][i] = outputs[i].getPotential() ;
 		}
 	}
 
 
 	public void updateScores() {
 		double score = 0 ;
-		for( OutputNeuron n : outputs ) {
-			double p = n.getPotential() ; 
+		for( int n=0 ; n<outputs.length ; n++  ) {
+			double p = neurons[n].getPotential() ; 
 			for( Neuron o : outputs ) {
 				score += Math.abs( o.getPotential() - p ) ; 
 			}
-			int sl = n.spike.length ;
-			double dp = p - n.getHistory( sl ) ; 
+			double dp = p - getHistory( n, BrainParameters.SPIKE_PROFILE_SIZE ) ; 
 			score += Math.abs(dp) ;
 		}
 		score -= spikeCost ;
@@ -198,6 +200,16 @@ public class Brain implements Iterable<Neuron>{
 		}
 	}
 
+	
+	public double getHistory( int outputIndex, int stepsBefore ) {
+		int step = historyIndex - stepsBefore ;
+		if( step < 0 ) {
+			step += outputHistory.length ;
+		}
+		return outputHistory[step][outputIndex] ;
+	}
+	
+	
 	/**
 	 * Get the average score 
 	 */
@@ -210,58 +222,12 @@ public class Brain implements Iterable<Neuron>{
 	}
 
 
-	protected boolean removeDeadReferences( List<Neuron> neurons ) {
-		boolean removed = false ;
-		Set<Neuron> visited = new HashSet<>() ; 
-		Queue<Neuron> queue = new LinkedList<>() ;
-
-		for( Neuron output : outputs ) {
-			queue.add( output ) ;
-			for( Iterator<Axon> j=output.iterator() ; j.hasNext() ; ) {
-				Axon a = j.next() ;
-				Neuron n = a.getNeuron() ;
-				if( !neurons.contains(n)  ) {
-					j.remove();
-					removed = true ;
-				}
-			}
-		}
-
-		while( !queue.isEmpty() ) {
-			Neuron n = queue.remove() ; 
-			if( visited.add(n) ) {
-				for( Axon a : n ) {
-					Neuron n2 = a.getNeuron() ;
-					if( !n2.isDead() && neurons.contains(n2) ) {
-						queue.add( n2 ) ;
-					}
-				}
-			}
-		}
-		log.debug( "Visited {} neurons", visited.size() ) ;
-		for( Iterator<Neuron> i=neurons.iterator() ; i.hasNext() ; ) {
-			Neuron dead = i.next() ;
-			if( !visited.contains( dead ) ) {
-				i.remove() ;
-				removed = true ;
-				for( Neuron n : neurons ) {
-					for( Iterator<Axon> j=n.iterator() ; j.hasNext() ; ) {
-						Axon a = j.next() ;
-						if( a.getNeuron() == dead ) {
-							j.remove(); 
-						}
-					}
-				}
-			}
-		}
-		return removed ;
-	}
-
-
 	/**
 	 * Determine the coordinates of a neuron in the brain
 	 */
 	public int[] getLocationFromIndex( int index ) {
+		index -= inputs.length  ;
+		
 		int [] rc = new int[ brainDimensions.length ] ;
 
 		for( int dimIndex=0 ; dimIndex<brainDimensions.length ; dimIndex++ ) {
@@ -283,13 +249,9 @@ public class Brain implements Iterable<Neuron>{
 			rc += location[dimIndex-1] ;
 		}
 
-		return rc ;
+		return rc += inputs.length ;
 	}
 
-	/**
-	 * @see #getIndexFromLocation(int[])
-	 */
-	public Neuron getNeuronByIndex( int ix ) { return neurons[ix] ; }
 
 	/**
 	 * Calculate Euclidian distance between two neurons
@@ -305,8 +267,8 @@ public class Brain implements Iterable<Neuron>{
 		return Math.sqrt( distance ) ;
 	}
 
-	public InputNeuron[] getInputs() { return inputs ; }
-	public OutputNeuron[] getOutputs() { return outputs ; }
+	public Neuron[] getInputs() { return inputs ; }
+	public Neuron[] getOutputs() { return outputs ; }
 
 	public Potentials getNeuronPotentials() {
 		Potentials rc = new Potentials() ;
@@ -330,6 +292,7 @@ public class Brain implements Iterable<Neuron>{
 
 
 	public CharSequence toJson() {
+		
 		StringBuilder rc  = new StringBuilder() ;
 		rc.append( "{ \"nodes\": [") ;
 		printNodes( rc ) ;
@@ -343,84 +306,42 @@ public class Brain implements Iterable<Neuron>{
 
 	private void printNodes( StringBuilder rc ) {
 		char sep = ' '  ;
-		for( Neuron n : inputs ) {
-			rc.append( sep ) ;
+		for( int n=0 ; n<neurons.length ; n++ ) {
+			rc.append( sep ) 
+			.append( "{ \"name\":\"" ) 
+			.append( neurons[n].getName() ) 
+			.append( "\",\"potential\":" ) 
+			.append( neurons[n].getPotential() ) 
+			;
+			if( n < inputs.length ) {
+				rc.append( ",\"fx\": 20 ") ;
+			} else if ( n>=(neurons.length - outputs.length) ) {
+				rc.append( ",\"fx\": 600 ") ;
+			}
+			rc.append( " }" ) 
+			;
 			sep = ',' ;
-			rc.append( "{\"name\":\"" ) ;
-			rc.append( n.getName() ) ;
-			rc.append( "\",\"potential\":" ) ;
-			rc.append( n.getPotential() ) ;				
-			rc.append( ",\"type\":\"" ) ;
-			rc.append( n.getType().toString() ) ;				
-			rc.append( "\",\"fx\":100" ) ;
-			rc.append( " }" ) ;
-		}
-		for( Neuron n : outputs ) {
-			rc.append( sep ) ;
-			sep = ',' ;
-			rc.append( "{\"name\":\"" ) ;
-			rc.append( n.getName() ) ;
-			rc.append( "\",\"potential\":" ) ;
-			rc.append( Double.isFinite( n.getPotential() ) ? n.getPotential() : 0 ) ;				
-			rc.append( ",\"type\":\"" ) ;
-			rc.append( n.getType().toString() ) ;				
-			rc.append( "\",\"fx\":600" ) ;
-			rc.append( " }" ) ;
-		}
-		for( Neuron n : neurons ) {
-			int loc[] = getLocationFromIndex( n.getIndexInBrain() ) ; 
-			rc.append( sep ) ;
-			sep = ',' ;
-			rc.append( "{\"name\":\"" ) ;
-			rc.append( n.getName() ) ;
-			rc.append( "\",\"potential\":" ) ;
-			rc.append( Double.isFinite( n.getPotential() ) ? n.getPotential() : 0 ) ;				
-			rc.append( ",\"type\":\"" ) ;
-			rc.append( n.getType().toString() ) ;				
-			rc.append( "\",\"px\":" ) ;
-			rc.append( loc[0] ) ;
-			rc.append( ",\"py\":" ) ;
-			rc.append( loc[1] ) ;
-			rc.append( " }" ) ;
 		}
 	}
 
 	private void printLinks( StringBuilder rc ) {
 		char sep = ' '  ;
-		for( Neuron n : neurons ) {
-			for( Axon in : n ) {
-				rc.append( sep ) ;
+		for( int n=0 ; n<neurons.length ; n++  ) {
+			for( int e=0 ; e<edges[n].length ; e++ ) {
+				Edge edge = edges[n][e] ;
+				Neuron source = neurons[edge.source] ;
+				Neuron target = neurons[n] ;
+				
+				rc.append( sep ) 
+				.append( "{\"source\":\"" ) 		
+				.append( source.getName() ) 
+				.append( "\",\"target\":\"" ) 
+				.append( target.getName() ) 
+				.append( "\",\"weight\":" ) 
+				.append( edge.weight ) 		
+				.append( " }" ) 
+				;
 				sep = ',' ;
-				rc.append( "{\"source\":\"" ) ;		
-				Neuron source = in.getNeuron() ;
-				rc.append( source.getName() ) ;
-				rc.append( "\",\"target\":\"" ) ;
-				rc.append( n.getName() ) ;
-				rc.append( "\",\"weight\":" ) ;
-				rc.append( in.getMembraneTransmissionFactor() ) ;				
-				rc.append( ",\"name\":\"" ) ;
-				rc.append( source.getName() ) ;				
-				rc.append( "-" ) ;
-				rc.append( n.getName() ) ;
-				rc.append( "\" }" ) ;
-			}
-		}
-		for( Neuron n : outputs ) {
-			for( Axon in : n ) {
-				rc.append( sep ) ;
-				sep = ',' ;
-				rc.append( "{\"source\":\"" ) ;		
-				Neuron source = in.getNeuron() ;
-				rc.append( source.getName() ) ;
-				rc.append( "\",\"target\":\"" ) ;
-				rc.append( n.getName() ) ;
-				rc.append( "\",\"weight\":" ) ;
-				rc.append( in.getMembraneTransmissionFactor() ) ;				
-				rc.append( ",\"name\":\"" ) ;
-				rc.append( source.getName() ) ;				
-				rc.append( "-" ) ;
-				rc.append( n.getName() ) ;
-				rc.append( "\" }" ) ;
 			}
 		}
 	}
@@ -444,13 +365,13 @@ public class Brain implements Iterable<Neuron>{
 		return Brain.load( fileName, 0, 0 ) ;
 	}		
 
-	public static Brain load( String fileName, int xdim, int ydim ) {
+	public static Brain load( String fileName, int ... dims ) {
 		Brain rc  ;
 		try ( InputStream is = new FileInputStream(fileName) ;
 				Reader json = new InputStreamReader(is) ) {
 			Gson gson = new Gson() ;
 			BrainParameters bp = (BrainParameters)gson.fromJson( json, BrainParameters.class ) ;
-			rc = new Brain( bp, xdim, ydim ) ;
+			rc = new Brain( bp, dims ) ;
 		} catch( Exception e ) {
 			e.printStackTrace();
 			rc = null ;
@@ -458,25 +379,18 @@ public class Brain implements Iterable<Neuron>{
 		return rc ;
 	}
 
-	@Override
-	public Iterator<Neuron> iterator() {
-		return new Iterator<Neuron>() {
-			private int p=0;
+}
 
-			public boolean hasNext() {
-				return neurons.length>p;
-			}
 
-			public Neuron next() {
-				return neurons[p++];
-			}
 
-			public void remove() {
-				throw new UnsupportedOperationException("Cannot remove an element of an array.");
-			}
-		} ;
+
+class Edge {
+	public int source ;
+	public double weight ;
+	public Edge( int sourceIndex, double weight ) {
+		this.source = sourceIndex ;
+		this.weight = weight ;
 	}
-
 }
 
 

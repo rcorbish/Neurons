@@ -8,6 +8,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Queue;
 import java.util.Random;
+import java.util.StringJoiner;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -17,6 +18,9 @@ import org.eclipse.jetty.util.ConcurrentArrayQueue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import joptsimple.OptionParser;
+import joptsimple.OptionSet;
+
 
 public class Main {
 	final static Logger logger = LoggerFactory.getLogger( Monitor.class ) ;
@@ -24,27 +28,40 @@ public class Main {
 	final static Random rng = new Random( 660 );
 	final static int INPUT_COUNT = 5 ;
 	final static int OUTPUT_COUNT = 5 ;
-	final static int POPULATION = 1_000 ;
-	final static int EPOCHS = 100 ;
-	final static int SIMULATIONS = 1_200 ;
+	final static int POPULATION = 5_000 ;
+	final static int EPOCHS = 200 ;
+	final static int SIMULATIONS = 2000 ;
 	
 	public static void main(String[] args) {
 		try {
 			
-			String parameterFile = args.length > 0 ? args[0] : null ;
-			int xdim = args.length > 1 ? Integer.parseInt(args[1]) : INPUT_COUNT ;
-			int ydim = args.length > 2 ? Integer.parseInt(args[2]) : OUTPUT_COUNT ;
+			OptionParser parser = new OptionParser( "f::e" );
+	        OptionSet options = parser.parse( args ) ;
+	        
+			String parameterFile = options.has("f") ? options.valueOf( "f" ).toString() : null ;
 			logger.info("Using file {}", parameterFile ) ;
-			logger.info("Network size: {} x {}", xdim, ydim );
 
+			List<?> dimArgs = options.nonOptionArguments() ;
+			
+			int dims[] = new int[ dimArgs.size() ] ;
+			for( int i=0 ; i<dims.length ; i++ ) {
+				dims[i] =  Integer.parseInt( dimArgs.get(i).toString() ) ;
+			}
+
+			StringJoiner sj = new StringJoiner( " x " ) ;
+			for( int d : dims ) {
+				sj.add( String.valueOf(d) ) ;
+			}
+			logger.info("Network size: {}", sj );
+
+			boolean evolve = options.has( "e" ) ;
+			
 			BrainParameters parameters = new BrainParameters() ;
 			parameters.numInputs = INPUT_COUNT ;
 			parameters.numOutputs = OUTPUT_COUNT ;
-			parameters.connectivityFactor = 0.75 ;
 			parameters.inhibitorRatio = .5 ;
-			parameters.dimensions = new int[]{ xdim, ydim } ;
+			parameters.dimensions = dims ;
 			parameters.spikeThreshold = 0.6 ;
-			parameters.transmissionFactor = 1 ;
 			parameters.spikeProfile = new double[]{ 0, 0.5, 1, 0.4, 0, -0.1, -0.17, -0.16, -0.15 } ;
 			parameters.restingPotential = -.10 ;
 			
@@ -54,11 +71,14 @@ public class Main {
 				fileExists = f.canRead() ;
 			}
 			Brain brain = fileExists ? 
-							Brain.load( parameterFile, xdim, ydim ) :
-							new Brain(parameters, xdim, ydim ) ; 
-			brain = evolve( xdim, ydim ) ;
-			if( parameterFile != null ) {
-			 	brain.save( parameterFile ) ;
+							Brain.load( parameterFile, dims ) :
+							new Brain(parameters, dims ) ;
+			if( evolve ) {
+				brain = evolve( dims ) ;
+				
+				if( parameterFile != null ) {
+					brain.save( parameterFile ) ;
+				}
 			}
 
 			Monitor m = new Monitor( brain ) ;
@@ -86,7 +106,7 @@ public class Main {
 		}
 	}
 	
-	public static Brain evolve( final int xdim, final int ydim ) throws Exception {
+	public static Brain evolve( final int ... dims ) throws Exception {
 		logger.info( "Evolution starts..." ) ;
 		
 		BrainData brainData[] = new BrainData[ POPULATION ] ;
@@ -98,7 +118,7 @@ public class Main {
 					bs.set(j) ; 
 				}
 			}
-			brainData[i] = new BrainData( bs, xdim, ydim ) ;
+			brainData[i] = new BrainData( bs, dims ) ;
 		}
 
 		logger.info( "Population created." ) ;
@@ -157,16 +177,16 @@ public class Main {
 				for( int b=0 ; b<BrainParameters.GENOME_SIZE ; b++ ) {
 					bs.set( b,  rng.nextInt(2)==0 ? p2.get(b) : p1.get(b) ) ;
 				}
-				// Mutation = 8%
+				// Mutation = x%
 				for( int b=0 ; b<BrainParameters.GENOME_SIZE ; b++ ) {
-					if( rng.nextDouble() < 0.08 ) {
+					if( rng.nextDouble() < 0.15 ) {
 						bs.set( b,  rng.nextBoolean()  ) ;
 					}
 				}
 				Runnable t = new Runnable() {
 					public void run() {
 						try {
-							BrainData bd = new BrainData( bs, xdim, ydim ) ;
+							BrainData bd = new BrainData( bs, dims ) ;
 							newBrains.add( bd ) ;
 						} catch( Throwable t ) {
 							logger.warn( "WTF - brainless.", t ) ;
@@ -206,12 +226,12 @@ class BrainData implements Comparable<BrainData>{
 	Brain brain ;
 	double score ;
 	
-	public BrainData( BitSet genome, int xdim, int ydim ) {
+	public BrainData( BitSet genome, int ...dims ) {
 		this.genome = genome ;
 		BrainParameters bp = new BrainParameters( genome ) ;
 		bp.numInputs = Main.INPUT_COUNT ;
 		bp.numOutputs = Main.OUTPUT_COUNT ;
-		this.brain = new Brain( bp, xdim, ydim ) ;
+		this.brain = new Brain( bp, dims ) ;
 	}
 	@Override
 	public int compareTo(BrainData o) {
