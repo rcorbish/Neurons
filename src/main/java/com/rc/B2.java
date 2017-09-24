@@ -24,48 +24,37 @@ import org.slf4j.LoggerFactory;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
-public class Brain implements Iterable<Neuron>{
+public class B2 implements Iterable<Neuron>{
 
-	final static Logger log = LoggerFactory.getLogger( Monitor.class ) ;
-
+	final static Logger log = LoggerFactory.getLogger( B2.class ) ;
+	
 	final static public int HISTORY_LENGTH = 100 ;
 
-	private Neuron[] neurons ;								// list of neurons in the brain 
-
-	private int [] brainDimensions ;						// the grid size(s) of the brain ( e.g. a 3x3 brain has 3 layes of 3 neurons )
+	private Edge edges[][] ;								// adjacency list ( directed & weighted )
+	
+	private int [] brainDimensions ;						// the grid size(s) of the brain ( e.g. a 3x3 brain has 3 layers of 3 neurons )
 	private InputNeuron  [] inputs ;						// which nodes are .. inputs 
 	private OutputNeuron [] outputs ;						// .. and outputs
 
-	private static final Random rng = new Random(24) ;								// utility random number generator
-	private final BrainParameters parameters ;
+	private static final Random rng = new Random(24) ;		// utility random number generator
 
 	private final double spikeCost ; 
 
 	private final double scoreReservoir[] ;
 	private int scoreClock ;
 
-	public Brain( BrainParameters parameters, int xdim, int ydim ) {
-		this.parameters = parameters ;
+	public B2( Brain parameters, int ... dims ) {
 		this.scoreReservoir = new double[1000] ;
 		this.scoreClock = 0 ;
-
-		int dims[] = new int[]{ xdim, ydim } ;
-		if( ydim < 1) dims[1] = dims[0] ;
-		if( xdim < 1) dims = parameters.dimensions ;
 		this.brainDimensions = dims ;
 
 		int numNeurons = 1 ;
 		for( int i=0 ; i<brainDimensions.length ; i++ ) {
 			numNeurons *= brainDimensions[i] ; 
 		}
-		List<Neuron> neurons = new ArrayList<>() ;
-
-		if( numNeurons < ( parameters.numInputs+parameters.numOutputs) ) {
-			throw new RuntimeException( "The total neuron count must be more than the sum of inputs and outputs." ) ;
-		}
-
+	
 		for( int neuronIndex = 0 ; neuronIndex<numNeurons ; neuronIndex++ ) {
-			neurons.add( new Neuron( this, neuronIndex, parameters ) ) ;
+			neurons[neuronIndex] = new Neuron( this, neuronIndex, parameters ) ) ;
 		}
 
 		log.debug( "Created {} neurons", neurons.size() ) ;
@@ -440,17 +429,17 @@ public class Brain implements Iterable<Neuron>{
 	}
 
 
-	public static Brain load( String fileName ) {
-		return Brain.load( fileName, 0, 0 ) ;
+	public static B2 load( String fileName ) {
+		return B2.load( fileName, 0, 0 ) ;
 	}		
 
-	public static Brain load( String fileName, int xdim, int ydim ) {
-		Brain rc  ;
+	public static B2 load( String fileName, int xdim, int ydim ) {
+		B2 rc  ;
 		try ( InputStream is = new FileInputStream(fileName) ;
 				Reader json = new InputStreamReader(is) ) {
 			Gson gson = new Gson() ;
 			BrainParameters bp = (BrainParameters)gson.fromJson( json, BrainParameters.class ) ;
-			rc = new Brain( bp, xdim, ydim ) ;
+			rc = new B2( bp, xdim, ydim ) ;
 		} catch( Exception e ) {
 			e.printStackTrace();
 			rc = null ;
@@ -493,4 +482,9 @@ class NeuronState {
 		this.potential = n.getPotential() ;
 		this.name = n.getName() ;
 	}
+}
+
+class Edge {
+	public int source ;
+	public double weight ;
 }

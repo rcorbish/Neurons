@@ -4,13 +4,16 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.BitSet;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.Queue;
 import java.util.Random;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
+import org.eclipse.jetty.util.ConcurrentArrayQueue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -103,6 +106,7 @@ public class Main {
 		double inputs[] = new double[ INPUT_COUNT ] ;
 		
 		ExecutorService tpool = Executors.newFixedThreadPool(6) ;
+		
 		for( int e=0 ; e<EPOCHS ; e++ ) {			
 			for( int s=0 ; s<SIMULATIONS ; s++ ) {
 				for( int i=0 ; i<inputs.length ; i++ ) {
@@ -132,7 +136,7 @@ public class Main {
 			int numNewBrains = brainData.length / 2 ;
 			CountDownLatch cdl = new CountDownLatch(numNewBrains) ;
 			
-			final List<BrainData> newBrains = new ArrayList<>() ;
+			final Queue<BrainData> newBrains = new ConcurrentArrayQueue<>() ;
 			
 			for( int i=0 ; i<numNewBrains ; i++ ) {
 				int ix1 = rng.nextInt( survivingIndex ) ;
@@ -161,16 +165,25 @@ public class Main {
 				}
 				Runnable t = new Runnable() {
 					public void run() {
-						newBrains.add( new BrainData( bs, xdim, ydim ) ) ;
+						try {
+							BrainData bd = new BrainData( bs, xdim, ydim ) ;
+							newBrains.add( bd ) ;
+						} catch( Throwable t ) {
+							logger.warn( "WTF - brainless.", t ) ;
+						}
 						cdl.countDown();
 					}
 				} ;
 				tpool.submit( t ) ;
 			}
 			cdl.await() ; 
+			
 			for( int i=0 ; i<newBrains.size() ; i++ ) {
-				brainData[brainData.length - i - 1] = newBrains.get(i) ;
+				BrainData bd = newBrains.remove() ;
+				brainData[brainData.length - i - 1] = bd ;
+				
 			}
+			
 			logger.info( "Epoch {} - best score {}", e, brainData[0].brain.getScore() ) ;
 		}
 		

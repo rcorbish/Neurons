@@ -18,17 +18,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.gson.Gson;
-/**
- * One of the more interesting classes, this handles raw messages from the client.
- * It does delegate most work to the private class (below). There is one WebSocketServer
- * per server instance, each client instance has a WebSocketCommandProcessor to 
- * manage itself. We have 2 lists of clients: 1 in client manager and one in clientData. Ideally these
- * need to be merged. TODO all that. The difference is that the client manager handles messages
- * from the web page and the clientData handles messages to - pretty lame
- * 
- * @author richard
- *
- */
+
+
+
 @WebSocket
 public class WebSocketServer  {
 	final static Logger logger = LoggerFactory.getLogger( WebSocketServer.class ) ;
@@ -69,6 +61,7 @@ public class WebSocketServer  {
 
 
 	public synchronized void send( String msg ) {
+		
 		for( Session session : this.sessions ) {
 			if( session.isOpen() ) {
 				try {
@@ -76,8 +69,8 @@ public class WebSocketServer  {
 				} catch( IOException ioe ){
 // nothing to do
 				}
-			} else {
-				this.sessions.remove( session ) ;
+//			} else {
+//				this.sessions.remove( session ) ;
 			}
 		}
 	}	
