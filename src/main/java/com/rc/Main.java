@@ -28,17 +28,32 @@ public class Main {
 	final static Random rng = new Random( 660 );
 	final static int INPUT_COUNT = 5 ;
 	final static int OUTPUT_COUNT = 5 ;
-	final static int POPULATION = 5_000 ;
-	final static int EPOCHS = 200 ;
-	final static int SIMULATIONS = 2000 ;
+	
+	static int POPULATION = 5_000 ;
+	static int EPOCHS = 200 ;
+	static int SIMULATIONS = 2000 ;
+	static double MUTATION = 0.1 ;
 	
 	public static void main(String[] args) {
 		try {
 			
-			OptionParser parser = new OptionParser( "f::e" );
+			OptionParser parser = new OptionParser();
+			
+			parser.acceptsAll( asList("f", "file") , "The parameters in json format" ).withRequiredArg().ofType( String.class ) ;
+			parser.acceptsAll( asList("e", "evolve") , "Whether to run the evolution step" ) ;
+			parser.accepts( "epochs" , "Number of epochs to run" ).withRequiredArg().ofType( Integer.class ) ; 
+			parser.accepts( "simulations" , "Number of simulations for each brain" ).withRequiredArg().ofType( Integer.class ) ; 
+			parser.accepts( "population" , "Number of brains in the population" ).withRequiredArg().ofType( Integer.class ) ; 
+			parser.accepts( "mutation" , "Mutation amount 0.0 - 1.0" ).withRequiredArg().ofType( Double.class ) ; 
+			
 	        OptionSet options = parser.parse( args ) ;
-	        
-			String parameterFile = options.has("f") ? options.valueOf( "f" ).toString() : null ;
+	
+	        if( options.has( "simulations" ) ) 	{ SIMULATIONS = (int) options.valueOf("simulations") ; }
+	        if( options.has( "population" ) ) 	{ POPULATION = (int) options.valueOf("population") ; }
+	        if( options.has( "epochs" ) ) 		{ EPOCHS = (int) options.valueOf("epochs") ; }
+	        if( options.has( "mutation" ) ) 	{ MUTATION = (double) options.valueOf("mutation") ; }
+
+	        String parameterFile = options.has("f") ? options.valueOf( "f" ).toString() : null ;
 			logger.info("Using file {}", parameterFile ) ;
 
 			List<?> dimArgs = options.nonOptionArguments() ;
@@ -179,7 +194,7 @@ public class Main {
 				}
 				// Mutation = x%
 				for( int b=0 ; b<BrainParameters.GENOME_SIZE ; b++ ) {
-					if( rng.nextDouble() < 0.15 ) {
+					if( rng.nextDouble() < MUTATION ) {
 						bs.set( b,  rng.nextBoolean()  ) ;
 					}
 				}
@@ -218,6 +233,12 @@ public class Main {
 		bp.numOutputs = Main.OUTPUT_COUNT ;
 		logger.info( "Best bp = {}", bp ) ;
 		return brainData[0].brain ;
+	}
+	
+	private static List<String> asList( String ... strings ) {
+		List<String> rc = new ArrayList<String>() ;
+		for( String string : strings ) rc.add( string ) ;
+		return rc ;
 	}
 }
 
