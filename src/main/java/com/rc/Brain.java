@@ -408,18 +408,6 @@ public class Brain  {
 }
 
 
-
-
-class Edge {
-	public int source ;
-	public double weight ;
-	public Edge( int sourceIndex, double weight ) {
-		this.source = sourceIndex ;
-		this.weight = weight ;
-	}
-}
-
-
 class Potentials {
 	public double score ;
 	public NeuronState states[] ;
