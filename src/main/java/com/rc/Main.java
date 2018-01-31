@@ -42,6 +42,7 @@ public class Main {
 			parser.acceptsAll( asList("f", "file") , "The parameters in json format" ).withRequiredArg().ofType( String.class ) ;
 			parser.acceptsAll( asList("e", "evolve") , "Whether to run the evolution step" ) ;
 			parser.accepts( "epochs" , "Number of epochs to run" ).withRequiredArg().ofType( Integer.class ) ; 
+			parser.accepts( "clear" , "Delete existing parameters" ) ; 
 			parser.accepts( "simulations" , "Number of simulations for each brain" ).withRequiredArg().ofType( Integer.class ) ; 
 			parser.accepts( "population" , "Number of brains in the population" ).withRequiredArg().ofType( Integer.class ) ; 
 			parser.accepts( "mutation" , "Mutation amount 0.0 - 1.0" ).withRequiredArg().ofType( Double.class ) ; 
@@ -94,7 +95,7 @@ public class Main {
 				File f = new File( parameterFile ) ;
 				fileExists = f.canRead() ;
 			}
-			Brain brain = fileExists ? 
+			Brain brain = fileExists && !options.has("clear") ? 
 							Brain.load( parameterFile, dims ) :
 							new Brain( parameters, dims ) ;
 			if( evolve ) {
@@ -127,7 +128,7 @@ public class Main {
 				brain.step( inputs ) ;
 				brain.updateScores() ;
 				m.sendBrainData(); 
-				Thread.sleep(150);
+				Thread.sleep(100);
 			}
 		} catch( Throwable t ) {  
 			t.printStackTrace();

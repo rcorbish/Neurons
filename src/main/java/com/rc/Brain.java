@@ -8,7 +8,6 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.Reader;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
 
@@ -49,7 +48,10 @@ public class Brain  {
 		this.brainDimensions = dims ;
 		this.outputHistory = new double[HISTORY_LENGTH][ parameters.numOutputs] ; 
 		this.historyIndex = 0 ;
-		
+	
+		// OK let's create space for all neurons
+		// The X0 x X1 x .... Xn 
+		// plus inputs & outputs
 		int numNeurons = 1 ;
 		for( int i=0 ; i<brainDimensions.length ; i++ ) {
 			numNeurons *= brainDimensions[i] ; 
@@ -62,38 +64,47 @@ public class Brain  {
 		for( int i = 0 ; i<numNeurons ; i++ ) {
 			neurons[i] = new Neuron( String.valueOf(i), parameters ) ;
 		}
-
+		
+		// Remember the inputs & outputs for convenience later 
 		this.inputs = new Neuron[parameters.numInputs] ;
 		this.outputs = new Neuron[parameters.numOutputs] ;
 
+		// Copy the first few neurons to input cache
 		for( int i=0 ; i<inputs.length ; i++ ) {
 			inputs[i] = neurons[i] ;
 		}
+		// Copy the last few neurons to output cache
 		for( int i=0 ; i<outputs.length ; i++ ) {
 			outputs[i] = neurons[numNeurons-i-1] ;
 		}
 
-		
+		// All neurons can have edges 
 		this.edges = new Edge[ numNeurons ][] ;
 
+		// Left hand side of the core are connected to inputs
+		// So get the index of all nodes where the first
+		// index == 0
 		int leftLiquid[] = new int[brainDimensions.length] ;
 		for( int i=2 ; i<leftLiquid.length ; i++ ) {
 			leftLiquid[i] = brainDimensions[i] - 1 ;
 		}
 		leftLiquid[0] = 0 ;
-
+		// Now we can get all nodes that math any left liquid index
+		// it's connected to an input
 		for( int i=0 ; i<inputs.length ; i++ ) {
 			edges[i] = new Edge[ brainDimensions[1] ] ;
 			
 			for( int l=0 ; l<edges[i].length ; l++ ) {
 				leftLiquid[1] = l ;
 				int source = getIndexFromLocation( leftLiquid ) ;
+				log.debug( "Neuron[{}] @ {} is connected to input {}", source, leftLiquid, i) ;
 				double weight = rng.nextDouble() *
 					rng.nextDouble() < parameters.inhibitorRatio ? -1 :1 ;
 				edges[i][l] = new Edge( source, weight ) ;
 			}
 		}
 		
+		// Repeat the same thing - but for outputs ...
 		leftLiquid[0] = brainDimensions[0] - 1 ;
 		
 		for( int i=0 ; i<outputs.length ; i++ ) {
@@ -102,6 +113,7 @@ public class Brain  {
 			for( int l=0 ; l<edges[numNeurons-i-1].length ; l++ ) {
 				leftLiquid[1] = l ;
 				int source = getIndexFromLocation( leftLiquid ) ;
+				log.debug( "Neuron[{}] @ {} is connected to output {}", source, leftLiquid, i) ;
 				double weight = rng.nextDouble() *
 					rng.nextDouble() < parameters.inhibitorRatio ? -1 :1 ;
 				edges[numNeurons-i-1][l] = new Edge( source, weight ) ;
@@ -122,14 +134,7 @@ public class Brain  {
 					Edge edge = new Edge( getIndexFromLocation(loc), weight ) ;
 					newEdges.add( edge ) ;
 				}
-				loc[d]++ ;
-				{					
-					double weight = rng.nextDouble() *
-						rng.nextDouble() < parameters.inhibitorRatio ? -1 :1 ;
-					Edge edge = new Edge( getIndexFromLocation(loc), weight ) ;
-					newEdges.add( edge ) ;
-				}
-				loc[d]++ ;
+				loc[d]+=2 ;
 				if( loc[d] < dims[d] ) {
 					double weight = rng.nextDouble() *
 						rng.nextDouble() < parameters.inhibitorRatio ? -1 :1 ;
@@ -137,22 +142,22 @@ public class Brain  {
 					newEdges.add( edge ) ;
 				}
 				loc[d]-- ;
-				{
-					int x = loc[0] ;
-					loc[0] = rng.nextInt( dims[0] ) ;
-					if( loc[0] < dims[0] ) {
-						double weight = rng.nextDouble() *
-							rng.nextDouble() < parameters.inhibitorRatio ? -1 :1 ;
-						Edge edge = new Edge( getIndexFromLocation(loc), weight ) ;
-						newEdges.add( edge ) ;
-					}
-					loc[0] = x ;
-				}
 			}	
+			for( int i=0 ; i<inputs.length ; i++ ) {				
+				Edge inputEdges[] = edges[i] ;
+				for( int j=0 ; j<inputEdges.length ; j++ ) {
+					if( inputEdges[j].source == targetNeuronIndex ) {
+						newEdges.add( new Edge( i, inputEdges[j].weight ) ) ;
+					}
+				}
+			}
 			edges[targetNeuronIndex] = new Edge[ newEdges.size() ] ;
 			newEdges.toArray( edges[targetNeuronIndex] ) ;
 		}		
-		
+		// Clear out inputs to actual inputs - it's wrong !
+		for( int i=0 ; i<inputs.length ; i++ ) {				
+			edges[i] = new Edge[0] ;
+		}		
 		// Better score if spike is flat
 		double sc = 0 ;
 		for( double s : parameters.spikeProfile ) {
@@ -162,9 +167,13 @@ public class Brain  {
 	}
 
 	public void step( double[] inputs ) {
+
+		// Set inputs immediately - no dependencies
 		for( int i=0 ; i<inputs.length ; i++ ) {
 			this.inputs[i].setPotential( inputs[i] );
 		}
+		
+		// Will build up all outputs - before chaning any of them
 		double newPotentials[] = new double[ neurons.length ] ;
 		
 		for( int n=inputs.length ; n<neurons.length; n++ ) {
@@ -174,9 +183,12 @@ public class Brain  {
 				newPotentials[n] += neurons[edge.source].getPotential() * edge.weight ;
 			}
 		}
+		
+		// Then write the output as an atomic op
 		for( int n=inputs.length ; n<neurons.length; n++ ) {
 			neurons[n].setPotential( newPotentials[n] ) ;
 		}
+		
 		// For scoring
 		for( int i=0 ; i<outputs.length ; i++ ) {
 			outputHistory[historyIndex][i] = outputs[i].getPotential() ;
@@ -328,9 +340,9 @@ public class Brain  {
 			.append( neurons[n].getPotential() ) 
 			;
 			if( n < inputs.length ) {
-				rc.append( ",\"fx\": 20 ") ;
+				rc.append( ",\"fx\": 0 ") ;
 			} else if ( n>=(neurons.length - outputs.length) ) {
-				rc.append( ",\"fx\": 600 ") ;
+				rc.append( ",\"fx\": 800 ") ;
 			}
 			rc.append( " }" ) 
 			;

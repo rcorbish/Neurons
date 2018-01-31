@@ -5,17 +5,16 @@ import java.util.StringJoiner;
 
 public class BrainParameters  {
 	
-	public double inhibitorRatio = 0.0 ;
-	public double spikeThreshold = 0.60 ;
-	public double restingPotential = 0 ;
+	public double inhibitorRatio = 0.25 ;
+	public double spikeThreshold = 0.70 ;
+	public double restingPotential = -.1 ;
 
-	public double spikeProfile [] = { 1.00, .70, .30, 0, -.10, -.08, -.05 , -.02  } ;
+	public double spikeProfile [] = { 1.00, .70, .30, -.25, -.20, -.15  } ;
 	public int numInputs ;
 	public int numOutputs ;
-	public int dimensions [] = { 3, 3 } ;
+	public int dimensions [] = { 3, 3 } ;	
 	
-	
-	final public static int SPIKE_PROFILE_SIZE = 8 ; 
+	final public static int SPIKE_PROFILE_SIZE = 6 ; 
 	final public static int BITS_PER_NUMBER = 6 ; 
 	final public static double NUMBER_GRANULARITY = 1 << BITS_PER_NUMBER ;
 	final public static int GENOME_SIZE = BITS_PER_NUMBER * (3+SPIKE_PROFILE_SIZE) ;
@@ -63,7 +62,6 @@ public class BrainParameters  {
 		.append( "\nnumOutputs\t\t" ).append( numOutputs )
 		;
 		
-		return sb.toString() ;
-		
+		return sb.toString() ;		
 	}
 }
