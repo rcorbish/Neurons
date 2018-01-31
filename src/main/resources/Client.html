@@ -6,7 +6,12 @@
 <style>
 
 .node {
-  stroke: none;
+	stroke: none;
+	font-size: 8pt ;
+	font-family: Arial, Helvetica, sans-serif ;
+}
+.potential {
+	color: black ;
 }
 .activated {
   stroke: none;
@@ -88,27 +93,42 @@ d3.json("data", function(error, graph) {
 		 	} )
 		;
 
-  	const nodes = svg
+		const nodes = svg
     	.selectAll("circle.node")
     	.data( graph.nodes )
-    	.enter().append("circle")
-			.attr( 'class', 'node' )
-			.attr( 'id', function(d) { return d.name } )
-      		.attr("r", function(d) { return 6.5 } ) 
-      		.attr("fill", function(d) { return color( d.type ); })
-      		.call(d3.drag()
-          		.on("start", dragstarted)
-          		.on("drag", dragged)
-          		.on("end", dragended)) 
+    	.enter()
+			.append("circle")
+				.attr( 'class', 'node' )
+				.attr( 'id', function(d) { return d.name } )
+				.attr("r", function(d) { return 6.5 } ) 
+				.attr("fill", function(d) { return color( d.type ); })
+				.call(d3.drag()
+					.on("start", dragstarted)
+					.on("drag", dragged)
+					.on("end", dragended)) 
+  		;
+
+		const texts = svg
+    	.selectAll("text.potential")
+    	.data( graph.nodes )
+		.enter()
+			.append( 'text' )
+				.attr( 'class', 'potential' )
+				.attr( 'id', function(d) { return 'txt-' + d.name } )
+				.text( "0.00" )
   		;
 
 
   function tick() {
-    	nodes
-    	.attr("cx", function(d) { return d.x; })
-        .attr("cy", function(d) { return d.y; })
+		nodes
+		.attr("cx", function(d) { return d.x; })
+		.attr("cy", function(d) { return d.y; })
+		;
+		texts
+    	.attr("x", function(d) { return d.x; })
+        .attr("y", function(d) { return d.y; })
     	;
-    
+
     	links
         .attr("x1", function(d) { return d.source.x; })
         .attr("y1", function(d) { return d.source.y; })
@@ -167,8 +187,14 @@ function resetWebSocket() {
 		for( var i=0 ; i<data.states.length ; i++ ) {			
 			var n = document.getElementById( data.states[i].name ) ;
 			if( n ) {				
-				n.style.fill = color( data.states[i].potential > 0.3 ? 1.0 : 10 ) ; 
+				n.style.fill = color( data.states[i].potential * 10 ) ; 
+				// n.style.fill = color( data.states[i].potential > 0.3 ? 1.0 : 10 ) ; 
 			}
+			var n = document.getElementById( 'txt-' + data.states[i].name ) ;
+			if( n ) {				
+				n.textContent = data.states[i].potential.toFixed(2) ; 
+			}
+
 		}
 		c.width = c.width;		
 		

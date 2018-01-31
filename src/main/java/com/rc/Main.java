@@ -1,10 +1,10 @@
 package com.rc ;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.BitSet;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Queue;
 import java.util.Random;
@@ -45,40 +45,49 @@ public class Main {
 			parser.accepts( "simulations" , "Number of simulations for each brain" ).withRequiredArg().ofType( Integer.class ) ; 
 			parser.accepts( "population" , "Number of brains in the population" ).withRequiredArg().ofType( Integer.class ) ; 
 			parser.accepts( "mutation" , "Mutation amount 0.0 - 1.0" ).withRequiredArg().ofType( Double.class ) ; 
+			parser.nonOptions( "Network dimensions  (e.g. 3 4 )" ).ofType( Integer.class ) ; 
+			parser.accepts( "help", "This help" ).forHelp();
 			
 	        OptionSet options = parser.parse( args ) ;
 	
+			if( options.has( "help")  ) {
+				try {
+					parser.printHelpOn( System.out );
+					System.exit(1) ;
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			}
+
 	        if( options.has( "simulations" ) ) 	{ SIMULATIONS = (int) options.valueOf("simulations") ; }
 	        if( options.has( "population" ) ) 	{ POPULATION = (int) options.valueOf("population") ; }
 	        if( options.has( "epochs" ) ) 		{ EPOCHS = (int) options.valueOf("epochs") ; }
 	        if( options.has( "mutation" ) ) 	{ MUTATION = (double) options.valueOf("mutation") ; }
 
 	        String parameterFile = options.has("f") ? options.valueOf( "f" ).toString() : null ;
-			logger.info("Using file {}", parameterFile ) ;
 
+			int dims[] ;
 			List<?> dimArgs = options.nonOptionArguments() ;
-			
-			int dims[] = new int[ dimArgs.size() ] ;
-			for( int i=0 ; i<dims.length ; i++ ) {
-				dims[i] =  Integer.parseInt( dimArgs.get(i).toString() ) ;
+			if( dimArgs.size() > 0 ) {
+				dims = new int[ dimArgs.size() ] ;
+				for( int i=0 ; i<dims.length ; i++ ) {
+					dims[i] =  Integer.parseInt( dimArgs.get(i).toString() ) ;
+				}
+			} else {
+				dims = new int[]{ 3, 3 } ;	// default if no size given
 			}
-
 			StringJoiner sj = new StringJoiner( " x " ) ;
 			for( int d : dims ) {
 				sj.add( String.valueOf(d) ) ;
 			}
-			logger.info("Network size: {}", sj );
+			logger.info("Network size  : {}", sj );
 
+			
 			boolean evolve = options.has( "e" ) ;
 			
 			BrainParameters parameters = new BrainParameters() ;
-			parameters.numInputs = INPUT_COUNT ;
+			parameters.numInputs  = INPUT_COUNT ;
 			parameters.numOutputs = OUTPUT_COUNT ;
-			parameters.inhibitorRatio = .5 ;
-			parameters.dimensions = dims ;
-			parameters.spikeThreshold = 0.6 ;
-			parameters.spikeProfile = new double[]{ 0, 0.5, 1, 0.4, 0, -0.1, -0.17, -0.16, -0.15 } ;
-			parameters.restingPotential = -.10 ;
 			
 			boolean fileExists = false ;
 			if( parameterFile !=null ) {
@@ -87,8 +96,12 @@ public class Main {
 			}
 			Brain brain = fileExists ? 
 							Brain.load( parameterFile, dims ) :
-							new Brain(parameters, dims ) ;
+							new Brain( parameters, dims ) ;
 			if( evolve ) {
+				logger.info("Epochs        : {}", EPOCHS );
+				logger.info("Population    : {}", POPULATION );
+				logger.info("Simulations   : {}", SIMULATIONS );
+				logger.info("Mutation Rate : {}", MUTATION );
 				brain = evolve( dims ) ;
 				
 				if( parameterFile != null ) {
@@ -155,7 +168,6 @@ public class Main {
 							brain.step( inputs ) ;
 							brain.updateScores() ;
 							cdl.countDown();
-							//logger.info( "CDL: {}", cdl.getCount() ) ; 
 						}
 					} ) ;
 				}
@@ -174,8 +186,8 @@ public class Main {
 			final Queue<BrainData> newBrains = new ConcurrentArrayQueue<>() ;
 			
 			for( int i=0 ; i<numNewBrains ; i++ ) {
-				int ix1 = rng.nextInt( survivingIndex ) ;
-				int ix2 = rng.nextInt( survivingIndex ) ;
+				int ix1 = rng.nextInt( Math.max(numNewBrains/4, i) ) ;
+				int ix2 = rng.nextInt( Math.max(numNewBrains/4, i) ) ;
 				
 				// Make sure ix1 is higher score than ix2 ( brainData is sorted )
 				if( ix1 > ix2 ) {
@@ -215,8 +227,7 @@ public class Main {
 			
 			for( int i=0 ; i<newBrains.size() ; i++ ) {
 				BrainData bd = newBrains.remove() ;
-				brainData[brainData.length - i - 1] = bd ;
-				
+				brainData[brainData.length - i - 1] = bd ;				
 			}
 			
 			logger.info( "Epoch {} - best score {}", e, brainData[0].brain.getScore() ) ;
@@ -228,11 +239,19 @@ public class Main {
 			logger.warn( "OMG - too late "); 
 		}
 		
-		BrainParameters bp = new BrainParameters( brainData[0].genome ) ;
+		BrainData bd =  brainData[0] ;
+		BrainParameters bp = new BrainParameters( bd.genome ) ;
 		bp.numInputs = Main.INPUT_COUNT ;
-		bp.numOutputs = Main.OUTPUT_COUNT ;
-		logger.info( "Best bp = {}", bp ) ;
-		return brainData[0].brain ;
+		bp.numOutputs = Main.OUTPUT_COUNT ; 
+		logger.info( "Best bp = {}\nScore = {}", bp, bd.score ) ;
+
+		BrainData bdw =  brainData[brainData.length-1] ;
+		bp = new BrainParameters( bdw.genome ) ;
+		bp.numInputs = Main.INPUT_COUNT ;
+		bp.numOutputs = Main.OUTPUT_COUNT ; 
+		
+		logger.info( "Worst bp = {}\nScore = {}", bp, bdw.score ) ;
+		return bd.brain ;
 	}
 	
 	private static List<String> asList( String ... strings ) {

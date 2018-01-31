@@ -88,7 +88,9 @@ public class Brain  {
 			for( int l=0 ; l<edges[i].length ; l++ ) {
 				leftLiquid[1] = l ;
 				int source = getIndexFromLocation( leftLiquid ) ;
-				edges[i][l] = new Edge( source, rng.nextGaussian() ) ;
+				double weight = rng.nextDouble() *
+					rng.nextDouble() < parameters.inhibitorRatio ? -1 :1 ;
+				edges[i][l] = new Edge( source, weight ) ;
 			}
 		}
 		
@@ -100,7 +102,9 @@ public class Brain  {
 			for( int l=0 ; l<edges[numNeurons-i-1].length ; l++ ) {
 				leftLiquid[1] = l ;
 				int source = getIndexFromLocation( leftLiquid ) ;
-				edges[numNeurons-i-1][l] = new Edge( source, rng.nextGaussian() ) ;
+				double weight = rng.nextDouble() *
+					rng.nextDouble() < parameters.inhibitorRatio ? -1 :1 ;
+				edges[numNeurons-i-1][l] = new Edge( source, weight ) ;
 			}
 		}
 
@@ -110,50 +114,51 @@ public class Brain  {
 			final int loc[] = getLocationFromIndex( targetNeuronIndex ) ;
 			newEdges.clear();
 			
-			
 			for( int d=0 ; d<dims.length ; d++ ) {
 				loc[d]-- ;
 				if( loc[d] >= 0 ) {
-					double weight = rng.nextGaussian() ;
+					double weight = rng.nextDouble() *
+						rng.nextDouble() < parameters.inhibitorRatio ? -1 :1 ;
 					Edge edge = new Edge( getIndexFromLocation(loc), weight ) ;
 					newEdges.add( edge ) ;
 				}
 				loc[d]++ ;
 				{					
-					double weight = rng.nextGaussian() ;
+					double weight = rng.nextDouble() *
+						rng.nextDouble() < parameters.inhibitorRatio ? -1 :1 ;
 					Edge edge = new Edge( getIndexFromLocation(loc), weight ) ;
 					newEdges.add( edge ) ;
 				}
 				loc[d]++ ;
 				if( loc[d] < dims[d] ) {
-					double weight = rng.nextGaussian() ;
+					double weight = rng.nextDouble() *
+						rng.nextDouble() < parameters.inhibitorRatio ? -1 :1 ;
 					Edge edge = new Edge( getIndexFromLocation(loc), weight ) ;
 					newEdges.add( edge ) ;
 				}
 				loc[d]-- ;
-//				{
-//					int x = loc[0] ;
-//					loc[0] = rng.nextInt( dims[0] ) ;
-//					double weight = rng.nextGaussian() ;
-//					Edge edge = new Edge( getIndexFromLocation(loc), weight ) ;
-//					newEdges.add( edge ) ;
-//					loc[0] = x ;
-//				}
-			}
-			
+				{
+					int x = loc[0] ;
+					loc[0] = rng.nextInt( dims[0] ) ;
+					if( loc[0] < dims[0] ) {
+						double weight = rng.nextDouble() *
+							rng.nextDouble() < parameters.inhibitorRatio ? -1 :1 ;
+						Edge edge = new Edge( getIndexFromLocation(loc), weight ) ;
+						newEdges.add( edge ) ;
+					}
+					loc[0] = x ;
+				}
+			}	
 			edges[targetNeuronIndex] = new Edge[ newEdges.size() ] ;
 			newEdges.toArray( edges[targetNeuronIndex] ) ;
 		}		
 		
-		
 		// Better score if spike is flat
 		double sc = 0 ;
-		if( this.neurons.length > 0 ) {
-			for( double s : parameters.spikeProfile ) {
-				sc += Math.abs(s)/5.0 ;
-			}
+		for( double s : parameters.spikeProfile ) {
+			sc += s ;
 		}
-		this.spikeCost = sc ;
+		this.spikeCost = sc ; //sc / ( 3.0 * inputs.length ) ;
 	}
 
 	public void step( double[] inputs ) {
@@ -179,17 +184,21 @@ public class Brain  {
 	}
 
 
+	// High score is better for survival
 	public void updateScores() {
-		double score = 0 ;
+		double score = 0 ; //-Math.abs(spikeCost) ;
 		for( int n=0 ; n<outputs.length ; n++  ) {
 			double p = neurons[n].getPotential() ; 
+			score += p ;
+			double tmp = 0 ;
 			for( Neuron o : outputs ) {
-				score += Math.abs( o.getPotential() - p ) ; 
+				double dp = o.getPotential() - p ;
+				tmp += dp * dp  ; 
 			}
+			score += Math.sqrt( tmp ) ;
 			double dp = p - getHistory( n, BrainParameters.SPIKE_PROFILE_SIZE ) ; 
-			score += Math.abs(dp) ;
+			//score += Math.abs(dp) ;
 		}
-		score -= spikeCost ;
 
 		if( scoreClock < scoreReservoir.length ) {
 			scoreReservoir[scoreClock] = score ;
@@ -211,14 +220,19 @@ public class Brain  {
 	
 	
 	/**
-	 * Get the average score 
+	 * Get the overall score 
 	 */
 	public double getScore() {
-		double score = 0 ;
-		for( int i=0 ; i<scoreClock ; i++ ) {
-			score += scoreReservoir[i] ;
+		double maxScore = scoreReservoir[0] ;
+		double minScore = scoreReservoir[0] ;
+		double avgScore = scoreReservoir[0] ;
+		for( int i=1 ; i<scoreClock ; i++ ) {
+			maxScore = Math.max( maxScore, scoreReservoir[i] ) ;
+			minScore = Math.min( maxScore, scoreReservoir[i] ) ;
+			avgScore += scoreReservoir[i] ;
 		}
-		return score / scoreClock ;
+		avgScore /= scoreClock ;
+		return avgScore  ;
 	}
 
 
