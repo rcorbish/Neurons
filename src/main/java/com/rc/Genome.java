@@ -1,7 +1,6 @@
 package com.rc ;
 
 import java.util.BitSet;
-import java.util.Random;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -58,15 +57,19 @@ public class Genome  {
 		int start = index * BITS_PER_NUMBER ;
 		for( int i=0 ; i<BITS_PER_NUMBER ; i++, mask <<= 1 ) {
 			if( 0 != (mask & bits) ) {
-				data.set( i+BITS_PER_NUMBER*0 ) ;
+				data.set( start + i ) ;
 			} else {
-				data.clear( i+BITS_PER_NUMBER*0 ) ;
+				data.clear( start + i ) ;
 			}
 		}
 	}
 
 	public double accuracy() {
 		return (1.0/BITS_PER_NUMBER) ;
+	}
+	
+	public int capacity() {
+		return data.size() / BITS_PER_NUMBER ;
 	}
 }
 

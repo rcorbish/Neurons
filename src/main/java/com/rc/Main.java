@@ -120,6 +120,7 @@ public class Main {
 				for( int i=0 ; i<inputs.length ; i++ ) {
 					inputs[i] =  rng.nextInt( 1+(clk % 4) )==0 ? 1 : 0 ;
 					inputs[i] =  Math.cos(i * clk / Math.PI ) ;
+					inputs[i] =  0.3 + 1/(i+1) ;
 				}
 				// inputs[0] = 1 / ( (clk % 10) + 1 ) ;
 				// inputs[0] = Math.abs( Math.sin( clk / Math.PI ) ) ;
@@ -127,8 +128,8 @@ public class Main {
 				// inputs[1] *= inputs[1] + rng.nextDouble()/10;
 				brain.step( inputs ) ;
 				brain.updateScores() ;
-				m.sendBrainData(); 
-				Thread.sleep(100);
+				m.sendBrainData() ; 
+				Thread.sleep( 100 ) ;
 			}
 		} catch( Throwable t ) {  
 			t.printStackTrace();

@@ -1,6 +1,5 @@
 package com.rc ;
 
-import java.util.BitSet;
 import java.util.Random;
 
 import org.slf4j.Logger;
@@ -34,7 +33,7 @@ public class Neuron  {
 		this.restingPotential = parameters.restingPotential ;
 		this.threshold = parameters.spikeThreshold ;
 		this.spike = parameters.spikeProfile ;
-		this.decay = rng.nextDouble() / 4.0 + 0.72 ;
+		this.decay = rng.nextDouble() / 8.0 + 0.85 ;
 		this.name = name ;
 	}
 
@@ -57,7 +56,6 @@ public class Neuron  {
 			}
 			if( this.currentPotential>threshold ) {
 				spikeIndex = 1 ;
-				this.currentPotential = spike[spikeIndex] ;
 			}
 		} else {
 			this.currentPotential = restingPotential ;
@@ -80,7 +78,7 @@ public class Neuron  {
 
 
 	public Genome toGenome() {
-		Genome rc = new Genome( GENOME_CAPACITY ) ;
+		Genome rc = new Genome( GENOME_CAPACITY  ) ;
 		rc.setValue( threshold, GENOME_INDEX_THRESHOLD ) ;
 		rc.setValue( restingPotential + 0.5 , GENOME_INDEX_RESTING ) ;
 		rc.setValue( decay, GENOME_INDEX_DECAY ) ;

@@ -1,16 +1,9 @@
 package com.rc;
 
-import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-
-import java.util.BitSet;
-import java.util.Random;
 
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 public class TestNeuron {
@@ -38,4 +31,6 @@ public class TestNeuron {
 		assertEquals( "Bitset copy - bad threshold", n.threshold, n2.threshold, accuracy ) ;
 		assertEquals( "Bitset copy - bad resting potential", n.restingPotential, n2.restingPotential, accuracy ) ;
 	}
+	
+	
 }
