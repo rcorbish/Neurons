@@ -162,6 +162,9 @@ public class Brain  {
 	
 	
 	public void step( double[] inputs ) {
+		for( int i=0 ; i<neurons.length ; i++ ) {
+			this.neurons[i].decay();
+		}
 
 		// Set inputs immediately - no dependencies
 		for( int i=0 ; i<inputs.length ; i++ ) {

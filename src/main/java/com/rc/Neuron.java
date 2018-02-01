@@ -1,5 +1,6 @@
 package com.rc ;
 
+import java.awt.image.SinglePixelPackedSampleModel;
 import java.util.Random;
 
 import org.slf4j.Logger;
@@ -30,10 +31,10 @@ public class Neuron  {
 
 	public Neuron( String name, BrainParameters parameters ) {
 		this.spikeIndex = -1 ;
-		this.restingPotential = parameters.restingPotential ;
+		this.restingPotential = 0 ; //parameters.restingPotential ;
 		this.threshold = parameters.spikeThreshold ;
 		this.spike = parameters.spikeProfile ;
-		this.decay = rng.nextDouble() / 8.0 + 0.85 ;
+		this.decay = 0.3 + rng.nextDouble() / 5.0 ;
 		this.name = name ;
 	}
 
@@ -47,32 +48,37 @@ public class Neuron  {
 		this.spike = new double[]{ 1.00, .70, .30, -.25, -.20, -.15  } ;
 	}
 
+	public void decay() {
+		this.currentPotential -= decay * this.currentPotential ;
+	}
+
 	public void setPotential( double currentPotential ) {
+		if( "10".equals(name) ) {
+			log.debug( "Now: {}, Add: {}", this.currentPotential, currentPotential ) ;
+		}
 		if( spikeIndex < 0 ) {
-			this.currentPotential *= decay ;
 			this.currentPotential += currentPotential ;
 			if( this.currentPotential < restingPotential ) {
 				this.currentPotential = restingPotential ;
 			}
 			if( this.currentPotential>threshold ) {
-				spikeIndex = 1 ;
+				this.currentPotential = 1.0 ;
+				spikeIndex = (int)Math.floor( Math.log(0.05) / -decay ) ;
+				spikeIndex = 5 ;
 			}
 		} else {
-			this.currentPotential = restingPotential ;
-			spikeIndex++ ;
-			if( this.spikeIndex >= spike.length ) {
-				spikeIndex = -1 ;
-			}
+			spikeIndex--;
+			if( spikeIndex==0 ) { this.currentPotential = restingPotential ; } 
 		}
 	}
 	
 	public String getName() { return name ; }
 	
 	public double getPotential() {
-		double rc = restingPotential ;
-		if( spikeIndex >= 0 ) {
-			rc = spike[spikeIndex] ;
-		}
+		double rc = currentPotential ;
+		// if( spikeIndex >= 0 ) {
+		// 	rc = spike[spikeIndex] ;
+		// }
 		return rc ;
 	}
 
