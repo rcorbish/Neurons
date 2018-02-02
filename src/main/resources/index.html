@@ -128,7 +128,7 @@ d3.json("data", function(error, graph) {
     	.enter()
 			.append("circle")
 				.attr( 'class', 'node' )
-				.attr( 'id', function(d) { return d.name } )
+				.attr( 'id', function(d) { return d.id } )
 				.attr("r", function(d) { return 6.5 } ) 
 				.attr("fill", function(d) { return color( d.type ); })
 				.call(d3.drag()
@@ -143,10 +143,10 @@ d3.json("data", function(error, graph) {
 		.enter()
 			.append( 'text' )
 				.attr( 'class', 'potential' )
-				.attr( 'font-size', '9pt')
+				.attr( 'font-size', '11pt')
 				.attr( 'font-family', 'arial')
-				.attr( 'id', function(d) { return 'txt-' + d.name } )
-				.text( "0.00" )
+				.attr( 'id', function(d) { return 'txt-' + d.id } )
+				.text( "0" )
   		;
 
 
@@ -156,8 +156,8 @@ d3.json("data", function(error, graph) {
 		.attr("cy", function(d) { return d.y; })
 		;
 		texts
-    	.attr("x", function(d) { return d.x; })
-        .attr("y", function(d) { return d.y; })
+    	.attr("x", function(d) { return d.x+7; })
+        .attr("y", function(d) { return d.y-3; })
     	;
 
     	links
@@ -173,7 +173,7 @@ d3.json("data", function(error, graph) {
 	.force( "link", d3.forceLink()
 	 		.strength( function(l) { return .2 ; }) 
 	 		.distance( function(l) { return 15 ; } )
-	 		.id( function(n) { return n.name ; } ) 
+	 		.id( function(n) { return n.id ; } ) 
 	 		.links( graph.links ) 
 	 	)
 	.force( "charge", d3.forceManyBody()
@@ -216,14 +216,14 @@ function resetWebSocket() {
 		const status = document.querySelector( ".status" ) ;
 		status.textContent = "Score: " + data.score.toFixed(3) ;
 		for( var i=0 ; i<data.states.length ; i++ ) {			
-			var n = document.getElementById( data.states[i].name ) ;
+			var n = document.getElementById( data.states[i].id ) ;
 			if( n ) {				
-				n.style.fill = color( data.states[i].potential * 10 ) ; 
+				n.style.fill = color( data.states[i].ago  ) ; 
 				// n.style.fill = color( data.states[i].potential > 0.3 ? 1.0 : 10 ) ; 
 			}
-			var n = document.getElementById( 'txt-' + data.states[i].name ) ;
+			var n = document.getElementById( 'txt-' + data.states[i].id ) ;
 			if( n ) {				
-				n.textContent = data.states[i].potential.toFixed(2) ; 
+				n.textContent = data.states[i].ago ; 
 			}
 
 		}

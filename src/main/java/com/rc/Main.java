@@ -86,9 +86,9 @@ public class Main {
 			
 			boolean evolve = options.has( "e" ) ;
 			
-			BrainParameters parameters = new BrainParameters() ;
-			parameters.numInputs  = INPUT_COUNT ;
-			parameters.numOutputs = OUTPUT_COUNT ;
+			// BrainParameters parameters = new BrainParameters() ;
+			// parameters.numInputs  = INPUT_COUNT ;
+			// parameters.numOutputs = OUTPUT_COUNT ;
 			
 			boolean fileExists = false ;
 			if( parameterFile !=null ) {
@@ -97,7 +97,7 @@ public class Main {
 			}
 			Brain brain = fileExists && !options.has("clear") ? 
 							Brain.load( parameterFile, dims ) :
-							new Brain( parameters, dims ) ;
+							new Brain( INPUT_COUNT, OUTPUT_COUNT, dims ) ;
 			if( evolve ) {
 				logger.info("Epochs        : {}", EPOCHS );
 				logger.info("Population    : {}", POPULATION );
@@ -112,7 +112,7 @@ public class Main {
 
 			Monitor m = new Monitor( brain ) ;
 			m.start();
-			double inputs[] = new double[parameters.numInputs] ;
+			double inputs[] = new double[INPUT_COUNT] ;
 
 			int clk = 0 ;
 			for( ; ; ) {
@@ -140,7 +140,7 @@ public class Main {
 		logger.info( "Evolution starts..." ) ;
 		
 		BrainData brainData[] = new BrainData[ POPULATION ] ;
-		
+		/*
 		for( int i=0 ; i<brainData.length ; i++ ) {
 			BitSet bs = new BitSet( BrainParameters.GENOME_SIZE ) ;
 			for( int j=0 ; j<BrainParameters.GENOME_SIZE ; j++ ) {
@@ -254,6 +254,8 @@ public class Main {
 		
 		logger.info( "Worst bp = {}\nScore = {}", bp, bdw.score ) ;
 		return bd.brain ;
+		*/
+		return null ;
 	}
 	
 	private static List<String> asList( String ... strings ) {
@@ -270,10 +272,7 @@ class BrainData implements Comparable<BrainData>{
 	
 	public BrainData( BitSet genome, int ...dims ) {
 		this.genome = genome ;
-		BrainParameters bp = new BrainParameters( genome ) ;
-		bp.numInputs = Main.INPUT_COUNT ;
-		bp.numOutputs = Main.OUTPUT_COUNT ;
-		this.brain = new Brain( bp, dims ) ;
+		this.brain = new Brain( 1 ,1, dims ) ;
 	}
 	@Override
 	public int compareTo(BrainData o) {

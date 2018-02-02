@@ -21,11 +21,13 @@ public class Brain  {
 
 	final static Logger log = LoggerFactory.getLogger( Brain.class ) ;
 	
-	final static public int HISTORY_LENGTH = 100 ;
+	private static final Random rng = new Random(24) ;	// utility random number generator
 
+	final static public int HISTORY_LENGTH = 100 ;
 	private final double outputHistory[][] ;
 	private int historyIndex ;
-	
+
+	private final double inhibitorRatio = 0.125 ;
 	private final Neuron neurons[] ;
 	private final EdgeList edges[] ;					// adjacency list ( directed & weighted )
 	
@@ -33,21 +35,18 @@ public class Brain  {
 	private final Neuron  [] inputs ;					// which nodes are .. inputs 
 	private final Neuron  [] outputs ;					// .. and outputs
 
-	private static final Random rng = new Random(24) ;	// utility random number generator
-
-	private final BrainParameters parameters ;
-
 	private final double scoreReservoir[] ;
 	private int scoreClock ;
+	private int clock ;
 
-	public Brain( BrainParameters parameters, int ... dims ) {
-		this.parameters = parameters ;
+	public Brain( int numInputs, int numOutputs, int ... dims ) {
 		this.scoreReservoir = new double[1000] ;
 		this.scoreClock = 0 ;
 		this.brainDimensions = dims ;
-		this.outputHistory = new double[HISTORY_LENGTH][ parameters.numOutputs] ; 
+		this.outputHistory = new double[HISTORY_LENGTH][ numOutputs] ; 
 		this.historyIndex = 0 ;
-	
+		this.clock = 0 ;
+
 		// OK let's create space for all neurons
 		// The X0 x X1 x .... Xn 
 		// plus inputs & outputs
@@ -56,17 +55,17 @@ public class Brain  {
 			numNeurons *= brainDimensions[i] ; 
 		}
 	
-		numNeurons += parameters.numInputs ;
-		numNeurons += parameters.numOutputs ;
+		numNeurons += numInputs ;
+		numNeurons += numOutputs ;
 		
 		this.neurons = new Neuron[ numNeurons ] ;
 		for( int i = 0 ; i<numNeurons ; i++ ) {
-			neurons[i] = new Neuron( String.valueOf(i), parameters ) ;
+			neurons[i] = new Neuron( i ) ;
 		}
 		
 		// Remember the inputs & outputs for convenience later 
-		this.inputs = new Neuron[parameters.numInputs] ;
-		this.outputs = new Neuron[parameters.numOutputs] ;
+		this.inputs = new Neuron[numInputs] ;
+		this.outputs = new Neuron[numOutputs] ;
 
 		// Copy the first few neurons to input cache
 		for( int i=0 ; i<inputs.length ; i++ ) {
@@ -97,7 +96,7 @@ public class Brain  {
 				leftLiquid[1] = l ;
 				int source = getIndexFromLocation( leftLiquid ) ;
 				log.debug( "Neuron[{}] @ {} is connected to input {}", source, leftLiquid, i) ;
-				double weight = getRandomWeight( parameters.inhibitorRatio ) ;
+				double weight = getRandomWeight() ;
 				edges[i].add( new Edge( source, weight ) ) ;
 			}
 		}
@@ -112,7 +111,7 @@ public class Brain  {
 				leftLiquid[1] = l ;
 				int source = getIndexFromLocation( leftLiquid ) ;
 				log.debug( "Neuron[{}] @ {} is connected to output {}", source, leftLiquid, i) ;
-				double weight = getRandomWeight( parameters.inhibitorRatio ) ;
+				double weight = getRandomWeight() ;
 				edges[numNeurons-i-1].add( new Edge( source, weight ) ) ;
 			}
 		}
@@ -126,13 +125,13 @@ public class Brain  {
 			for( int d=0 ; d<dims.length ; d++ ) {
 				loc[d]-- ;
 				if( loc[d] >= 0 ) {
-					double weight = getRandomWeight( parameters.inhibitorRatio ) ;
+					double weight = getRandomWeight() ;
 					Edge edge = new Edge( getIndexFromLocation(loc), weight ) ;
 					newEdges.add( edge ) ;
 				}
 				loc[d]+=2 ;
 				if( loc[d] < dims[d] ) {
-					double weight = getRandomWeight( parameters.inhibitorRatio ) ;
+					double weight = getRandomWeight() ;
 					Edge edge = new Edge( getIndexFromLocation(loc), weight ) ;
 					newEdges.add( edge ) ;
 				}
@@ -156,12 +155,13 @@ public class Brain  {
 		}		
 	}
 
-	protected double getRandomWeight( double inhibitorRatio ) {
+	protected double getRandomWeight() {
 		return rng.nextDouble() * ( rng.nextDouble() < inhibitorRatio ? -1 : 1 ) ;
 	}
 	
 	
 	public void step( double[] inputs ) {
+		clock++ ;
 		for( int i=inputs.length ; i<neurons.length ; i++ ) {
 			this.neurons[i].decay();
 		}
@@ -206,7 +206,7 @@ public class Brain  {
 				tmp += dp * dp  ; 
 			}
 			score += Math.sqrt( tmp ) ;
-			double dp = p - getHistory( n, BrainParameters.SPIKE_PROFILE_SIZE ) ; 
+			double dp = p - getHistory( n, 1 ) ; 
 			//score += Math.abs(dp) ;
 		}
 
@@ -296,19 +296,15 @@ public class Brain  {
 
 	public Potentials getNeuronPotentials() {
 		Potentials rc = new Potentials() ;
-		int ix = 0 ;
-		rc.states = new NeuronState[ inputs.length + outputs.length + neurons.length] ;
+		
+		rc.states = new NeuronState[neurons.length] ;
 		rc.outputs = new double[ outputs.length ] ;
 
-		for( int i=0 ; i<inputs.length ; i++ ) {
-			rc.states[ix++] = new NeuronState( inputs[i] ) ;
-		}
 		for( int i=0 ; i<outputs.length ; i++ ) {
-			rc.states[ix++] = new NeuronState( outputs[i] ) ;
 			rc.outputs[i] = outputs[i].getPotential() ;
 		}
 		for( int i=0 ; i<neurons.length ; i++ ) {
-			rc.states[ix++] = new NeuronState( neurons[i] ) ;
+			rc.states[i] = new NeuronState( neurons[i] ) ;
 		}
 		rc.score = getScore() ;
 		return rc ;
@@ -332,9 +328,9 @@ public class Brain  {
 		char sep = ' '  ;
 		for( int n=0 ; n<neurons.length ; n++ ) {
 			rc.append( sep ) 
-			.append( "{ \"name\":\"" ) 
-			.append( neurons[n].getName() ) 
-			.append( "\",\"potential\":" ) 
+			.append( "{ \"id\":"  ) 
+			.append( neurons[n].getId() ) 
+			.append( ",\"potential\":" ) 
 			.append( neurons[n].getPotential() ) 
 			;
 			if( n < inputs.length ) {
@@ -357,11 +353,11 @@ public class Brain  {
 				Neuron target = neurons[n] ;
 				
 				rc.append( sep ) 
-				.append( "{\"source\":\"" ) 		
-				.append( source.getName() ) 
-				.append( "\",\"target\":\"" ) 
-				.append( target.getName() ) 
-				.append( "\",\"weight\":" ) 
+				.append( "{\"source\":" ) 		
+				.append( source.getId() ) 
+				.append( ",\"target\":" ) 
+				.append( target.getId() ) 
+				.append( ",\"weight\":" ) 
 				.append( edge.weight ) 		
 				.append( " }" ) 
 				;
@@ -375,9 +371,9 @@ public class Brain  {
 		boolean rc = false ;
 		Gson gson = new GsonBuilder().setPrettyPrinting().create();
 		try ( OutputStream os = new FileOutputStream( fileName ))  {
-			parameters.dimensions = this.brainDimensions ;
-			String json = gson.toJson( parameters ) ;
-			os.write( json.getBytes( "UTF-8" ) ) ;
+			// parameters.dimensions = this.brainDimensions ;
+			// String json = gson.toJson( parameters ) ;
+			// os.write( json.getBytes( "UTF-8" ) ) ;
 		} catch( IOException ioe ) {
 			rc = false ;
 		}
@@ -394,8 +390,8 @@ public class Brain  {
 		try ( InputStream is = new FileInputStream(fileName) ;
 				Reader json = new InputStreamReader(is) ) {
 			Gson gson = new Gson() ;
-			BrainParameters bp = (BrainParameters)gson.fromJson( json, BrainParameters.class ) ;
-			rc = new Brain( bp, dims ) ;
+			// BrainParameters bp = (BrainParameters)gson.fromJson( json, BrainParameters.class ) ;
+			rc = new Brain( 1,1,dims ) ;
 		} catch( Exception e ) {
 			e.printStackTrace();
 			rc = null ;
@@ -420,9 +416,11 @@ class Potentials {
 
 class NeuronState {
 	public double potential ;
-	public String name ;
+	public int id ;
+	public int ago ;
 	public NeuronState( Neuron n ) {
 		this.potential = n.getPotential() ;
-		this.name = n.getName() ;
+		this.id = n.getId() ;
+		this.ago = n.lastSpikeTime ;
 	}
 }

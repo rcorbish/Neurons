@@ -18,9 +18,9 @@ public class Neuron  {
 
 	private double 	currentPotential ;
 	private int 	spikeIndex ;
+	public  int 	lastSpikeTime ;
 
-	public final String name ;
-	public final double spike[] ;
+	public final int id ;
 
 	// These must be 0 .. 1  ( to map to a genome )
 	public final double threshold  ;
@@ -28,23 +28,21 @@ public class Neuron  {
 	// This is -0.5 .. +0.5
 	public final double restingPotential ;
 
-	public Neuron( String name, BrainParameters parameters ) {
+	public Neuron( int id ) {
 		this.spikeIndex = -1 ;
 		this.restingPotential = 0 ; //parameters.restingPotential ;
-		this.threshold = parameters.spikeThreshold ;
-		this.spike = parameters.spikeProfile ;
+		this.threshold = 0.70 + rng.nextDouble() / 10.0 ;
 		this.decay = 0.25 + rng.nextDouble() / 10.0 ;
-		this.name = name ;
+		this.id = id ;
+		lastSpikeTime = 0 ;
 	}
 
-	public Neuron( String name, Genome genome ) {
-		this.name = name ;
+	public Neuron( int id, Genome genome ) {
+		this.id = id ;
 
 		this.threshold = genome.getDouble( GENOME_INDEX_THRESHOLD ) ;
 		this.restingPotential = genome.getDouble( GENOME_INDEX_RESTING ) - 0.5 ;
 		this.decay = genome.getDouble( GENOME_INDEX_DECAY ) ;
-
-		this.spike = new double[]{ 1.00, .70, .30, -.25, -.20, -.15  } ;
 	}
 
 	public void decay() {
@@ -52,9 +50,10 @@ public class Neuron  {
 	}
 
 	public void setPotential( double currentPotential ) {
-		if( "10".equals(name) ) {
+		if( id == 10 ) {
 			log.debug( "Now: {}, Add: {}", this.currentPotential, currentPotential ) ;
 		}
+		lastSpikeTime++ ;
 		if( spikeIndex < 0 ) {
 			this.currentPotential += currentPotential ;
 			if( this.currentPotential < restingPotential ) {
@@ -62,6 +61,7 @@ public class Neuron  {
 			}
 			if( this.currentPotential>threshold ) {
 				this.currentPotential = 1.0 ;
+				lastSpikeTime = 0 ;
 				spikeIndex = (int)Math.floor( Math.log(0.1) / -decay ) ;
 			}
 		} else {
@@ -70,7 +70,7 @@ public class Neuron  {
 		}
 	}
 	
-	public String getName() { return name ; }
+	public int getId() { return id ; }
 	
 	public double getPotential() {
 		double rc = currentPotential ;

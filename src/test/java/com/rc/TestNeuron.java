@@ -8,16 +8,12 @@ import org.junit.Test;
 
 public class TestNeuron {
 
-	BrainParameters bp ;
-
 	@Before
 	public void setUp() throws Exception {
-		bp = new BrainParameters() ;
 	}
 
 	@After
 	public void tearDown() throws Exception {
-		bp = null ;
 	}
 
 
@@ -86,9 +82,9 @@ public class TestNeuron {
 
 	@Test
 	public void testNeuron() {
-		Neuron n = new Neuron("TEST", bp ) ;
+		Neuron n = new Neuron( 1 ) ;
 		Genome g = n.toGenome() ;
-		Neuron n2 = new Neuron( n.getName(), g ) ;
+		Neuron n2 = new Neuron( n.getId(), g ) ;
 		double accuracy = g.accuracy() ;
 		assertEquals( "Bitset copy - bad decay", n.decay, n2.decay, accuracy ) ;
 		assertEquals( "Bitset copy - bad threshold", n.threshold, n2.threshold, accuracy ) ;
