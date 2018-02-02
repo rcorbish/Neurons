@@ -10,12 +10,12 @@ public class Edge {
 	}
 	
 	public Edge( Genome genome ) {
-		this.weight = genome.getValue( 0 ) ;
+		this.weight = genome.getDouble( 0 ) ;
 	}
 	
 	public Genome toGenome() {
 		Genome rc = new Genome( 1 ) ;
-		rc.setValue( weight, 0 ) ;
+		rc.set( weight, 0 ) ;
 		return rc ;
 	}
 }

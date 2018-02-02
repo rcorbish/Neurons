@@ -41,9 +41,9 @@ public class Neuron  {
 	public Neuron( String name, Genome genome ) {
 		this.name = name ;
 
-		this.threshold = genome.getValue( GENOME_INDEX_THRESHOLD ) ;
-		this.restingPotential = genome.getValue( GENOME_INDEX_RESTING ) - 0.5 ;
-		this.decay = genome.getValue( GENOME_INDEX_DECAY ) ;
+		this.threshold = genome.getDouble( GENOME_INDEX_THRESHOLD ) ;
+		this.restingPotential = genome.getDouble( GENOME_INDEX_RESTING ) - 0.5 ;
+		this.decay = genome.getDouble( GENOME_INDEX_DECAY ) ;
 
 		this.spike = new double[]{ 1.00, .70, .30, -.25, -.20, -.15  } ;
 	}
@@ -85,9 +85,9 @@ public class Neuron  {
 
 	public Genome toGenome() {
 		Genome rc = new Genome( GENOME_CAPACITY  ) ;
-		rc.setValue( threshold, GENOME_INDEX_THRESHOLD ) ;
-		rc.setValue( restingPotential + 0.5 , GENOME_INDEX_RESTING ) ;
-		rc.setValue( decay, GENOME_INDEX_DECAY ) ;
+		rc.set( threshold, GENOME_INDEX_THRESHOLD ) ;
+		rc.set( restingPotential + 0.5 , GENOME_INDEX_RESTING ) ;
+		rc.set( decay, GENOME_INDEX_DECAY ) ;
 
 		return rc ;
 	}

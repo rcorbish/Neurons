@@ -403,6 +403,12 @@ public class Brain  {
 		return rc ;
 	}
 
+	public Genome toGenome() {
+		// 2 per neuron
+		// 2 per edge
+		Genome rc = new Genome( 1 ) ;
+		return rc ;
+	}
 }
 
 
