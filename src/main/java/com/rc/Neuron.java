@@ -1,6 +1,5 @@
 package com.rc ;
 
-import java.awt.image.SinglePixelPackedSampleModel;
 import java.util.Random;
 
 import org.slf4j.Logger;
@@ -34,7 +33,7 @@ public class Neuron  {
 		this.restingPotential = 0 ; //parameters.restingPotential ;
 		this.threshold = parameters.spikeThreshold ;
 		this.spike = parameters.spikeProfile ;
-		this.decay = 0.3 + rng.nextDouble() / 5.0 ;
+		this.decay = 0.25 + rng.nextDouble() / 10.0 ;
 		this.name = name ;
 	}
 
@@ -63,8 +62,7 @@ public class Neuron  {
 			}
 			if( this.currentPotential>threshold ) {
 				this.currentPotential = 1.0 ;
-				spikeIndex = (int)Math.floor( Math.log(0.05) / -decay ) ;
-				spikeIndex = 5 ;
+				spikeIndex = (int)Math.floor( Math.log(0.1) / -decay ) ;
 			}
 		} else {
 			spikeIndex--;
