@@ -162,7 +162,7 @@ public class Brain  {
 	
 	
 	public void step( double[] inputs ) {
-		for( int i=0 ; i<neurons.length ; i++ ) {
+		for( int i=inputs.length ; i<neurons.length ; i++ ) {
 			this.neurons[i].decay();
 		}
 

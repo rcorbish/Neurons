@@ -5,7 +5,7 @@ import java.util.StringJoiner;
 
 public class BrainParameters  {
 	
-	public double inhibitorRatio = 0.125 ;
+	public double inhibitorRatio = 0.1 ; 
 	public double spikeThreshold = 0.60 ;
 	public double restingPotential = -.1 ;
 
