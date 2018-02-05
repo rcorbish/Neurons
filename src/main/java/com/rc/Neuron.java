@@ -50,7 +50,9 @@ public class Neuron  {
 		this.decay = genome.getDouble( GENOME_INDEX_DECAY ) ;
 		this.index = genome.getInt( GENOME_INDEX_ID ) ;
 		this.learningRate = genome.getDouble( GENOME_INDEX_LEARNING_RATE ) ;
-		spikeDuration = (int)Math.floor( Math.log(0.1) / -decay ) ;
+		// Simple vs Synaptic Model
+		//spikeDuration = (int)Math.floor( Math.log(0.1) / -decay ) ;
+		spikeDuration = (int)Math.ceil( 1.0 / decay ) ;
 	}
 	
 	public Genome toGenome() {
@@ -65,7 +67,12 @@ public class Neuron  {
 	}
 
 	public void decay() {
-		this.currentPotential -= decay * this.currentPotential ;
+		// Simple vs Synaptic Model
+//		this.currentPotential -= decay * this.currentPotential ;
+		
+		if( this.currentPotential > restingPotential ) {
+			this.currentPotential -= decay  ;
+		}
 	}
 
 	
@@ -77,12 +84,15 @@ public class Neuron  {
 				this.currentPotential = restingPotential ;
 			}
 			if( this.currentPotential>threshold ) {
+				// Simple vs Synaptic Model
+
 				this.currentPotential = 1.0 ;
 				lastSpikeTime = 0 ;
 				spikeIndex = spikeDuration ;
 			}
 		} else {
 			spikeIndex--;
+			// Simple vs Synaptic Model
 //			if( spikeIndex==0 ) { 
 				this.currentPotential = restingPotential ;
 //			} 
@@ -98,14 +108,15 @@ public class Neuron  {
 			for( Edge e : edges ) {
 				Neuron source = brain.getNeuron( e.source() ) ;
 				int timeSinceFired = source.lastSpikeTime ;
-				if( timeSinceFired > 0 ) {		// same step - can't be the cause !
+				if( timeSinceFired < 10 ) {		// same step - can't be the cause !
 					double increase = learningRate / ( timeSinceFired * timeSinceFired ) ;
 					e.addWeight( increase ) ;
 				} else {
 					// 
-					double increase = learningRate * ( timeSinceFired * timeSinceFired ) ;
-					if( increase > 0.05 ) increase = 0.05 ;
-					e.addWeight( -increase ) ;
+					double decrease = ( learningRate * timeSinceFired ) / 10 ;
+					if( decrease < 0.0005 ) decrease = 0.0005 ;
+					if( decrease > 0.5 ) decrease = 0.5 ;
+					e.addWeight( -decrease ) ;
 				}
 			}
 		}
@@ -113,7 +124,6 @@ public class Neuron  {
 	
 	public int getIndex() { return index ; }
 	public double getPotential() { return currentPotential ; }
-
 
 }
 
