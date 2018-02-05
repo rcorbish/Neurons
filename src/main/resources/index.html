@@ -20,27 +20,23 @@ body {
 }
 
 .link {
-  stroke: #ccc;
   stroke-opacity: .6;
   marker-end: url(#arrow-marker);
 }
-.inhibitor {
-  stroke: #800030;
-}
+
 .status {
 	position: absolute ;
 	top: 0 ;
 	left: 0 ;
 	margin: 5px ;
 }
-.fill-blotter {
+#chart {
 	left: 0 ;
 	top: 0 ;
 	width: 100% ;
 	height: 120px ;
 	border: none ;
 	padding: 0 ;
-	xbackground-color: #050225 ;
 	overflow: hidden ;
 }
 .liquid {
@@ -62,14 +58,20 @@ body {
 <body>
 <div class="status"></div>
 
-<canvas id="chart" class='fill-blotter' width='1200' height='150'></canvas>
+<canvas id="chart"  width='1200' height='150'></canvas>
 <div id='liquid' class='liquid'></div>
 
 <script type="text/javascript" charset="utf-8">
-	var width = 800;
-    var height = 600;
+	var width = 800 ;
+    var height = 600 ;
+	
+	const firingAge = d3.scaleLinear()
+    			.domain([1, 10, 30])
+    			.range(["green", "white", "red"]);
 
-	const color = d3.scaleOrdinal( d3.schemeCategory20 ) ;
+	const weightColor = d3.scaleLinear()
+				.domain([-1, 0, 1])
+				.range(["red", "white", "green"]);
 
 	var svg = d3.select("#liquid").append("svg") 
 		.attr("width", '100%')
@@ -117,9 +119,7 @@ d3.json("data", function(error, graph) {
     	.data(graph.links)
     	.enter().append("line") 
 		.attr( 'class', 'link' )
-		.attr( 'class', function(l) { 
-			return l.weight>0 ? 'link' : 'link inhibitor' ; 
-		 	} )
+		.attr( "stroke", function(l) { return weightColor( l.weight ); })
 		;
 
 		const nodes = svg
@@ -130,7 +130,7 @@ d3.json("data", function(error, graph) {
 				.attr( 'class', 'node' )
 				.attr( 'id', function(d) { return d.id } )
 				.attr("r", function(d) { return 6.5 } ) 
-				.attr("fill", function(d) { return color( d.type ); })
+				.attr("fill", function(d) { return firingAge( d.type ); })
 				.call(d3.drag()
 					.on("start", dragstarted)
 					.on("drag", dragged)
@@ -171,18 +171,24 @@ d3.json("data", function(error, graph) {
   const simulation = d3.forceSimulation()
 	.nodes( graph.nodes ) 	
 	.force( "link", d3.forceLink()
-	 		.strength( function(l) { return .2 ; }) 
+	 		.strength( function(l) { return .6 ; }) 
 	 		.distance( function(l) { return 15 ; } )
 	 		.id( function(n) { return n.id ; } ) 
 	 		.links( graph.links ) 
 	 	)
 	.force( "charge", d3.forceManyBody()
-			.strength( -30 ) 
+			.strength( -1 ) 
 		)
-	.force( "center", d3.forceCenter(width/2, height/2) )
-	.force( "collide", d3.forceCollide( 40 ) ) 
-	//.force( "x",  d3.forceX().x( function(d) { return (d.px || 3) * 100 - 200 ; } ) ) 
-	.force( "y",  d3.forceX().x( function(d) { return (d.py || 3) * 100 - 200 ; } ) ) 
+	//.force( "center", d3.forceCenter(width/2, height/2) )
+	.force( "collide", d3.forceCollide( 20 ) ) 
+	.force( "x", d3.forceX()
+			.x( function(d) { return d.fx || 0 ; } )
+			.strength( function(d) { return d.fx ? 1 : 0 ; } ) 
+		)  
+	.force( "y", d3.forceY()
+			.y( function(d) { return height/2 ; } )
+			.strength( function(d) { return d.fx ? 2 : 0 ; } ) 
+		)  
 	.on("tick", tick ) 
 	.on("end", tick ) 
 	;
@@ -213,32 +219,43 @@ function resetWebSocket() {
 	// called when a message received from server
 	ws.onmessage = function (evt) {
 		var data = JSON.parse( evt.data ) ;
-		const status = document.querySelector( ".status" ) ;
-		status.textContent = "Score: " + data.score.toFixed(3) ;
+		
 		for( var i=0 ; i<data.states.length ; i++ ) {			
 			var n = document.getElementById( data.states[i].id ) ;
 			if( n ) {				
-				n.style.fill = color( data.states[i].ago  ) ; 
-				// n.style.fill = color( data.states[i].potential > 0.3 ? 1.0 : 10 ) ; 
+				n.style.fill = firingAge( data.states[i].ago  ) ; 
+			
+				n = document.getElementById( 'txt-' + data.states[i].id ) ;
+				if( n ) {				
+					n.textContent = data.states[i].ago ; 
+				}
 			}
-			var n = document.getElementById( 'txt-' + data.states[i].id ) ;
-			if( n ) {				
-				n.textContent = data.states[i].ago ; 
-			}
-
 		}
-		c.width = c.width;		
 		
+		c.width = c.width;	// clear screern ( of the chart area - not the graph )		
+		
+		// Draw the chart at the top of the screen
+		// chart od output values & which outputs are activated
 		history.push( data.outputs ) ;
 		if( history.length > HistoryLength ) history.shift() ;
-		const cols = [ '#ff00ff', '#ffff00', '#00ffff', '#ffffff', '#c0c0c0' ]
+		const outputColors = d3.scaleLinear()
+			.domain([ 0, data.outputs.length ] )
+			.range([ "white", "steelblue"]);
+		
 		for( var h=0 ; h<data.outputs.length ; h++ ) {
 			ctx.beginPath() ;
-			ctx.moveTo( 0, 100 );
+			ctx.strokeStyle = outputColors( h ) ;
+			ctx.fillStyle = outputColors( h ) ;
 			for( var i=0 ; i<history.length ; i++ ) {
-				ctx.lineTo( i*12, 100-(100*history[i][h]) ) ;
+				if( history[i][h] > 0.99 ) {
+					ctx.moveTo( i*12, 110-h*10 );
+					ctx.arc( i*12, 110-h*10, 5, 0, 2*Math.PI);
+				}
+				ctx.moveTo( i*12+h, 110 );
+				ctx.lineTo( i*12+h, 110-(100*history[i][h]) ) ;
+				ctx.fill() ;
+				 
 			}
-			ctx.strokeStyle = cols[h] ;
 			ctx.stroke();
 		}
 	};

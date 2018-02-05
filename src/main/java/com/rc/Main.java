@@ -3,18 +3,11 @@ package com.rc ;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.BitSet;
 import java.util.List;
-import java.util.Queue;
 import java.util.Random;
 import java.util.StringJoiner;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 
-import org.eclipse.jetty.util.ConcurrentArrayQueue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -26,13 +19,15 @@ public class Main {
 	final static Logger logger = LoggerFactory.getLogger( Monitor.class ) ;
 
 	final static Random rng = new Random( 660 );
-	final static int INPUT_COUNT = 5 ;
-	final static int OUTPUT_COUNT = 5 ;
+	
+	static int INPUT_COUNT = 5 ;
+	static int OUTPUT_COUNT = 5 ;
 	
 	static int POPULATION = 5_000 ;
 	static int EPOCHS = 200 ;
 	static int SIMULATIONS = 2000 ;
 	static double MUTATION = 0.1 ;
+	static int DELAY_INTERVAL  = 150 ;
 	
 	public static void main(String[] args) {
 		try {
@@ -41,12 +36,16 @@ public class Main {
 			
 			parser.acceptsAll( asList("f", "file") , "The parameters in json format" ).withRequiredArg().ofType( String.class ) ;
 			parser.acceptsAll( asList("e", "evolve") , "Whether to run the evolution step" ) ;
+			parser.acceptsAll( asList("i", "inputs"), "Number of inputs in the network" ).withRequiredArg().ofType( Integer.class ) ; 
+			parser.acceptsAll( asList("o", "outputs"), "Number of outputs in the network" ).withRequiredArg().ofType( Integer.class ) ; 
+			parser.acceptsAll( asList("u", "update-delay" ) , "Interval between updates 0-200 mS" ).withRequiredArg().ofType( Integer.class ) ; 
 			parser.accepts( "epochs" , "Number of epochs to run" ).withRequiredArg().ofType( Integer.class ) ; 
 			parser.accepts( "clear" , "Delete existing parameters" ) ; 
+			parser.accepts( "train" , "Train the network" ) ; 
 			parser.accepts( "simulations" , "Number of simulations for each brain" ).withRequiredArg().ofType( Integer.class ) ; 
 			parser.accepts( "population" , "Number of brains in the population" ).withRequiredArg().ofType( Integer.class ) ; 
 			parser.accepts( "mutation" , "Mutation amount 0.0 - 1.0" ).withRequiredArg().ofType( Double.class ) ; 
-			parser.nonOptions( "Network dimensions  (e.g. 3 4 )" ).ofType( Integer.class ) ; 
+			parser.nonOptions( "Network dimensions ( up to 3 ) (e.g. 3 4, 2 2 2 )" ).ofType( Integer.class ) ; 
 			parser.accepts( "help", "This help" ).forHelp();
 			
 	        OptionSet options = parser.parse( args ) ;
@@ -64,7 +63,13 @@ public class Main {
 	        if( options.has( "population" ) ) 	{ POPULATION = (int) options.valueOf("population") ; }
 	        if( options.has( "epochs" ) ) 		{ EPOCHS = (int) options.valueOf("epochs") ; }
 	        if( options.has( "mutation" ) ) 	{ MUTATION = (double) options.valueOf("mutation") ; }
-
+	        if( options.has( "inputs" ) ) 		{ INPUT_COUNT = (int) options.valueOf("inputs") ; }
+	        if( options.has( "outputs" ) ) 		{ OUTPUT_COUNT = (int) options.valueOf("outputs") ; }
+	        if( options.has( "update-delay" ) ) { DELAY_INTERVAL = (int) options.valueOf("update-delay") ; }
+	        boolean clearFile = options.has("clear") ;
+	        boolean evolve    = options.has("evolve") ;
+	        boolean train	  = options.has("train") ;
+	        
 	        String parameterFile = options.has("f") ? options.valueOf( "f" ).toString() : null ;
 
 			int dims[] ;
@@ -81,23 +86,27 @@ public class Main {
 			for( int d : dims ) {
 				sj.add( String.valueOf(d) ) ;
 			}
-			logger.info("Network size  : {}", sj );
-
-			
-			boolean evolve = options.has( "e" ) ;
-			
-			// BrainParameters parameters = new BrainParameters() ;
-			// parameters.numInputs  = INPUT_COUNT ;
-			// parameters.numOutputs = OUTPUT_COUNT ;
+			logger.info("Network size  : {}", sj ) ;
+			logger.info("Inputs        : {}", INPUT_COUNT ) ;
+			logger.info("Outputs       : {}", OUTPUT_COUNT ) ;
+			logger.info("Delay         : {}", DELAY_INTERVAL ) ;
 			
 			boolean fileExists = false ;
 			if( parameterFile !=null ) {
 				File f = new File( parameterFile ) ;
 				fileExists = f.canRead() ;
 			}
-			Brain brain = fileExists && !options.has("clear") ? 
-							Brain.load( parameterFile, dims ) :
-							new Brain( INPUT_COUNT, OUTPUT_COUNT, dims ) ;
+			
+			Brain brain ;
+			if( fileExists && !clearFile ) {
+				brain = Brain.load( parameterFile ) ;
+			} else {
+				brain = new Brain( INPUT_COUNT, OUTPUT_COUNT, dims ) ;
+				if( parameterFile != null ) {
+					brain.save( parameterFile ) ;
+				}
+			}
+
 			if( evolve ) {
 				logger.info("Epochs        : {}", EPOCHS );
 				logger.info("Population    : {}", POPULATION );
@@ -120,16 +129,16 @@ public class Main {
 				for( int i=0 ; i<inputs.length ; i++ ) {
 					inputs[i] =  rng.nextInt( 1+(clk % 4) )==0 ? 1 : 0 ;
 					inputs[i] =  Math.cos(i * clk / Math.PI ) ;
-					inputs[i] =  0.1 + 1/(i+1) ;
+//					inputs[i] =  0.1 + 1/(i+1) ;
 				}
 				// inputs[0] = 1 / ( (clk % 10) + 1 ) ;
 				// inputs[0] = Math.abs( Math.sin( clk / Math.PI ) ) ;
 				// inputs[1] = Math.cos( 3 * clk / Math.PI ) ;
 				// inputs[1] *= inputs[1] + rng.nextDouble()/10;
-				brain.step( inputs ) ;
+				brain.step( inputs, train ) ;
 				brain.updateScores() ;
 				m.sendBrainData() ; 
-				Thread.sleep( 100 ) ;
+				Thread.sleep( DELAY_INTERVAL ) ;
 			}
 		} catch( Throwable t ) {  
 			t.printStackTrace();

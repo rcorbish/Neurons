@@ -1,8 +1,10 @@
 package com.rc ;
 
 public class Edge {
-	public int source ;
-	public double weight ;
+	static public int GENOME_SIZE = 3 ;
+
+	private int source ;
+	private double weight ;
 	
 	public Edge( int sourceIndex, double weight ) {
 		this.source = sourceIndex ;
@@ -10,13 +12,29 @@ public class Edge {
 	}
 	
 	public Edge( Genome genome ) {
-		this.weight = genome.getDouble( 0 ) ;
+		this.source = genome.getInt( 0 ) ;
+		this.weight = genome.getDouble( 1 ) * ( genome.getInt( 2 )==0 ? -1 : 1 ) ;
 	}
 	
 	public Genome toGenome() {
-		Genome rc = new Genome( 1 ) ;
-		rc.set( weight, 0 ) ;
+		Genome rc = new Genome() ;
+		rc.set( source, 0 ) ;
+		rc.set( Math.abs(weight), 1 ) ;
+		int s = Math.signum(weight) < 0 ? 0 : 1 ;
+		rc.set( s, 2 ) ;
 		return rc ;
+	}
+	
+	public int source() {
+		return source ;
+	}
+	public double weight() {
+		return weight ;
+	}
+	public void addWeight( double addition ) {
+		weight += addition ;
+		if( weight > 0.85 ) weight = 0.85 ;
+		if( weight < -0.85 ) weight = -0.85 ;
 	}
 }
 

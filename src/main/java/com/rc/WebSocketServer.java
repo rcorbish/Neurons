@@ -23,7 +23,7 @@ public class WebSocketServer  {
 
 	@OnWebSocketConnect
 	public synchronized void connect( Session session )  {
-		this.sessions.add( session ) ;	// keep tabs on the rempote client
+		this.sessions.add( session ) ;	// keep tabs on the remote client
 		logger.info( "Opened connection to {} - {} active sessions", session.getRemoteAddress(), sessions.size() ) ;
 	}
 

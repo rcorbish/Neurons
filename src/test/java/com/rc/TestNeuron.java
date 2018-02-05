@@ -19,7 +19,7 @@ public class TestNeuron {
 
 	@Test
 	public void testGenomeInt() {
-		Genome g = new Genome( 2 ) ;
+		Genome g = new Genome() ;
 
 		int v = 31 ;
 		g.set( v, 0 ) ;
@@ -42,7 +42,7 @@ public class TestNeuron {
 	
 	@Test
 	public void testGenomeDouble() {
-		Genome g = new Genome( 2 ) ;
+		Genome g = new Genome() ;
 		double accuracy = g.accuracy() ;
 
 		double v = .31 ;
@@ -66,8 +66,8 @@ public class TestNeuron {
 	
 	@Test
 	public void testGenomeSubsequence() {
-		Genome g = new Genome( 30 ) ;
-		double accuracy = g.accuracy() ;
+		Genome g = new Genome() ;
+//		double accuracy = g.accuracy() ;
 		for( int i=0 ;i<30 ; i++ ) {
 			g.set( i, i ) ;
 		}
@@ -84,7 +84,7 @@ public class TestNeuron {
 	public void testNeuron() {
 		Neuron n = new Neuron( 1 ) ;
 		Genome g = n.toGenome() ;
-		Neuron n2 = new Neuron( n.getId(), g ) ;
+		Neuron n2 = new Neuron( g ) ;
 		double accuracy = g.accuracy() ;
 		assertEquals( "Bitset copy - bad decay", n.decay, n2.decay, accuracy ) ;
 		assertEquals( "Bitset copy - bad threshold", n.threshold, n2.threshold, accuracy ) ;

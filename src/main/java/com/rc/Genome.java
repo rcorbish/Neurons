@@ -1,5 +1,6 @@
 package com.rc ;
 
+import java.io.Serializable;
 import java.util.BitSet;
 
 import org.slf4j.Logger;
@@ -10,22 +11,26 @@ import org.slf4j.LoggerFactory;
  * of 1/BITS_PER_NUMBER
  * 
  */
-public class Genome  {
+public class Genome  implements Serializable {	
 
-	final static Logger log = LoggerFactory.getLogger( Genome.class ) ;
+	private static final long serialVersionUID = 1L;
+
+	final public static Logger log = LoggerFactory.getLogger( Genome.class ) ;
 
 	// Numbers have a range of 0..1 in  1/( 2^BITS_PER_NUMBER ) 
-	final public static int BITS_PER_NUMBER = 6 ; 
+	final public static int BITS_PER_NUMBER = 8 ; 
 	final public static double NUMBER_GRANULARITY = 1 << BITS_PER_NUMBER ;
 
 	final private BitSet data ;
+	private int capacity ;
 
 	/**
 	 * Create a genome that can hold a fixed amount of data
 	 * items. All items are cleared.
 	 */
-	public Genome( int capacity ) {
-		this.data = new BitSet( capacity * BITS_PER_NUMBER ) ;
+	public Genome() {
+		this.data = new BitSet() ;
+		capacity = 0 ;
 	}
 
 	/**
@@ -72,6 +77,9 @@ public class Genome  {
 				data.clear( start + i ) ;
 			}
 		}
+		if( index+1 > capacity ) {
+			capacity = index+1 ;
+		}
 	}
 
 
@@ -90,13 +98,11 @@ public class Genome  {
 	 * @param tail the genome to glue onto the end of the receiver
 	 */
 	public void append( Genome tail ) {
-		for( int i=0 ; i<tail.data.size() ; i++ ) {
-			if( tail.data.get(i) ) {
-				data.set( i + tail.data.size() ) ;
-			} else {
-				data.clear( i + tail.data.size() ) ;
-			}
+		int start = capacity * BITS_PER_NUMBER ;
+		for( int i = tail.data.nextSetBit(0); i >= 0; i = tail.data.nextSetBit(i+1) ) {
+			data.set( i + start ) ;
 		} 
+		capacity += tail.capacity ;
 	}
 
 	/**
@@ -105,7 +111,7 @@ public class Genome  {
 	 * @param length the number of numbers to copy
 	 */
 	public Genome subSequence( int start, int length ) {
-		Genome rc = new Genome( length ) ;
+		Genome rc = new Genome() ;
 		for( int i=0 ; i<length ; i++ ) {
 			rc.set( getInt( start + i ), i ) ;
 		} 
@@ -117,9 +123,6 @@ public class Genome  {
 		return (1.0/BITS_PER_NUMBER) ;
 	}
 	
-	public int capacity() {
-		return data.size() / BITS_PER_NUMBER ;
-	}
 }
 
 

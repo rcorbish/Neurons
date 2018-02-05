@@ -10,5 +10,5 @@ target/
 .classpath
 .vscode
 sync.sh
-*.json
+*.dat
 

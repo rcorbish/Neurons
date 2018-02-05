@@ -14,13 +14,18 @@ public class Neuron  {
 	private final static int GENOME_INDEX_THRESHOLD = 0 ;
 	private final static int GENOME_INDEX_RESTING = 1 ;
 	private final static int GENOME_INDEX_DECAY = 2 ;
-	private final static int GENOME_CAPACITY = 3 ;
+	private final static int GENOME_INDEX_ID = 3 ;
+	private final static int GENOME_INDEX_LEARNING_RATE = 4 ;
+	public  final static int GENOME_SIZE = 5 ;
 
+	private final int spikeDuration ;
+	
+	private double 	learningRate ;
 	private double 	currentPotential ;
 	private int 	spikeIndex ;
 	public  int 	lastSpikeTime ;
 
-	public final int id ;
+	public final int index ;
 
 	// These must be 0 .. 1  ( to map to a genome )
 	public final double threshold  ;
@@ -28,31 +33,43 @@ public class Neuron  {
 	// This is -0.5 .. +0.5
 	public final double restingPotential ;
 
-	public Neuron( int id ) {
+	public Neuron( int index ) {
 		this.spikeIndex = -1 ;
 		this.restingPotential = 0 ; //parameters.restingPotential ;
 		this.threshold = 0.70 + rng.nextDouble() / 10.0 ;
 		this.decay = 0.25 + rng.nextDouble() / 10.0 ;
-		this.id = id ;
+		this.learningRate = rng.nextDouble() / 15.0 ;
+		this.index = index ;
 		lastSpikeTime = 0 ;
+		spikeDuration = (int)Math.floor( Math.log(0.1) / -decay ) ;
 	}
 
-	public Neuron( int id, Genome genome ) {
-		this.id = id ;
-
+	public Neuron( Genome genome ) {
 		this.threshold = genome.getDouble( GENOME_INDEX_THRESHOLD ) ;
 		this.restingPotential = genome.getDouble( GENOME_INDEX_RESTING ) - 0.5 ;
 		this.decay = genome.getDouble( GENOME_INDEX_DECAY ) ;
+		this.index = genome.getInt( GENOME_INDEX_ID ) ;
+		this.learningRate = genome.getDouble( GENOME_INDEX_LEARNING_RATE ) ;
+		spikeDuration = (int)Math.floor( Math.log(0.1) / -decay ) ;
+	}
+	
+	public Genome toGenome() {
+		Genome rc = new Genome() ;
+		rc.set( threshold, GENOME_INDEX_THRESHOLD ) ;
+		rc.set( restingPotential + 0.5 , GENOME_INDEX_RESTING ) ;
+		rc.set( decay, GENOME_INDEX_DECAY ) ;
+		rc.set( index, GENOME_INDEX_ID ) ;
+		rc.set( learningRate, GENOME_INDEX_LEARNING_RATE ) ;
+
+		return rc ;
 	}
 
 	public void decay() {
 		this.currentPotential -= decay * this.currentPotential ;
 	}
 
+	
 	public void setPotential( double currentPotential ) {
-		if( id == 10 ) {
-			log.debug( "Now: {}, Add: {}", this.currentPotential, currentPotential ) ;
-		}
 		lastSpikeTime++ ;
 		if( spikeIndex < 0 ) {
 			this.currentPotential += currentPotential ;
@@ -62,33 +79,42 @@ public class Neuron  {
 			if( this.currentPotential>threshold ) {
 				this.currentPotential = 1.0 ;
 				lastSpikeTime = 0 ;
-				spikeIndex = (int)Math.floor( Math.log(0.1) / -decay ) ;
+				spikeIndex = spikeDuration ;
 			}
 		} else {
 			spikeIndex--;
-			if( spikeIndex==0 ) { this.currentPotential = restingPotential ; } 
+//			if( spikeIndex==0 ) { 
+				this.currentPotential = restingPotential ;
+//			} 
 		}
 	}
 	
-	public int getId() { return id ; }
+	public void train( Brain brain ) {
+		// if just fired - find all inputs 
+		// and when they fired, update weights positively 
+		// for neurons that have fired recently
+		if( lastSpikeTime == 0 ) {
+			EdgeList edges = brain.getEdgeList( index ) ;
+			for( Edge e : edges ) {
+				Neuron source = brain.getNeuron( e.source() ) ;
+				int timeSinceFired = source.lastSpikeTime ;
+				if( timeSinceFired > 0 ) {		// same step - can't be the cause !
+					double increase = learningRate / ( timeSinceFired * timeSinceFired ) ;
+					e.addWeight( increase ) ;
+				} else {
+					// 
+					double increase = learningRate * ( timeSinceFired * timeSinceFired ) ;
+					if( increase > 0.05 ) increase = 0.05 ;
+					e.addWeight( -increase ) ;
+				}
+			}
+		}
+	}
 	
-	public double getPotential() {
-		double rc = currentPotential ;
-		// if( spikeIndex >= 0 ) {
-		// 	rc = spike[spikeIndex] ;
-		// }
-		return rc ;
-	}
+	public int getIndex() { return index ; }
+	public double getPotential() { return currentPotential ; }
 
 
-	public Genome toGenome() {
-		Genome rc = new Genome( GENOME_CAPACITY  ) ;
-		rc.set( threshold, GENOME_INDEX_THRESHOLD ) ;
-		rc.set( restingPotential + 0.5 , GENOME_INDEX_RESTING ) ;
-		rc.set( decay, GENOME_INDEX_DECAY ) ;
-
-		return rc ;
-	}
 }
 
 
