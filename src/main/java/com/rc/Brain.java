@@ -25,7 +25,7 @@ public class Brain  {
 	private final double outputHistory[][] ;
 	private int historyIndex ;
 
-	private final double inhibitorRatio = 0.2 ;
+	private final double inhibitorRatio = 0.0 ;
 	private final Neuron neurons[] ;
 	private final EdgeList edges[] ;			// adjacency list ( directed & weighted )
 

@@ -29,6 +29,18 @@ public class Main {
 	static double MUTATION = 0.1 ;
 	static int DELAY_INTERVAL  = 150 ;
 	
+	static double [][] TestPatterns = {
+		{ 0.5, 0.3, 0.6, 0.1, 0.9, 0.9 },
+		{ 0.9, 0.9, 0.9, 0.1, 0.1, 0.1 },
+		{ 0.9, 0.5, 0.1, 0.1, 0.5, 0.9 },
+		{ 0.1, 0.5, 0.9, 0.9, 0.5, 0.1 },
+		{ 0.9, 0.9, 0.9, 0.9, 0.5, 0.1 },
+		{ 0.1, 0.5, 0.9, 0.9, 0.9, 0.9 },
+		{ 0.5, 0.5, 0.5, 0.5, 0.5, 0.5 },
+		{ 0.1, 0.1, 0.1, 0.1, 0.1, 0.1 },
+		{ 0.9, 0.9, 0.9, 0.9, 0.9, 0.9 },
+	} ;
+
 	public static void main(String[] args) {
 		try {
 			
@@ -82,11 +94,11 @@ public class Main {
 			} else {
 				dims = new int[]{ 3, 3 } ;	// default if no size given
 			}
-			StringJoiner sj = new StringJoiner( " x " ) ;
+			StringJoiner sj = new StringJoiner( " , " ) ;
 			for( int d : dims ) {
 				sj.add( String.valueOf(d) ) ;
 			}
-			logger.info("Network size  : {}", sj ) ;
+			logger.info("Layers        : {}", sj ) ;
 			logger.info("Inputs        : {}", INPUT_COUNT ) ;
 			logger.info("Outputs       : {}", OUTPUT_COUNT ) ;
 			logger.info("Delay         : {}", DELAY_INTERVAL ) ;
@@ -124,18 +136,26 @@ public class Main {
 			double inputs[] = new double[INPUT_COUNT] ;
 
 			int clk = 0 ;
+			int patternCount = 0 ;
+			double testPattern[] = null ;
 			for( ; ; ) {
 				clk++ ;
+				patternCount-- ;
+				if( patternCount<0) {
+					patternCount = 20 ;
+					testPattern = TestPatterns[ rng.nextInt(TestPatterns.length)] ;
+				}
 				for( int i=0 ; i<inputs.length ; i++ ) {
 					inputs[i] =  rng.nextInt( 1+(clk % 4) )==0 ? 1 : 0 ;
 					inputs[i] =  Math.cos(i * clk / Math.PI ) ;
-//					inputs[i] =  0.1 + 1/(i+1) ;
+
+					inputs[i] =  testPattern[i] ;
 				}
 				// inputs[0] = 1 / ( (clk % 10) + 1 ) ;
 				// inputs[0] = Math.abs( Math.sin( clk / Math.PI ) ) ;
 				// inputs[1] = Math.cos( 3 * clk / Math.PI ) ;
 				// inputs[1] *= inputs[1] + rng.nextDouble()/10;
-				brain.step( inputs, train ) ;
+				brain.step( inputs, train && clk<6000 ) ;
 				brain.updateScores() ;
 				m.sendBrainData() ; 
 				Thread.sleep( DELAY_INTERVAL ) ;

@@ -34,7 +34,7 @@ public class Edge {
 	public void addWeight( double addition ) {
 		weight += addition ;
 		if( weight > 0.85 ) weight = 0.85 ;
-		if( weight < -0.85 ) weight = -0.85 ;
+		if( weight < 0 ) weight = 0 ;
 	}
 }
 
