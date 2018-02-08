@@ -27,8 +27,10 @@ body {
 .status {
 	position: absolute ;
 	top: 0 ;
-	left: 0 ;
+	right: 0 ;
+	text-align: right ;
 	margin: 5px ;
+	color: #80a0c0 ;
 }
 #chart {
 	left: 0 ;
@@ -220,6 +222,9 @@ function resetWebSocket() {
 	ws.onmessage = function (evt) {
 		var data = JSON.parse( evt.data ) ;
 		
+		const scoreDiv = document.querySelector( ".status" ) ;
+		scoreDiv.textContent = data.score ;
+
 		for( var i=0 ; i<data.states.length ; i++ ) {			
 			var n = document.getElementById( data.states[i].id ) ;
 			if( n ) {				

@@ -37,14 +37,14 @@ public class Neuron  {
 		this.spikeIndex = -1 ;
 		this.restingPotential = 0 ; //parameters.restingPotential ;
 		this.threshold = 0.70 + rng.nextDouble() / 10.0 ;
-		this.decay = 0.05 + rng.nextDouble() / 10.0 ;
+		this.decay = 0.01 + rng.nextDouble() / 10.0 ;
 		this.learningRate = rng.nextDouble() / 100.0 ;
 		this.currentPotential = rng.nextDouble() ;
 		this.index = index ;
 		lastSpikeTime = 0 ;
 		// Simple vs Synaptic Model
 		//spikeDuration = (int)Math.floor( Math.log(0.1) / -decay ) ;
-		spikeDuration = (int)Math.ceil( 1.0 / decay ) ;
+		spikeDuration = 5 ; //(int)Math.ceil( 1.0 / decay ) ;
 	}
 
 	public Neuron( Genome genome ) {
@@ -89,18 +89,13 @@ public class Neuron  {
 				this.currentPotential = restingPotential ;
 			}
 			if( this.currentPotential>threshold ) {
-				// Simple vs Synaptic Model
-
 				this.currentPotential = 1.0 ;
 				lastSpikeTime = 0 ;
 				spikeIndex = spikeDuration ;
 			}
 		} else {
 			spikeIndex--;
-			// Simple vs Synaptic Model
-//			if( spikeIndex==0 ) { 
-				this.currentPotential = restingPotential ;
-//			} 
+			this.currentPotential = restingPotential ;
 		}
 	}
 	
@@ -113,8 +108,11 @@ public class Neuron  {
 			for( Edge e : edges ) {
 				Neuron source = brain.getNeuron( e.source() ) ;
 				int timeSinceFired = source.lastSpikeTime ;
-				if( timeSinceFired < 5 && timeSinceFired > 0 ) {		// same step - can't be the cause !
-					double delta = learningRate / ( timeSinceFired * 2 )  ;
+				if( timeSinceFired == 0 ) {		// same step - can't be the cause !
+					double delta = learningRate / 3 ;
+					e.addWeight( -delta ) ;
+				} else if( timeSinceFired < 5 ) {		// same step - can't be the cause !
+					double delta = learningRate / ( timeSinceFired * 3 )  ;
 					e.addWeight( delta ) ;
 				}
 			}
@@ -122,15 +120,15 @@ public class Neuron  {
 			// OK - totally inefficient - but for trying this out ...
 			for( int i=0 ; i<brain.getNumNeurons() ; i++  ) {
 				EdgeList el = brain.getEdgeList( i ) ;
+				Neuron target = brain.getNeuron( i ) ;
+				int timeSinceFired = target.lastSpikeTime ;
 				for( Edge e : el ) {
 					// find what this neuron sends to
 					if( e.source() == index ) {
-						Neuron target = brain.getNeuron( e.source() ) ;
-						int timeSinceFired = target.lastSpikeTime ;
-						if( timeSinceFired < 5 ) {
+						if( timeSinceFired < 4 ) {
 							double delta = learningRate / ( 1 + timeSinceFired * 3 )  ;
 							e.addWeight( -delta ) ;
-						}		
+						}
 					}
 				}
 			}			

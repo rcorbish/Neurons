@@ -188,7 +188,7 @@ public class Brain  {
 	public void step( double[] inputs, boolean train ) {
 		clock++ ;			// step number
 
-		if( (clock %1000) == 0 ) {
+		if( train && (clock % 1000) == 0 ) {
 			log.info( "Step {}", clock ) ; 
 		}
 		
@@ -299,7 +299,7 @@ public class Brain  {
 	public Neuron[] getInputs() { return inputs ; }
 	public Neuron[] getOutputs() { return outputs ; }
 
-	public Potentials getNeuronPotentials() {
+	public Potentials getNeuronPotentials( int patternIndex ) {
 		Potentials rc = new Potentials() ;
 
 		rc.states = new NeuronState[neurons.length] ;
@@ -311,7 +311,7 @@ public class Brain  {
 		for( int i=0 ; i<neurons.length ; i++ ) {
 			rc.states[i] = new NeuronState( neurons[i] ) ;
 		}
-		rc.score = getScore() ;
+		rc.score = patternIndex ;
 		return rc ;
 	}
 

@@ -27,7 +27,7 @@ public class Main {
 	static int EPOCHS = 200 ;
 	static int SIMULATIONS = 2000 ;
 	static double MUTATION = 0.1 ;
-	static int DELAY_INTERVAL  = 150 ;
+	static long DELAY_INTERVAL  = 150 ;
 	
 	static double [][] TestPatterns = {
 		{ 0.5, 0.3, 0.6, 0.1, 0.9, 0.9 },
@@ -50,7 +50,7 @@ public class Main {
 			parser.acceptsAll( asList("e", "evolve") , "Whether to run the evolution step" ) ;
 			parser.acceptsAll( asList("i", "inputs"), "Number of inputs in the network" ).withRequiredArg().ofType( Integer.class ) ; 
 			parser.acceptsAll( asList("o", "outputs"), "Number of outputs in the network" ).withRequiredArg().ofType( Integer.class ) ; 
-			parser.acceptsAll( asList("u", "update-delay" ) , "Interval between updates 0-200 mS" ).withRequiredArg().ofType( Integer.class ) ; 
+			parser.acceptsAll( asList("u", "update-delay" ) , "Interval between updates 0-200 mS" ).withRequiredArg().ofType( Long.class ) ; 
 			parser.accepts( "epochs" , "Number of epochs to run" ).withRequiredArg().ofType( Integer.class ) ; 
 			parser.accepts( "clear" , "Delete existing parameters" ) ; 
 			parser.accepts( "train" , "Train the network" ) ; 
@@ -77,7 +77,7 @@ public class Main {
 	        if( options.has( "mutation" ) ) 	{ MUTATION = (double) options.valueOf("mutation") ; }
 	        if( options.has( "inputs" ) ) 		{ INPUT_COUNT = (int) options.valueOf("inputs") ; }
 	        if( options.has( "outputs" ) ) 		{ OUTPUT_COUNT = (int) options.valueOf("outputs") ; }
-	        if( options.has( "update-delay" ) ) { DELAY_INTERVAL = (int) options.valueOf("update-delay") ; }
+	        if( options.has( "update-delay" ) ) { DELAY_INTERVAL = (long) options.valueOf("update-delay") ; }
 	        boolean clearFile = options.has("clear") ;
 	        boolean evolve    = options.has("evolve") ;
 	        boolean train	  = options.has("train") ;
@@ -137,28 +137,34 @@ public class Main {
 
 			int clk = 0 ;
 			int patternCount = 0 ;
+			int patternIndex = 0 ;
 			double testPattern[] = null ;
+			long lastSentTime = 0 ;
 			for( ; ; ) {
 				clk++ ;
+				if( clk > 4_000_000 ) {
+					train = false ;
+				}
 				patternCount-- ;
 				if( patternCount<0) {
-					patternCount = 20 ;
-					testPattern = TestPatterns[ rng.nextInt(TestPatterns.length)] ;
+					patternCount = 10 ;
+					patternIndex = rng.nextInt(TestPatterns.length) ;
+					testPattern = TestPatterns[ patternIndex ] ;
 				}
 				for( int i=0 ; i<inputs.length ; i++ ) {
-					inputs[i] =  rng.nextInt( 1+(clk % 4) )==0 ? 1 : 0 ;
-					inputs[i] =  Math.cos(i * clk / Math.PI ) ;
-
 					inputs[i] =  testPattern[i] ;
 				}
-				// inputs[0] = 1 / ( (clk % 10) + 1 ) ;
-				// inputs[0] = Math.abs( Math.sin( clk / Math.PI ) ) ;
-				// inputs[1] = Math.cos( 3 * clk / Math.PI ) ;
-				// inputs[1] *= inputs[1] + rng.nextDouble()/10;
-				brain.step( inputs, train && clk<6000 ) ;
-				brain.updateScores() ;
-				m.sendBrainData() ; 
-				Thread.sleep( DELAY_INTERVAL ) ;
+
+				brain.step( inputs, train ) ;
+				//brain.updateScores() ;
+				long deltaTime = System.currentTimeMillis() - lastSentTime ;
+				if( !train || deltaTime > DELAY_INTERVAL ) {
+					lastSentTime = System.currentTimeMillis() ;
+					m.sendBrainData( patternIndex ) ; 
+				}
+				if( !train ) {
+					Thread.sleep( DELAY_INTERVAL ) ;
+				}
 			}
 		} catch( Throwable t ) {  
 			t.printStackTrace();
