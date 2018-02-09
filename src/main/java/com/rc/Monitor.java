@@ -8,6 +8,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 
 import spark.Request;
 import spark.Response;
@@ -31,7 +32,7 @@ public class Monitor implements AutoCloseable {
 	final WebSocketServer wss ;
 
 	public Monitor( Brain brain ) {
-		this.gson = new Gson() ;
+		this.gson = new GsonBuilder().create() ;
 		this.brain = brain ;
 		this.random = new Random() ;
 		this.wss = new WebSocketServer() ;
@@ -51,8 +52,8 @@ public class Monitor implements AutoCloseable {
 		}
 	}
 
-	public void sendBrainData( int patternIndex ) {
-		wss.send( gson.toJson( brain.getNeuronPotentials( patternIndex ) ) ) ;
+	public void sendBrainData( int patternIndex, int clk ) {
+		wss.send( gson.toJson( brain.getNeuronPotentials( patternIndex, clk ) ) ) ;
 	}
 	/**
 	 * get 1 slice of compressed data, with random shear

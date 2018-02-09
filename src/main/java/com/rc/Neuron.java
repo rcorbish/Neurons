@@ -38,7 +38,7 @@ public class Neuron  {
 		this.restingPotential = 0 ; //parameters.restingPotential ;
 		this.threshold = 0.70 + rng.nextDouble() / 10.0 ;
 		this.decay = 0.01 + rng.nextDouble() / 10.0 ;
-		this.learningRate = rng.nextDouble() / 100.0 ;
+		this.learningRate = rng.nextDouble() / 10.0 ;
 		this.currentPotential = rng.nextDouble() ;
 		this.index = index ;
 		lastSpikeTime = 0 ;
@@ -75,20 +75,19 @@ public class Neuron  {
 		// Simple vs Synaptic Model
 //		this.currentPotential -= decay * this.currentPotential ;
 		
-		if( this.currentPotential > restingPotential ) {
-			this.currentPotential -= decay  ;
-		}
+		// if( this.currentPotential > restingPotential ) {
+		// 	this.currentPotential -= decay  ;
+		// }
 	}
 
 	
-	public void setPotential( double potential ) {
-		lastSpikeTime++ ;
+	public void setPotential( double potential, int clock ) {
 		if( spikeIndex > 0 ) {
 			this.currentPotential = restingPotential ;
 			spikeIndex-- ;
 		} else {
 			if( this.currentPotential>threshold ) {
-				lastSpikeTime = 0 ;
+				lastSpikeTime = clock ;
 				spikeIndex = spikeDuration ;
 				this.currentPotential = restingPotential ;
 			} else if( this.currentPotential < restingPotential ) {
@@ -115,7 +114,7 @@ public class Neuron  {
 			if( deltaFiredTime < -2 ) {
 				delta = -Math.exp( deltaFiredTime / 0.6 ) ;
 			} else if( deltaFiredTime > 2 ) {
-				delta = Math.exp( deltaFiredTime / 0.6 ) ;
+				delta = Math.exp( deltaFiredTime / 0.4 ) ;
 			}
 			e.addWeight( learningRate * delta ) ;			
 		}

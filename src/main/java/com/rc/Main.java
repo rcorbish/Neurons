@@ -142,7 +142,7 @@ public class Main {
 			long lastSentTime = 0 ;
 			for( ; ; ) {
 				clk++ ;
-				if( clk > 4_000_000 ) {
+				if( clk > 40_000 ) {
 					train = false ;
 				}
 				patternCount-- ;
@@ -150,17 +150,23 @@ public class Main {
 					patternCount = 10 ;
 					patternIndex = rng.nextInt(TestPatterns.length) ;
 					testPattern = TestPatterns[ patternIndex ] ;
-				}
-				for( int i=0 ; i<inputs.length ; i++ ) {
-					inputs[i] =  testPattern[i] ;
+
+					for( int i=0 ; i<inputs.length ; i++ ) {
+						inputs[i] =  testPattern[i] ;
+					}
+
+					if( train ) {
+						brain.train() ;
+					}
 				}
 
-				brain.step( inputs, train ) ;
+				brain.step( inputs, clk ) ;
+
 				//brain.updateScores() ;
 				long deltaTime = System.currentTimeMillis() - lastSentTime ;
 				if( !train || deltaTime > DELAY_INTERVAL ) {
 					lastSentTime = System.currentTimeMillis() ;
-					m.sendBrainData( patternIndex ) ; 
+					m.sendBrainData( patternIndex, clk ) ; 
 				}
 				if( !train ) {
 					Thread.sleep( DELAY_INTERVAL ) ;

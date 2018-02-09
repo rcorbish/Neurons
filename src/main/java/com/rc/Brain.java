@@ -33,8 +33,6 @@ public class Brain  {
 	private final Neuron  [] inputs ;			// which nodes are .. inputs 
 	private final Neuron  [] outputs ;			// .. and outputs
 
-	private int clock ;
-
 	/**
 	 * Create a brain from a genome (bitmask).
 	 * 
@@ -89,7 +87,6 @@ public class Brain  {
 	public Brain( int numInputs, int numOutputs, int ... dims ) {
 		this.outputHistory = new double[HISTORY_LENGTH][ numOutputs] ; 
 		this.historyIndex = 0 ;
-		this.clock = 0 ;
 		
 		int numNeurons = numInputs + numOutputs ;
 		this.layerSizes = new int[ dims.length ] ;
@@ -161,6 +158,24 @@ public class Brain  {
 			}
 		}
 
+		// Now connect neighbours in each layer
+		for( int l=0 ; l<layerSizes.length ; l++ ) {
+			for( int i=0 ; i<layerSizes[l] ; i++ ) {	
+				// Get edge list for each node in a layer
+				EdgeList el = edges[ getIndexOfFirstInLayer(l)+i ] ;
+				if( i>0 ) {
+					double weight = getRandomWeight() ;
+					Edge e = new Edge( getIndexOfFirstInLayer(l)+i-1, weight ) ;
+					el.add( e ) ;
+				}
+				if( i<layerSizes[l]-1 ) {
+					double weight = getRandomWeight() ;
+					Edge e = new Edge( getIndexOfFirstInLayer(l)+i+1, weight ) ;
+					el.add( e ) ;
+				}
+			}
+		}
+
 		for( int i=0 ; i<numInputs ; i++ ) {
 			EdgeList el = new EdgeList() ;
 			edges[i] = el ;
@@ -183,14 +198,9 @@ public class Brain  {
 	 * neuron. Then (atomically) update the weights.
 	 * 
 	 * @param inputs an array of values to set inputs to
-	 * @param train whether to execute a training step after this step
+	 * @param clock  the time unit for this step
 	 */
-	public void step( double[] inputs, boolean train ) {
-		clock++ ;			// step number
-
-		if( train && (clock % 1000) == 0 ) {
-			log.info( "Step {}", clock ) ; 
-		}
+	public void step( double[] inputs, int clock ) {
 		
 		// First decay all weights - each neuron loses 'charge'
 		// Do not decay inputs though, they need to fire sometimes
@@ -200,7 +210,7 @@ public class Brain  {
 
 		// Set inputs immediately - no dependencies
 		for( int i=0 ; i<inputs.length ; i++ ) {
-			this.inputs[i].setPotential( inputs[i] );
+			this.inputs[i].setPotential( inputs[i], clock );
 		}
 
 		// Will build up all outputs - before changing any of them
@@ -217,16 +227,15 @@ public class Brain  {
 
 		// Then write the output as an atomic op
 		for( int n=inputs.length ; n<neurons.length; n++ ) {
-			neurons[n].setPotential( newPotentials[n] ) ;
-		}
-		
-		if( train ) {
-			for( int n=inputs.length ; n<neurons.length; n++ ) {
-				neurons[n].train( this ) ;
-			}
+			neurons[n].setPotential( newPotentials[n], clock ) ;
 		}
 	}
 
+	public void train() {
+		for( int n=inputs.length ; n<neurons.length; n++ ) {
+			neurons[n].train( this ) ;
+		}
+	}
 
 	// High score is better for survival
 	public void updateScores() {
@@ -299,7 +308,7 @@ public class Brain  {
 	public Neuron[] getInputs() { return inputs ; }
 	public Neuron[] getOutputs() { return outputs ; }
 
-	public Potentials getNeuronPotentials( int patternIndex ) {
+	public Potentials getNeuronPotentials( int patternIndex, int clk ) {
 		Potentials rc = new Potentials() ;
 
 		rc.states = new NeuronState[neurons.length] ;
@@ -308,8 +317,9 @@ public class Brain  {
 		for( int i=0 ; i<outputs.length ; i++ ) {
 			rc.outputs[i] = outputs[i].getPotential() ;
 		}
+
 		for( int i=0 ; i<neurons.length ; i++ ) {
-			rc.states[i] = new NeuronState( neurons[i] ) ;
+			rc.states[i] = new NeuronState( neurons[i], clk ) ;
 		}
 		rc.score = patternIndex ;
 		return rc ;
@@ -326,6 +336,7 @@ public class Brain  {
 		rc.append( "\"links\": [") ;
 		printLinks( rc ) ;
 		rc.append( "] }") ;
+
 		return rc ;
 	}
 
@@ -453,6 +464,7 @@ public class Brain  {
 
 class Potentials {
 	public double score ;
+	public double clock ;
 	public NeuronState states[] ;
 	public double outputs[] ;
 }
@@ -461,9 +473,9 @@ class NeuronState {
 	public double potential ;
 	public int id ;
 	public int ago ;
-	public NeuronState( Neuron n ) {
+	public NeuronState( Neuron n, int clk ) {
 		this.potential = n.getPotential() ;
 		this.id = n.getIndex() ;
-		this.ago = n.lastSpikeTime ;
+		this.ago = clk - n.lastSpikeTime ;
 	}
 }
