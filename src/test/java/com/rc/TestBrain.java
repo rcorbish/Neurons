@@ -23,19 +23,16 @@ public class TestBrain {
 		//	5 inputs
 		//	4 outputs
 		//  3 x 3 liquid
-		Brain b = new Brain( 5,  4,  3, 3 ) ;
+		Brain b = new Brain( 5, 3, 4 ) ;
 		
 		Genome g = b.toGenome() ;
 		
 		double accuracy = g.accuracy() ;
 		
-		int sz = g.getInt( 0 ) ;
-		int in = g.getInt( 1 ) ;
-		int out = g.getInt( 2 ) ;
+		int nl = g.getInt( 0 ) ;		
+		assertEquals( "Invalid num layers recovered", 3, nl )  ;  // 3, 4, 5
 		
-		assertEquals( "Invalid total neurons recovered", 15, sz )  ;  // 3 + 3 + 4 + 5
-		assertEquals( "Invalid input neurons recovered", 5, in )  ;  
-		assertEquals( "Invalid output neurons recovered", 4, out )  ;
+		int sz = b.getNumNeurons() ;
 		
 		for( int i=0 ; i<sz ; i++ ) {
 			Genome gr = g.subSequence( b.GENOME_SIZE+(i*Neuron.GENOME_SIZE), Neuron.GENOME_SIZE ) ;
@@ -54,7 +51,7 @@ public class TestBrain {
 			
 			Genome gr = g.subSequence( start, 1 + numEdges * Edge.GENOME_SIZE ) ;
 			EdgeList elr = new EdgeList( gr ) ;
-			EdgeList el  = b.getEdgeList(i) ;
+			EdgeList el  = b.getIncomingEdges(i) ;
 
 			assertEquals( "Invalid edgeList recovered " + i , el.size(), elr.size() ) ;
 			
@@ -74,14 +71,13 @@ public class TestBrain {
 		//	2 inputs
 		//	5 outputs
 		//  4 x 6 liquid
-		Brain b = new Brain( 2,  5,  4, 6 ) ;
+		Brain b = new Brain( 2, 4, 6 ) ;
 		
 		Genome g = b.toGenome() ;
 		Brain br = new Brain( g ) ;
 		double accuracy = g.accuracy() ;
 		
-		assertEquals( "Invalid input neurons recovered", b.getInputs().length, br.getInputs().length )  ;  
-		assertEquals( "Invalid output neurons recovered", b.getOutputs().length, br.getOutputs().length )  ;
+		assertEquals( "Invalid num neurons recovered", b.getNumNeurons(), br.getNumNeurons() )  ;  
 		
 		int start = b.GENOME_SIZE  ;
 		for( int i=0 ; i<b.getNumNeurons() ; i++ ) {
@@ -98,20 +94,25 @@ public class TestBrain {
 		}
 		
 		for( int i=0 ; i<b.getNumNeurons() ; i++ ) {
-			int numEdges = g.getInt( start ) ;
-			
-			Genome gr = g.subSequence( start, 1 + numEdges * Edge.GENOME_SIZE ) ;
-			EdgeList elr = new EdgeList( gr ) ;
-			EdgeList el  = b.getEdgeList(i) ;
+			EdgeList elr  = br.getIncomingEdges(i) ;
+			EdgeList el  = b.getIncomingEdges(i) ;
 
-			assertEquals( "Invalid edgeList recovered " + i , el.size(), elr.size() ) ;
+			assertEquals( "Invalid incoming edgeList recovered " + i , el.size(), elr.size() ) ;
 			
 			for( int j=0 ; j<el.size() ; j++ ) {
 				assertEquals( "Invalid edge recovered " + i + "," + j, el.get(j).weight(), elr.get(j).weight(), accuracy ) ;
 				assertEquals( "Invalid edge recovered " + i + "," + j, el.get(j).source(), elr.get(j).source() ) ;
 			}
+			
+			elr  = br.getOutgoingEdges(i) ;
+			el   = b.getOutgoingEdges(i) ;
 
-			start += numEdges * Edge.GENOME_SIZE + 1 ;
+			assertEquals( "Invalid outgoing edgeList recovered " + i , el.size(), elr.size() ) ;
+			
+			for( int j=0 ; j<el.size() ; j++ ) {
+				assertEquals( "Invalid edge recovered " + i + "," + j, el.get(j).weight(), elr.get(j).weight(), accuracy ) ;
+				assertEquals( "Invalid edge recovered " + i + "," + j, el.get(j).source(), elr.get(j).source() ) ;
+			}
 		}
 	}
 

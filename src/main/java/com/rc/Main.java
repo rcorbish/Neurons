@@ -20,9 +20,6 @@ public class Main {
 
 	final static Random rng = new Random( 660 );
 	
-	static int INPUT_COUNT = 5 ;
-	static int OUTPUT_COUNT = 5 ;
-	
 	static int POPULATION = 5_000 ;
 	static int EPOCHS = 200 ;
 	static int SIMULATIONS = 2000 ;
@@ -38,7 +35,7 @@ public class Main {
 		{ 0.1, 0.5, 0.9, 0.9, 0.9, 0.9 },
 		{ 0.5, 0.5, 0.5, 0.5, 0.5, 0.5 },
 		{ 0.1, 0.1, 0.1, 0.1, 0.1, 0.1 },
-		{ 0.9, 0.9, 0.9, 0.9, 0.9, 0.9 },
+		{ 0.9, 0.9, 0.9, 0.9, 0.9, 0.9 }
 	} ;
 
 	public static void main(String[] args) {
@@ -48,8 +45,6 @@ public class Main {
 			
 			parser.acceptsAll( asList("f", "file") , "The parameters in json format" ).withRequiredArg().ofType( String.class ) ;
 			parser.acceptsAll( asList("e", "evolve") , "Whether to run the evolution step" ) ;
-			parser.acceptsAll( asList("i", "inputs"), "Number of inputs in the network" ).withRequiredArg().ofType( Integer.class ) ; 
-			parser.acceptsAll( asList("o", "outputs"), "Number of outputs in the network" ).withRequiredArg().ofType( Integer.class ) ; 
 			parser.acceptsAll( asList("u", "update-delay" ) , "Interval between updates 0-200 mS" ).withRequiredArg().ofType( Long.class ) ; 
 			parser.accepts( "epochs" , "Number of epochs to run" ).withRequiredArg().ofType( Integer.class ) ; 
 			parser.accepts( "clear" , "Delete existing parameters" ) ; 
@@ -75,8 +70,6 @@ public class Main {
 	        if( options.has( "population" ) ) 	{ POPULATION = (int) options.valueOf("population") ; }
 	        if( options.has( "epochs" ) ) 		{ EPOCHS = (int) options.valueOf("epochs") ; }
 	        if( options.has( "mutation" ) ) 	{ MUTATION = (double) options.valueOf("mutation") ; }
-	        if( options.has( "inputs" ) ) 		{ INPUT_COUNT = (int) options.valueOf("inputs") ; }
-	        if( options.has( "outputs" ) ) 		{ OUTPUT_COUNT = (int) options.valueOf("outputs") ; }
 	        if( options.has( "update-delay" ) ) { DELAY_INTERVAL = (long) options.valueOf("update-delay") ; }
 	        boolean clearFile = options.has("clear") ;
 	        boolean evolve    = options.has("evolve") ;
@@ -94,13 +87,11 @@ public class Main {
 			} else {
 				dims = new int[]{ 3, 3 } ;	// default if no size given
 			}
-			StringJoiner sj = new StringJoiner( " , " ) ;
+			StringJoiner sj = new StringJoiner( ", " ) ;
 			for( int d : dims ) {
 				sj.add( String.valueOf(d) ) ;
 			}
 			logger.info("Layers        : {}", sj ) ;
-			logger.info("Inputs        : {}", INPUT_COUNT ) ;
-			logger.info("Outputs       : {}", OUTPUT_COUNT ) ;
 			logger.info("Delay         : {}", DELAY_INTERVAL ) ;
 			
 			boolean fileExists = false ;
@@ -113,7 +104,7 @@ public class Main {
 			if( fileExists && !clearFile ) {
 				brain = Brain.load( parameterFile ) ;
 			} else {
-				brain = new Brain( INPUT_COUNT, OUTPUT_COUNT, dims ) ;
+				brain = new Brain( dims ) ;
 				if( parameterFile != null ) {
 					brain.save( parameterFile ) ;
 				}
@@ -133,7 +124,7 @@ public class Main {
 
 			Monitor m = new Monitor( brain ) ;
 			m.start();
-			double inputs[] = new double[INPUT_COUNT] ;
+			double inputs[] = new double[ dims[0] ] ;
 
 			int clk = 0 ;
 			int patternCount = 0 ;
@@ -142,27 +133,23 @@ public class Main {
 			long lastSentTime = 0 ;
 			for( ; ; ) {
 				clk++ ;
-				if( clk > 40_000 ) {
-					train = false ;
-				}
+
 				patternCount-- ;
 				if( patternCount<0) {
-					patternCount = 10 ;
+					patternCount = 1_000 ;
 					patternIndex = rng.nextInt(TestPatterns.length) ;
 					testPattern = TestPatterns[ patternIndex ] ;
 
 					for( int i=0 ; i<inputs.length ; i++ ) {
 						inputs[i] =  testPattern[i] ;
 					}
-
-					if( train ) {
-						brain.train() ;
-					}
 				}
 
-				brain.step( inputs, clk ) ;
+				brain.step( inputs ) ;
+//				if( train ) {
+					brain.train( patternIndex ) ;
+//				}
 
-				//brain.updateScores() ;
 				long deltaTime = System.currentTimeMillis() - lastSentTime ;
 				if( !train || deltaTime > DELAY_INTERVAL ) {
 					lastSentTime = System.currentTimeMillis() ;
@@ -307,13 +294,13 @@ public class Main {
 }
 
 class BrainData implements Comparable<BrainData>{
-	BitSet genome ;
+	Genome genome ;
 	Brain brain ;
 	double score ;
 	
-	public BrainData( BitSet genome, int ...dims ) {
-		this.genome = genome ;
-		this.brain = new Brain( 1 ,1, dims ) ;
+	public BrainData( Brain b ) {
+		this.genome = b.toGenome() ;
+		this.brain = b ;
 	}
 	@Override
 	public int compareTo(BrainData o) {

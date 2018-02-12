@@ -64,6 +64,7 @@ body {
 <div id='liquid' class='liquid'></div>
 
 <script type="text/javascript" charset="utf-8">
+
 	var width = 800 ;
     var height = 600 ;
 	
@@ -119,9 +120,11 @@ d3.json("data", function(error, graph) {
 	const links = svg
 	    .selectAll("line")
     	.data(graph.links)
-    	.enter().append("line") 
-		.attr( 'class', 'link' )
-		.attr( "stroke", function(l) { return weightColor( l.weight ); })
+    	.enter()
+	    	.append("line") 
+				.attr( 'id', function(l) { return l.id } )
+				.attr( 'class', 'link' )
+				.attr( "stroke", function(l) { return weightColor( l.weight ); })
 		;
 
 		const nodes = svg
@@ -225,15 +228,22 @@ function resetWebSocket() {
 		const scoreDiv = document.querySelector( ".status" ) ;
 		scoreDiv.textContent = data.score ;
 
-		for( var i=0 ; i<data.states.length ; i++ ) {			
-			var n = document.getElementById( data.states[i].id ) ;
+		for( var i=0 ; i<data.neurons.length ; i++ ) {			
+			var n = document.getElementById( data.neurons[i].id ) ;
 			if( n ) {				
-				n.style.fill = firingAge( data.states[i].ago  ) ; 
+				n.style.fill = firingAge( data.neurons[i].ago  ) ; 
 			
-				n = document.getElementById( 'txt-' + data.states[i].id ) ;
-				if( n ) {				
-					n.textContent = data.states[i].ago ; 
+				n = document.getElementById( 'txt-' + data.neurons[i].id ) ;
+				if( n ) {								
+					n.textContent = data.neurons[i].ago > 100 ? "" : data.neurons[i].ago ; 
 				}
+			}
+		}
+
+		for( var i=0 ; i<data.edges.length ; i++ ) {			
+			var e = document.getElementById( data.edges[i].id ) ;
+			if( e ) {				
+				e.style.stroke = weightColor( data.edges[i].weight  ) ; 			
 			}
 		}
 		

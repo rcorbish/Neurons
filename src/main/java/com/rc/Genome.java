@@ -2,6 +2,7 @@ package com.rc ;
 
 import java.io.Serializable;
 import java.util.BitSet;
+import java.util.StringJoiner;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -123,6 +124,16 @@ public class Genome  implements Serializable {
 		return (1.0/BITS_PER_NUMBER) ;
 	}
 	
+	public String toString() {
+
+		StringJoiner rc = new StringJoiner( ", " ) ;
+
+		int n = Math.min( capacity,  10 ) ;
+		for( int i=0 ; i<n ; i++ ) {
+			rc.add( String.valueOf( getInt(i) ) ) ;
+		}
+		return rc.toString() ;
+	}
 }
 
 
