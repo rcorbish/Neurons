@@ -113,7 +113,7 @@ public class Brain  {
 		for( int i = 0 ; i<layerSizes[0] ; i++ ) {
 			neurons[i] = new InputNeuron( i ) ;
 		}
-		for( int i = layerSizes[0] ; i<numNeurons ; i++ ) {
+		for( int i = 0 ; i<numNeurons ; i++ ) {
 			neurons[i] = new Neuron( i ) ;
 		}
 

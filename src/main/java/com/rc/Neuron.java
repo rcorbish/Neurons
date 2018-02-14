@@ -35,7 +35,6 @@ public class Neuron  {
 	public final double restingPotential ;
 
 	public Neuron( int index ) {
-		this.spikeIndex = 0 ;
 		this.restingPotential = 0 ; // ;
 		this.threshold = 0.7 ; 		// 0.70 + rng.nextDouble() / 10.0 ;
 		this.decay = 0.05 ; 		// rng.nextDouble() / 10.0 ;
@@ -44,6 +43,7 @@ public class Neuron  {
 		this.index = index ;
 		spikeDuration = 5 ; 		// (int)Math.ceil( 1.0 / decay ) ;
 		this.currentPotential = rng.nextDouble() ;
+		this.spikeIndex = 1 ;
 	}
 
 	public Neuron( Genome genome ) {
@@ -56,7 +56,7 @@ public class Neuron  {
 		this.currentPotential = rng.nextDouble() ;
 		
 		spikeDuration = 5 ;
-		spikeIndex = 0 ;
+		spikeIndex = 1 ;
 	}
 	
 	public Genome toGenome() {

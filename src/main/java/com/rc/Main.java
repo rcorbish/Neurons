@@ -122,6 +122,16 @@ public class Main {
 				}
 			}
 
+			for( int i=0 ; i<TestPatterns.length ; i++ ) {
+				double sum = 0 ;
+				for( int j=0 ; j<TestPatterns[i].length ; j++ ) {
+					sum += TestPatterns[i][j] ;
+				}
+				double factor = 0.25 / sum ;
+				for( int j=0 ; j<TestPatterns[i].length ; j++ ) {
+					TestPatterns[i][j] *= factor ;
+				}
+			}
 			Monitor m = new Monitor( brain ) ;
 			m.start();
 			double inputs[] = new double[ dims[0] ] ;
@@ -136,7 +146,7 @@ public class Main {
 
 				patternCount-- ;
 				if( patternCount<0) {
-					patternCount = 1_000 ;
+					patternCount = 100 ;
 					patternIndex = rng.nextInt(TestPatterns.length) ;
 					testPattern = TestPatterns[ patternIndex ] ;
 
