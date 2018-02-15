@@ -37,9 +37,9 @@ public class Neuron  {
 	public Neuron( int index ) {
 		this.restingPotential = 0 ; // ;
 		this.threshold = 0.70 + rng.nextDouble() / 10.0 ;
-		this.decay = 0.01 ; 		// rng.nextDouble() / 10.0 ;
-		this.learningRate = rng.nextDouble() / 1000.0 ;
-		this.spikeValue = 1 + 3 * rng.nextDouble() ;
+		this.decay = 0.001 ; 		// rng.nextDouble() / 10.0 ;
+		this.learningRate = rng.nextDouble() / 100.0 ;
+		this.spikeValue = 0.01 + rng.nextDouble() ;
 		this.index = index ;
 
 		this.currentPotential = rng.nextDouble() ;
@@ -102,27 +102,22 @@ public class Neuron  {
 	
 	
 	public void train( Brain brain ) {
-		if( this.isSpiking() ) {
-			EdgeList edges = brain.getIncomingEdges(index) ;
-			for( Edge e : edges ) {				
-				Neuron source = brain.getNeuron( e.source() ) ;
-				int deltaFiredTime =  spikeIndex - source.spikeIndex ;
-				if( deltaFiredTime < 0 ) {
-					//reinforce
-					double delta = learningRate / ( deltaFiredTime * deltaFiredTime ) ;
-					e.addWeight( delta ) ;
-				}
-			}
-			
-			edges = brain.getOutgoingEdges(index) ;
-			for( Edge e : edges ) {				
-				Neuron target = brain.getNeuron( e.target() ) ;
-				int deltaFiredTime = target.spikeIndex - spikeIndex ;
-				if( deltaFiredTime < 10 ) {
-					//suppress
-					double delta = learningRate / ( 1 + deltaFiredTime * deltaFiredTime ) ;
-					e.addWeight( -delta ) ;
-				}
+		
+		// Look for pre-synaptic spikes (we received a spike before we spiked)
+		// and post-synaptic spikes (we spiked before receiving a spike)
+		EdgeList edges = brain.getIncomingEdges(index) ;
+		for( Edge e : edges ) {			
+			Neuron source = brain.getNeuron( e.source() ) ;
+			int deltaFiredTime = source.spikeIndex - spikeIndex ;
+			// pre-synaptic spike occurs before ( spikeIndex > ours )
+			if( spikeIndex < 5 && deltaFiredTime > 0 ) {
+				//reinforce
+				double delta = learningRate / ( 1 + deltaFiredTime * deltaFiredTime ) ;
+				e.addWeight( delta ) ;
+			} else if( spikeIndex < 5 && deltaFiredTime < 1 ) {
+				//suppress
+				double delta = learningRate / ( 1 + deltaFiredTime * deltaFiredTime ) ;
+				e.addWeight( -delta ) ;
 			}
 		}
 	}

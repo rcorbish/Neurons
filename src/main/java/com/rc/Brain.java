@@ -219,7 +219,7 @@ public class Brain  {
 		for( int i=0 ; i<neurons.length; i++ ) {
 			neurons[i].train( this ) ;
 		}
-
+/*
 		for( int l=0 ; l<layerSizes.length ; l++ ) {
 			int spikingIndex = -1 ;
 			double maxPotential = 0 ;
@@ -248,23 +248,12 @@ public class Brain  {
 				}
 			}
 		}
+		*/
 	}
 
 	// High score is better for survival
 	public void updateScores() {
-//		double score = 0 ; //-Math.abs(spikeCost) ;
-//		for( int n=0 ; n<outputs.length ; n++  ) {
-//			double p = neurons[n].getPotential() ; 
-//			score += p ;
-//			double tmp = 0 ;
-//			for( Neuron o : outputs ) {
-//				double dp = o.getPotential() - p ;
-//				tmp += dp * dp  ; 
-//			}
-//			score += Math.sqrt( tmp ) ;
-//			double dp = p - getHistory( n, 1 ) ; 
-//			score += Math.abs(dp) ;
-//		}
+	
 	}
 
 
