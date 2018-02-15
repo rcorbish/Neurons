@@ -135,9 +135,9 @@ public class Brain  {
 				for( int j=0 ; j<layerSizes[l-1] ; j++ ) {
 					double weight = getRandomWeight() ;
 					Edge e = new Edge( getIndexOfFirstInLayer(l-1)+j, tgtIndex, weight, edgeId++ ) ;
-					if( Math.abs( i-j ) < 4 ) {
+					// if( Math.abs( i-j ) < 4 ) {
 						el.add( e ) ;
-					}
+					// }
 				}
 			}
 		}
@@ -215,31 +215,38 @@ public class Brain  {
 			Neuron n = getNeuron( layerSizes.length-1, pi ) ;
 		//	n.setPotential( 1 ) ;
 		}
-		
-		/*
-		for( int l=0 ; l<layerSizes.length ; l++ ) {
-			int spikingIndex = -1 ;
-			for( int i=0 ; i<layerSizes[l] ; i++ ) {	
-				int tgtIndex = getIndexOfFirstInLayer(l)+i ;
-				Neuron n = getNeuron( tgtIndex ) ;
-				
-				if( n.isSpiking() ) {
-					if( spikingIndex<0 ) {
-						spikingIndex = i ;
-					} else {
-						EdgeList el = getIncomingEdges(tgtIndex) ;
-						for( Edge e : el ) {
-							e.addWeight( -n.learningRate / 4 ) ;
-						}
- 					}
-				}
-			}
-		}
-		*/
-		
 		trainingPatternQueue.add( patternIndex ) ;
 		for( int i=0 ; i<neurons.length; i++ ) {
 			neurons[i].train( this ) ;
+		}
+
+		for( int l=0 ; l<layerSizes.length ; l++ ) {
+			int spikingIndex = -1 ;
+			double maxPotential = 0 ;
+			for( int i=0 ; i<layerSizes[l] ; i++ ) {	
+				int tgtIndex = getIndexOfFirstInLayer(l)+i ;
+				Neuron n = getNeuron( tgtIndex ) ;
+					
+				if( n.isSpiking() ) {
+					if( n.getPotential() > maxPotential ) {
+						maxPotential = n.getPotential() ;
+						spikingIndex = n.index ;
+					}
+				}
+			}
+
+			if( spikingIndex>=0 ) {
+				for( int i=0 ; i<layerSizes[l] ; i++ ) {	
+					int tgtIndex = getIndexOfFirstInLayer(l)+i ;
+					Neuron n = getNeuron( tgtIndex ) ;
+					if( tgtIndex != spikingIndex ) {
+						EdgeList el = getIncomingEdges(tgtIndex) ;
+						for( Edge e : el ) {
+							e.addWeight( -n.learningRate / 300.0 ) ;
+						}
+					}
+				}
+			}
 		}
 	}
 

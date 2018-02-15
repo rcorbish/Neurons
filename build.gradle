@@ -1,4 +1,5 @@
 apply plugin: 'java'
+apply plugin: 'maven'
 
 group = 'Neurons'
 version = '0.0.1-SNAPSHOT'

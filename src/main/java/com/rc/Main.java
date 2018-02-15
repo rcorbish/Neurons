@@ -156,9 +156,9 @@ public class Main {
 				}
 
 				brain.step( inputs ) ;
-//				if( train ) {
+				if( train ) {
 					brain.train( patternIndex ) ;
-//				}
+				}
 
 				long deltaTime = System.currentTimeMillis() - lastSentTime ;
 				if( !train || deltaTime > DELAY_INTERVAL ) {

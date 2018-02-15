@@ -174,25 +174,25 @@ d3.json("data", function(error, graph) {
 	}
 
   const simulation = d3.forceSimulation()
-	.nodes( graph.nodes ) 	
+	.nodes( graph.nodes )
 	.force( "link", d3.forceLink()
-	 		.strength( function(l) { return .6 ; }) 
-	 		.distance( function(l) { return 15 ; } )
+//	 		.strength( function(l) { return .6 ; }) 
+//	 		.distance( function(l) { return 15 ; } )
 	 		.id( function(n) { return n.id ; } ) 
 	 		.links( graph.links ) 
 	 	)
-	.force( "charge", d3.forceManyBody()
-			.strength( -1 ) 
-		)
+	// .force( "charge", d3.forceManyBody()
+	// 		.strength( -1 ) 
+	// 	)
 	//.force( "center", d3.forceCenter(width/2, height/2) )
-	.force( "collide", d3.forceCollide( 20 ) ) 
+	.force( "collide", d3.forceCollide( 30 ) ) 
 	.force( "x", d3.forceX()
 			.x( function(d) { return d.fx || 0 ; } )
-			.strength( function(d) { return d.fx ? 1 : 0 ; } ) 
+			.strength( function(d) { return 1 ; } ) 
 		)  
 	.force( "y", d3.forceY()
 			.y( function(d) { return height/2 ; } )
-			.strength( function(d) { return d.fx ? 2 : 0 ; } ) 
+			// .strength( function(d) { return d.fx ? 2 : 0 ; } ) 
 		)  
 	.on("tick", tick ) 
 	.on("end", tick ) 
@@ -216,63 +216,70 @@ function resetWebSocket() {
 	// called when socket connection established
 	ws.onopen = function() {
     	console.log("Connected.")
+		processing = false ;
 	};
  
 	const history = []
 	const HistoryLength = 100 ;
 	
+	var processing = 0 
 	// called when a message received from server
 	ws.onmessage = function (evt) {
-		var data = JSON.parse( evt.data ) ;
-		
-		const scoreDiv = document.querySelector( ".status" ) ;
-		scoreDiv.textContent = data.score ;
-
-		for( var i=0 ; i<data.neurons.length ; i++ ) {			
-			var n = document.getElementById( data.neurons[i].id ) ;
-			if( n ) {				
-				n.style.fill = firingAge( data.neurons[i].ago  ) ; 
+		if( processing<=0 ) {
+			processing=10
+			var data = JSON.parse( evt.data ) ;
 			
-				n = document.getElementById( 'txt-' + data.neurons[i].id ) ;
-				if( n ) {								
-					n.textContent = data.neurons[i].ago > 100 ? "" : data.neurons[i].ago ; 
-				}
-			}
-		}
+			const scoreDiv = document.querySelector( ".status" ) ;
+			scoreDiv.textContent = data.score ;
 
-		for( var i=0 ; i<data.edges.length ; i++ ) {			
-			var e = document.getElementById( data.edges[i].id ) ;
-			if( e ) {				
-				e.style.stroke = weightColor( data.edges[i].weight  ) ; 			
-			}
-		}
-		
-		c.width = c.width;	// clear screern ( of the chart area - not the graph )		
-		
-		// Draw the chart at the top of the screen
-		// chart od output values & which outputs are activated
-		history.push( data.outputs ) ;
-		if( history.length > HistoryLength ) history.shift() ;
-		const outputColors = d3.scaleLinear()
-			.domain([ 0, data.outputs.length ] )
-			.range([ "white", "steelblue"]);
-		
-		for( var h=0 ; h<data.outputs.length ; h++ ) {
-			ctx.beginPath() ;
-			ctx.strokeStyle = outputColors( h ) ;
-			ctx.fillStyle = outputColors( h ) ;
-			for( var i=0 ; i<history.length ; i++ ) {
-				if( history[i][h] > 0.99 ) {
-					ctx.moveTo( i*12, 110-h*10 );
-					ctx.arc( i*12, 110-h*10, 5, 0, 2*Math.PI);
+			for( var i=0 ; i<data.neurons.length ; i++ ) {			
+				var n = document.getElementById( data.neurons[i].id ) ;
+				if( n ) {				
+					n.style.fill = firingAge( data.neurons[i].ago  ) ; 
+				
+					n = document.getElementById( 'txt-' + data.neurons[i].id ) ;
+					if( n ) {								
+						n.textContent = data.neurons[i].ago > 100 ? "" : data.neurons[i].ago ; 
+					}
 				}
-				ctx.moveTo( i*12+h, 110 );
-				ctx.lineTo( i*12+h, 110-(100*history[i][h]) ) ;
-				ctx.fill() ;
-				 
 			}
-			ctx.stroke();
+
+			for( var i=0 ; i<data.edges.length ; i++ ) {			
+				var e = document.getElementById( data.edges[i].id ) ;
+				if( e ) {				
+					e.style.stroke = weightColor( data.edges[i].weight  ) ; 			
+				}
+			}
+			
+			c.width = c.width;	// clear screern ( of the chart area - not the graph )		
+			
+			// Draw the chart at the top of the screen
+			// chart od output values & which outputs are activated
+			history.push( data.outputs ) ;
+			if( history.length > HistoryLength ) history.shift() ;
+			const outputColors = d3.scaleLinear()
+				.domain([ 0, data.outputs.length ] )
+				.range([ "white", "steelblue"]);
+			
+			for( var h=0 ; h<data.outputs.length ; h++ ) {
+				ctx.beginPath() ;
+				ctx.strokeStyle = outputColors( h ) ;
+				ctx.fillStyle = outputColors( h ) ;
+				for( var i=0 ; i<history.length ; i++ ) {
+					if( history[i][h] > 0.99 ) {
+						ctx.moveTo( i*12, 110-h*10 );
+						ctx.arc( i*12, 110-h*10, 5, 0, 2*Math.PI);
+					}
+					ctx.moveTo( i*12+h, 110 );
+					ctx.lineTo( i*12+h, 110-(100*history[i][h]) ) ;
+					ctx.fill() ;
+					
+				}
+				ctx.stroke();
+			}
+			processing = 0
 		}
+		processing--
 	};
 	 
 	// called when socket connection closed
@@ -284,6 +291,7 @@ function resetWebSocket() {
 	// called in case of an error
 	ws.onerror = function(err) {
 	    console.log("ERROR!", err )
+		processing = false ;
 	};
 	
 }

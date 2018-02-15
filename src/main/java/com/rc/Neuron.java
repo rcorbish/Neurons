@@ -36,14 +36,15 @@ public class Neuron  {
 
 	public Neuron( int index ) {
 		this.restingPotential = 0 ; // ;
-		this.threshold = 0.7 ; 		// 0.70 + rng.nextDouble() / 10.0 ;
-		this.decay = 0.05 ; 		// rng.nextDouble() / 10.0 ;
-		this.learningRate = 0.0001 ; // rng.nextDouble() / 1000.0 ;
-		this.spikeValue = 2 ; 		// 1 + 3 * rng.nextDouble() ;
+		this.threshold = 0.70 + rng.nextDouble() / 10.0 ;
+		this.decay = 0.01 ; 		// rng.nextDouble() / 10.0 ;
+		this.learningRate = rng.nextDouble() / 1000.0 ;
+		this.spikeValue = 1 + 3 * rng.nextDouble() ;
 		this.index = index ;
-		spikeDuration = 5 ; 		// (int)Math.ceil( 1.0 / decay ) ;
+
 		this.currentPotential = rng.nextDouble() ;
-		this.spikeIndex = 1 ;
+		spikeDuration = 5 ;
+		spikeIndex = 1 ;
 	}
 
 	public Neuron( Genome genome ) {
@@ -53,8 +54,9 @@ public class Neuron  {
 		this.index = genome.getInt( GENOME_INDEX_ID ) ;
 		this.learningRate = genome.getDouble( GENOME_INDEX_LEARNING_RATE ) ;
 		this.spikeValue = genome.getDouble( GENOME_INDEX_SPIKE_VALUE ) ;
+
+
 		this.currentPotential = rng.nextDouble() ;
-		
 		spikeDuration = 5 ;
 		spikeIndex = 1 ;
 	}
