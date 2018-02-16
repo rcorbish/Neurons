@@ -157,7 +157,7 @@ public class Main {
 
 				brain.step( inputs ) ;
 				if( train ) {
-					brain.train( patternIndex ) ;
+					brain.train() ;
 				}
 
 				long deltaTime = System.currentTimeMillis() - lastSentTime ;

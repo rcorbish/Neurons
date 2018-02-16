@@ -32,7 +32,8 @@ public class Brain  {
 	private final EdgeList targetEdges[] ;		// adjacency list ( directed & weighted )
 
 	private final int layerSizes[] ;			// the size of each layer in the brain
-	private final Queue<Integer> trainingPatternQueue ;
+	private final Neuron layers[][] ;			// neurons in each layer
+	private final double weights[][][] ;		// array of 2D weight matrices
 
 	/**
 	 * Create a brain from a genome (bitmask).
@@ -42,6 +43,10 @@ public class Brain  {
 	public Brain( Genome g ) {
 		int numNeurons = 0 ;
 		layerSizes = new int[ g.getInt(0) ] ;
+
+		this.layers = new Neuron[layerSizes.length][] ;
+		this.weights  = new double[layerSizes.length][][] ;
+		
 		for( int i=0 ; i<layerSizes.length ; i++ ) {
 			layerSizes[i] = g.getInt( i+1 ) ;
 			numNeurons += layerSizes[i] ; 
@@ -67,10 +72,6 @@ public class Brain  {
 
 		int numOutputs = layerSizes[ layerSizes.length - 1 ] ;
 		this.outputHistory = new double[HISTORY_LENGTH][numOutputs] ;
-		trainingPatternQueue = new LinkedList<>() ;
-		for( int i=0 ; i<layerSizes.length ; i++ ) {
-			trainingPatternQueue.add( -1 ) ;
-		}
 	}
 
 	public Genome toGenome() {
@@ -100,19 +101,25 @@ public class Brain  {
 		this.outputHistory = new double[HISTORY_LENGTH][ numOutputs] ; 
 		this.historyIndex = 0 ;
 		
+		this.layers = new Neuron[layers.length][] ;
+		this.weights  = new double[layers.length][][] ;
+				
 		int numNeurons = 0 ;
 		this.layerSizes = new int[ layers.length ] ;
+		int nid = 0 ;
 		for( int i=0 ; i<layerSizes.length ; i++ ) {
 			layerSizes[i] = layers[i] ;
 			numNeurons += layers[i] ;
+			this.layers[i] = new Neuron[ layers[i] ] ;
+			for( int j=0 ; j<layers[i] ; j++ ) {
+				this.layers[i][j] = new Neuron(nid) ;
+				nid++ ;
+			}
 		}
 		
 		GENOME_SIZE = 1 + layerSizes.length ;
 
 		this.neurons = new Neuron[ numNeurons ] ;
-		for( int i = 0 ; i<layerSizes[0] ; i++ ) {
-			neurons[i] = new InputNeuron( i ) ;
-		}
 		for( int i = 0 ; i<numNeurons ; i++ ) {
 			neurons[i] = new Neuron( i ) ;
 		}
@@ -161,10 +168,6 @@ public class Brain  {
 				}
 			}
 		}
-		trainingPatternQueue = new LinkedList<>() ;
-		for( int i=0 ; i<layerSizes.length ; i++ ) {
-			trainingPatternQueue.add( -1 ) ;
-		}
 	}
 
 	/**
@@ -209,46 +212,10 @@ public class Brain  {
 		
 	}
 
-	public void train( int patternIndex ) {
-		int pi = trainingPatternQueue.remove() ;
-		if( pi >= 0 ) {
-			Neuron n = getNeuron( layerSizes.length-1, pi ) ;
-		//	n.setPotential( 1 ) ;
-		}
-		trainingPatternQueue.add( patternIndex ) ;
+	public void train() {
 		for( int i=0 ; i<neurons.length; i++ ) {
 			neurons[i].train( this ) ;
 		}
-/*
-		for( int l=0 ; l<layerSizes.length ; l++ ) {
-			int spikingIndex = -1 ;
-			double maxPotential = 0 ;
-			for( int i=0 ; i<layerSizes[l] ; i++ ) {	
-				int tgtIndex = getIndexOfFirstInLayer(l)+i ;
-				Neuron n = getNeuron( tgtIndex ) ;
-					
-				if( n.isSpiking() ) {
-					if( n.getPotential() > maxPotential ) {
-						maxPotential = n.getPotential() ;
-						spikingIndex = n.index ;
-					}
-				}
-			}
-
-			if( spikingIndex>=0 ) {
-				for( int i=0 ; i<layerSizes[l] ; i++ ) {	
-					int tgtIndex = getIndexOfFirstInLayer(l)+i ;
-					Neuron n = getNeuron( tgtIndex ) ;
-					if( tgtIndex != spikingIndex ) {
-						EdgeList el = getIncomingEdges(tgtIndex) ;
-						for( Edge e : el ) {
-							e.addWeight( -n.learningRate / 300.0 ) ;
-						}
-					}
-				}
-			}
-		}
-		*/
 	}
 
 	// High score is better for survival
@@ -312,7 +279,6 @@ public class Brain  {
 		
 		rc.outputs = new double[ layerSizes[outputLayer] ] ;
 		for( int i=0 ; i<rc.outputs.length ; i++ ) {
-			
 			rc.outputs[i] = getNeuron( outputLayer, i ).getPotential() ;
 		}
 
