@@ -212,7 +212,8 @@ var intervalTimer = null ;
 function resetWebSocket() {
 	console.log( "Resetting WS" ) 
 	ws = new WebSocket( "ws://localhost:8111/live" )
-	
+	clearInterval( intervalTimer ) 
+
 	const history = []
 	const HistoryLength = 100 
 	const scoreDiv = document.querySelector( ".status" )

@@ -17,53 +17,6 @@ public class TestBrain {
 	}
 
 
-	@Test
-	public void testBrainSaveDetail() {
-		// create a brain with 
-		//	5 inputs
-		//	4 outputs
-		//  3 x 3 liquid
-		Brain b = new Brain( 5, 3, 4 ) ;
-		
-		Genome g = b.toGenome() ;
-		
-		double accuracy = g.accuracy() ;
-		
-		int nl = g.getInt( 0 ) ;		
-		assertEquals( "Invalid num layers recovered", 3, nl )  ;  // 3, 4, 5
-		
-		int sz = b.getNumNeurons() ;
-		
-		for( int i=0 ; i<sz ; i++ ) {
-			Genome gr = g.subSequence( b.GENOME_SIZE+(i*Neuron.GENOME_SIZE), Neuron.GENOME_SIZE ) ;
-			Neuron nr = new Neuron( gr ) ;
-			Neuron n = b.getNeuron(i) ;
-
-			assertEquals( "Invalid neuron recovered", n.decay, nr.decay, accuracy )  ;
-			assertEquals( "Invalid neuron recovered", n.threshold, nr.threshold, accuracy )  ;
-			assertEquals( "Invalid neuron recovered", n.restingPotential, nr.restingPotential, accuracy )  ;
-			assertEquals( "Invalid neuron recovered", n.index, nr.index )  ;
-		}
-
-		int start = b.GENOME_SIZE+(sz*Neuron.GENOME_SIZE) ;
-		for( int i=0 ; i<sz ; i++ ) {
-			int numEdges = g.getInt( start ) ;
-			
-			Genome gr = g.subSequence( start, 1 + numEdges * Edge.GENOME_SIZE ) ;
-			EdgeList elr = new EdgeList( gr ) ;
-			EdgeList el  = b.getIncomingEdges(i) ;
-
-			assertEquals( "Invalid edgeList recovered " + i , el.size(), elr.size() ) ;
-			
-			for( int j=0 ; j<el.size() ; j++ ) {
-				assertEquals( "Invalid edge recovered " + i + "," + j, el.get(j).weight(), elr.get(j).weight(), accuracy ) ;
-				assertEquals( "Invalid edge recovered " + i + "," + j, el.get(j).source(), elr.get(j).source() ) ;
-			}
-
-			start += numEdges * Edge.GENOME_SIZE + 1 ;
-		}
-	}
-
 	
 	@Test
 	public void testBrainSaveSummary() {
@@ -77,23 +30,23 @@ public class TestBrain {
 		Brain br = new Brain( g ) ;
 		double accuracy = g.accuracy() ;
 		
-		assertEquals( "Invalid num neurons recovered", b.getNumNeurons(), br.getNumNeurons() )  ;  
+		assertEquals( "Invalid num neuron layers recovered", b.getNumLayers(), br.getNumLayers() )  ;  
 		
-		int start = b.GENOME_SIZE  ;
-		for( int i=0 ; i<b.getNumNeurons() ; i++ ) {
-			Genome gr = g.subSequence( start, Neuron.GENOME_SIZE ) ;
-			Neuron nr = new Neuron( gr ) ;
-			Neuron n = b.getNeuron(i) ;
-
-			assertEquals( "Invalid neuron recovered", n.decay, nr.decay, accuracy )  ;
-			assertEquals( "Invalid neuron recovered", n.threshold, nr.threshold, accuracy )  ;
-			assertEquals( "Invalid neuron recovered", n.restingPotential, nr.restingPotential, accuracy )  ;
-			assertEquals( "Invalid neuron recovered", n.index, nr.index )  ;
-			
-			start += Neuron.GENOME_SIZE  ;
+		int numNeurons = 0 ;
+		for( int i=0 ; i<b.getNumLayers() ; i++ ) {
+			assertEquals( "Invalid num neurons in layer " + i + " recovered", b.getLayer(i).length, br.getLayer(i).length )  ;  
+			for( int j=0 ; j<b.getLayer(i).length ; j++, numNeurons++ ) {
+				Neuron nr = br.getNeuron(i,j) ;
+				Neuron n  =  b.getNeuron(i,j) ;
+	
+				assertEquals( "Invalid neuron recovered", n.decay, nr.decay, accuracy )  ;
+				assertEquals( "Invalid neuron recovered", n.threshold, nr.threshold, accuracy )  ;
+				assertEquals( "Invalid neuron recovered", n.restingPotential, nr.restingPotential, accuracy )  ;
+				assertEquals( "Invalid neuron recovered", n.index, nr.index )  ;
+			}
 		}
 		
-		for( int i=0 ; i<b.getNumNeurons() ; i++ ) {
+		for( int i=0 ; i<numNeurons ; i++ ) {
 			EdgeList elr  = br.getIncomingEdges(i) ;
 			EdgeList el  = b.getIncomingEdges(i) ;
 

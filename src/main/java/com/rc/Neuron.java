@@ -107,7 +107,7 @@ public class Neuron  {
 		// and post-synaptic spikes (we spiked before receiving a spike)
 		EdgeList edges = brain.getIncomingEdges(index) ;
 		for( Edge e : edges ) {			
-			Neuron source = brain.getNeuron( e.source() ) ;
+			Neuron source = brain.findNeuron( e.source() ) ;
 			int deltaFiredTime = source.spikeIndex - spikeIndex ;
 			// pre-synaptic spike occurs before ( spikeIndex > ours )
 			if( spikeIndex < 5 && deltaFiredTime > 0 ) {
