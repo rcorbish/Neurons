@@ -36,10 +36,10 @@ public class Neuron  {
 
 	public Neuron( int index ) {
 		this.restingPotential = 0 ; // ;
-		this.threshold = 0.60 + rng.nextDouble() / 10.0 ;
-		this.decay = 0.001 ; 		// rng.nextDouble() / 10.0 ;
+		this.threshold = 0.85 + rng.nextDouble() / 10.0 ;
+		this.decay = 0.1 ; 		// rng.nextDouble() / 10.0 ;
 		this.learningRate = rng.nextDouble() / 100.0 ;
-		this.spikeValue = 0.01 + rng.nextDouble() ;
+		this.spikeValue = 0.1 + rng.nextDouble() ;
 		this.index = index ;
 
 		this.currentPotential = rng.nextDouble() ;
@@ -116,7 +116,7 @@ public class Neuron  {
 				e.addWeight( delta ) ;
 			} else if( spikeIndex < 5 && deltaFiredTime < 1 ) {
 				//suppress
-				double delta = learningRate / ( 1 + deltaFiredTime * deltaFiredTime ) ;
+				double delta = learningRate / ( 2 + deltaFiredTime * deltaFiredTime ) ;
 				e.addWeight( -delta ) ;
 			}
 		}

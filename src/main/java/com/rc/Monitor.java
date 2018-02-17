@@ -52,8 +52,8 @@ public class Monitor implements AutoCloseable {
 		}
 	}
 
-	public void sendBrainData( int patternIndex, int clk ) {
-		wss.send( gson.toJson( brain.getNeuronPotentials( patternIndex, clk ) ) ) ;
+	public void sendBrainData( int patternIndex, double clock ) {
+		wss.send( gson.toJson( brain.getNeuronPotentials( patternIndex, clock ) ) ) ;
 	}
 	/**
 	 * get 1 slice of compressed data, with random shear

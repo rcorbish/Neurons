@@ -202,30 +202,25 @@ d3.json("data", function(error, graph) {
 
 		
 <script>
-var c = document.getElementById("chart");
-var ctx = c.getContext("2d");
-ctx.fillStyle = "#FF0000";
+	var c = document.getElementById("chart");
+	var ctx = c.getContext("2d");
+	ctx.fillStyle = "#FF0000";
 
-var ws = null ;
-var intervalTimer = null ;
-
-function resetWebSocket() {
-	console.log( "Resetting WS" ) 
-	ws = new WebSocket( "ws://localhost:8111/live" )
-	clearInterval( intervalTimer ) 
-
-	const history = []
-	const HistoryLength = 100 
+	var ws = null ;
+	var intervalTimer = null ;
 	const scoreDiv = document.querySelector( ".status" )
-	
-	var processing = 0 
-	// called when a message received from server
-	ws.onmessage = function (evt) {
-		if( processing<=0 ) {
-			processing=10
+
+	function resetWebSocket() {
+		console.log( "Resetting WS" ) 
+		stopTimer()
+
+		ws = new WebSocket( "ws://localhost:8111/live" )
+		
+		// called when a message received from server
+		ws.onmessage = function (evt) {
 			var data = JSON.parse( evt.data )
 			
-			scoreDiv.textContent = data.score
+			scoreDiv.textContent = data.clock.toFixed(5)
 
 			for( var i=0 ; i<data.neurons.length ; i++ ) {			
 				var n = document.getElementById( data.neurons[i].id )
@@ -250,62 +245,63 @@ function resetWebSocket() {
 			
 			// Draw the chart at the top of the screen
 			// chart od output values & which outputs are activated
-			history.push( data.outputs ) ;
-			if( history.length > HistoryLength ) history.shift() ;
 			const outputColors = d3.scaleLinear()
-				.domain([ 0, data.outputs.length ] )
+				.domain([ 1.0, 2.0 ] )
 				.range([ "orange", "steelblue"]);
 			
-			for( var h=0 ; h<data.outputs.length ; h++ ) {
-				ctx.beginPath() ;
-				ctx.strokeStyle = outputColors( h ) ;
-				ctx.fillStyle = outputColors( h ) ;
-				for( var i=0 ; i<history.length ; i++ ) {
-					if( history[i][h] > 0.99 ) {
-						ctx.moveTo( i*12, 110-h*10 );
-						ctx.arc( i*12, 110-h*10, 5, 0, 2*Math.PI);
+			for( var i=0 ; i<data.outputs.length ; i++ ) {
+				for( var j=0 ; j<data.outputs[i].length ; j++ ) {
+					var h = data.outputs[i][j] ;
+					if( h >= 1.0 ) {
+						ctx.beginPath() ;
+						ctx.strokeStyle = outputColors( h ) ;
+						ctx.fillStyle = outputColors( h ) ;
+						ctx.moveTo( i*12, 110-j*10 );
+						ctx.arc( i*12, 110-j*10, 5, 0, 2*Math.PI);
+						ctx.fill() ;	
 					}
-					//ctx.moveTo( i*12+h, 110 );
-					//ctx.lineTo( i*12+h, 110-(100*history[i][h]) ) ;
-					ctx.fill() ;	
+						//ctx.moveTo( i*12+h, 110 );
+						//ctx.lineTo( i*12+h, 110-(100*history[i][h]) ) ;
 				}
 				//ctx.stroke();
 			}
-			processing = 0
-		}
-		processing--
-	};
-	
-	// called when socket connection established
-	ws.onopen = function() {
-		clearInterval( intervalTimer ) ;
-    	console.log("Connected.")
-		processing = false ;
-	};
-	 
-	// called when socket connection closed
-	ws.onclose = function() {
-	    console.log("Disconnected")
-	    intervalTimer = setInterval( resetWebSocket, 1000 ) ;
-	};
-	 
-	// called in case of an error
-	ws.onerror = function(err) {
-	    console.log("ERROR!", err )
-		processing = false ;
-	    intervalTimer = setInterval( resetWebSocket, 1000 ) ;
-	};
-}
-
-intervalTimer = setInterval( resetWebSocket, 1000 ) ;
-
- 
-// sends msg to the server over websocket
-function sendToServer(msg) {
-	if( ws ) ws.send(msg);
-}		
-
+		};
 		
-		</script>
+		// called when socket connection established
+		ws.onopen = function() {
+			stopTimer() ;
+			console.log("Connected.")
+		};
+		
+		// called when socket connection closed
+		ws.onclose = function() {
+			console.log("Disconnected")
+			stopTimer() ;
+			intervalTimer = setInterval( resetWebSocket, 1000 ) ;
+		};
+		
+		// called in case of an error
+		ws.onerror = function(err) {
+			console.log("ERROR!", err )
+			stopTimer() ;
+			intervalTimer = setInterval( resetWebSocket, 1000 ) ;
+		};
+	}
+
+	function stopTimer() {
+		if( intervalTimer ) {
+			clearInterval( intervalTimer ) 
+			intervalTimer = null 
+		}
+	}
+	intervalTimer = setInterval( resetWebSocket, 1000 ) ;
+
+	
+	// sends msg to the server over websocket
+	function sendToServer(msg) {
+		if( ws ) ws.send(msg);
+	}		
+</script>
+
 </body>
 </html>

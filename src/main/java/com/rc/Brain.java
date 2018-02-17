@@ -156,7 +156,7 @@ public class Brain  {
 	 * 
 	 * @param inputs an array of values to set inputs to
 	 */
-	public void step( double[] inputs ) {
+	public void step( double clock, double[] inputs ) {
 		
 		// Set inputs immediately - no dependencies
 		for( int i=0 ; i<neurons[0].length ; i++ ) {
@@ -186,6 +186,16 @@ public class Brain  {
 				neurons[i][j].setPotential( newPotentials[i][j] ) ;
 			}
 		}		
+
+		Neuron outputLayer[] = neurons[neurons.length-1] ;
+		for( int i=0 ; i<outputLayer.length; i++ ) {
+			outputHistory[historyIndex][i]= outputLayer[i].getPotential() ;
+		}
+		
+		historyIndex++ ;
+		if( historyIndex >= outputHistory.length ) {
+			historyIndex = 0 ;
+		}
 	}
 
 	public void train() {
@@ -198,15 +208,6 @@ public class Brain  {
 
 	// High score is better for survival
 	public void updateScores() {
-	}
-
-
-	public double getHistory( int outputIndex, int stepsBefore ) {
-		int step = historyIndex - stepsBefore ;
-		if( step < 0 ) {
-			step += outputHistory.length ;
-		}
-		return outputHistory[step][outputIndex] ;
 	}
 
 
@@ -250,22 +251,28 @@ public class Brain  {
 	}		
 
 
-	public Potentials getNeuronPotentials( int patternIndex, int clk ) {
+	public Potentials getNeuronPotentials( int patternIndex, double clock ) {
 		Potentials rc = new Potentials() ;
-		int outputLayer = neurons.length - 1 ;
-		
-		rc.outputs = new double[ neurons[outputLayer].length ] ;
-		for( int i=0 ; i<rc.outputs.length ; i++ ) {
-			rc.outputs[i] = getNeuron( outputLayer, i ).getPotential() ;
+		rc.clock = clock ;
+		rc.outputs = new double[outputHistory.length][outputHistory[0].length] ;
+
+		int offset = historyIndex ;
+		for( int i=0 ; i<outputHistory.length ; i++ ) {
+			for( int j=0 ; j<outputHistory[i].length ; j++ ) {
+				rc.outputs[outputHistory.length-offset-1][j] = outputHistory[i][j] ;
+			}
+			offset-- ;
+			if( offset<0 ) {
+				offset += outputHistory.length ;
+			}
 		}
 
 		rc.neurons = new ArrayList<NeuronState>() ;
 		for( int i=0 ; i<neurons.length; i++ ) {
 			for( int j=0 ; j<neurons[i].length; j++ ) {
-				rc.neurons.add( new NeuronState( neurons[i][j], clk ) ) ;
+				rc.neurons.add( new NeuronState( neurons[i][j] ) ) ;
 			}
 		}
-
 
 		int numEdges = 0 ;
 		for( int i=0 ; i<targetEdges.length ; i++ ) {
@@ -436,14 +443,14 @@ class Potentials {
 	public double clock ;
 	public List<NeuronState> neurons ;
 	public EdgeState edges[] ;
-	public double outputs[] ;
+	public double outputs[][] ;
 }
 
 class NeuronState {
 	public double potential ;
 	public int id ;
 	public int ago ;
-	public NeuronState( Neuron n, int clk ) {
+	public NeuronState( Neuron n ) {
 		this.potential = n.getPotential() ;
 		this.id = n.getIndex() ;
 		this.ago = n.spikeIndex ;

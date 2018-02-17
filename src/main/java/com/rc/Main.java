@@ -23,6 +23,7 @@ public class Main {
 	static int POPULATION = 5_000 ;
 	static int EPOCHS = 200 ;
 	static int SIMULATIONS = 2000 ;
+	static double TICK_PERIOD = 0.001 ;   // each clock tick in seconds - default 1mS
 	static double MUTATION = 0.1 ;
 	static long DELAY_INTERVAL  = 150 ;
 	
@@ -45,6 +46,7 @@ public class Main {
 			
 			parser.acceptsAll( asList("f", "file") , "The parameters in json format" ).withRequiredArg().ofType( String.class ) ;
 			parser.acceptsAll( asList("e", "evolve") , "Whether to run the evolution step" ) ;
+			parser.acceptsAll( asList("p", "period") , "Each clock step is this long (uS)" ).withRequiredArg().ofType( Integer.class ) ;
 			parser.acceptsAll( asList("u", "update-delay" ) , "Interval between updates 0-200 mS" ).withRequiredArg().ofType( Long.class ) ; 
 			parser.accepts( "epochs" , "Number of epochs to run" ).withRequiredArg().ofType( Integer.class ) ; 
 			parser.accepts( "clear" , "Delete existing parameters" ) ; 
@@ -71,6 +73,7 @@ public class Main {
 	        if( options.has( "epochs" ) ) 		{ EPOCHS = (int) options.valueOf("epochs") ; }
 	        if( options.has( "mutation" ) ) 	{ MUTATION = (double) options.valueOf("mutation") ; }
 	        if( options.has( "update-delay" ) ) { DELAY_INTERVAL = (long) options.valueOf("update-delay") ; }
+	        if( options.has( "period" ) ) 		{ TICK_PERIOD = (int) options.valueOf("period") ; }
 	        boolean clearFile = options.has("clear") ;
 	        boolean evolve    = options.has("evolve") ;
 	        boolean train	  = options.has("train") ;
@@ -136,13 +139,13 @@ public class Main {
 			m.start();
 			double inputs[] = new double[ dims[0] ] ;
 
-			int clk = 0 ;
+			double clock = 0 ;
 			int patternCount = 0 ;
 			int patternIndex = 0 ;
 			double testPattern[] = null ;
 			long lastSentTime = 0 ;
 			for( ; ; ) {
-				clk++ ;
+				clock += TICK_PERIOD ;
 
 				patternCount-- ;
 				if( patternCount<0) {
@@ -155,7 +158,7 @@ public class Main {
 					}
 				}
 
-				brain.step( inputs ) ;
+				brain.step( clock, inputs ) ;
 				if( train ) {
 					brain.train() ;
 				}
@@ -163,11 +166,11 @@ public class Main {
 				long deltaTime = System.currentTimeMillis() - lastSentTime ;
 				if( !train || deltaTime > DELAY_INTERVAL ) {
 					lastSentTime = System.currentTimeMillis() ;
-					m.sendBrainData( patternIndex, clk ) ; 
+					m.sendBrainData( patternIndex, clock ) ; 
 				}
-				if( !train ) {
+				// if( !train ) {
 					Thread.sleep( DELAY_INTERVAL ) ;
-				}
+				// }
 			}
 		} catch( Throwable t ) {  
 			t.printStackTrace();
