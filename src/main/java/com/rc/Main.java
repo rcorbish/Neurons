@@ -23,7 +23,7 @@ public class Main {
 	static int POPULATION = 5_000 ;
 	static int EPOCHS = 200 ;
 	static int SIMULATIONS = 2000 ;
-	static double TICK_PERIOD = 0.001 ;   // each clock tick in seconds - default 1mS
+	static double TICK_PERIOD = 1e-4 ;   // each clock tick in seconds - default 100uS
 	static double MUTATION = 0.1 ;
 	static long DELAY_INTERVAL  = 150 ;
 	
@@ -125,16 +125,16 @@ public class Main {
 				}
 			}
 
-			for( int i=0 ; i<TestPatterns.length ; i++ ) {
-				double sum = 0 ;
-				for( int j=0 ; j<TestPatterns[i].length ; j++ ) {
-					sum += TestPatterns[i][j] ;
-				}
-				double factor = 0.25 / sum ;
-				for( int j=0 ; j<TestPatterns[i].length ; j++ ) {
-					TestPatterns[i][j] *= factor ;
-				}
-			}
+//			for( int i=0 ; i<TestPatterns.length ; i++ ) {
+//				double sum = 0 ;
+//				for( int j=0 ; j<TestPatterns[i].length ; j++ ) {
+//					sum += TestPatterns[i][j] ;
+//				}
+//				double factor = 0.25 / sum ;
+//				for( int j=0 ; j<TestPatterns[i].length ; j++ ) {
+//					TestPatterns[i][j] *= factor ;
+//				}
+//			}
 			Monitor m = new Monitor( brain ) ;
 			m.start();
 			double inputs[] = new double[ dims[0] ] ;

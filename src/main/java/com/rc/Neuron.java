@@ -21,9 +21,9 @@ public class Neuron  {
 
 	private final int spikeDuration ;
 	
-	public double 	learningRate ;
+	public double 		learningRate ;
 	protected double 	currentPotential ;
-	public  int 	spikeIndex ;
+	public  int 		spikeIndex ;
 
 	public final int index ;
 
@@ -36,10 +36,10 @@ public class Neuron  {
 
 	public Neuron( int index ) {
 		this.restingPotential = 0 ; // ;
-		this.threshold = 0.85 + rng.nextDouble() / 10.0 ;
-		this.decay = 0.1 ; 		// rng.nextDouble() / 10.0 ;
-		this.learningRate = rng.nextDouble() / 100.0 ;
-		this.spikeValue = 0.1 + rng.nextDouble() ;
+		this.threshold = 0.85 ; // + rng.nextDouble() / 10.0 ;
+		this.decay = 0.05 ; 	// rng.nextDouble() / 10.0 ;
+		this.learningRate = rng.nextDouble() / 30.0 ;
+		this.spikeValue = 1.0  ;
 		this.index = index ;
 
 		this.currentPotential = rng.nextDouble() ;
@@ -73,17 +73,14 @@ public class Neuron  {
 		return rc ;
 	}
 
-	public void absolutePotential( double potential ) {
-		this.currentPotential = potential ;
-	}
-	
-	public void setPotential( double potential ) {
+	public void setPotential( double potential, double clock ) {
+		spikeIndex++ ;
 		if( spikeIndex < spikeDuration ) {
 			this.currentPotential = restingPotential ;
 		} else {
 			if( this.currentPotential>threshold ) {
-				spikeIndex = -1 ;
-				this.currentPotential += spikeValue ;
+				spikeIndex = 0 ;
+				this.currentPotential = spikeValue ;
 			} else {
 				this.currentPotential += potential ;
 				this.currentPotential -= decay ;
@@ -92,7 +89,6 @@ public class Neuron  {
 				this.currentPotential = restingPotential ;
 			} 
 		}
-		spikeIndex++ ;
 	}
 	
 	public void spike() {

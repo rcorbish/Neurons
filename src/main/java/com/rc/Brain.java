@@ -8,9 +8,7 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.OutputStream;
 import java.util.ArrayList;
-import java.util.LinkedList;
 import java.util.List;
-import java.util.Queue;
 import java.util.Random;
 
 import org.slf4j.Logger;
@@ -50,13 +48,25 @@ public class Brain  {
 			numNeurons += n ;
 			neurons[i] = new Neuron[ n ];
 		}
-		
+		//-----------------------------
+		// how many items in the genome
+		//
+		// 0 = # layers
+		// 1 .. n = # neurons in each layer
 		int start = 1 + numlayers ;
-		for( int i=0 ; i<neurons.length ; i++ ) {
+
+		// 1st layer is always special (input) neurons
+		for( int j=0 ; j<neurons[0].length ; j++ ) {
+			Genome gs = g.subSequence(start, Neuron.GENOME_SIZE ) ;
+			neurons[0][j] = new InputNeuron( gs ) ;
+			start += Neuron.GENOME_SIZE ;	// update Brain size
+		}
+		// Start from 2nd layer onwards ...
+		for( int i=1 ; i<neurons.length ; i++ ) {
 			for( int j=0 ; j<neurons[i].length ; j++ ) {
 				Genome gs = g.subSequence(start, Neuron.GENOME_SIZE ) ;
 				neurons[i][j] = new Neuron( gs ) ;
-				start += Neuron.GENOME_SIZE ;
+				start += Neuron.GENOME_SIZE ;	// update Brain size
 			}
 		}
 
@@ -108,7 +118,13 @@ public class Brain  {
 				
 		int numNeurons = 0 ;
 		
-		for( int i=0 ; i<layers.length ; i++ ) {
+		this.neurons[0] = new Neuron[ layers[0] ] ;
+		for( int j=0 ; j<layers[0] ; j++ ) {
+			this.neurons[0][j] = new InputNeuron( numNeurons ) ;
+			numNeurons++ ;
+		}
+
+		for( int i=1 ; i<layers.length ; i++ ) {
 			this.neurons[i] = new Neuron[ layers[i] ] ;
 			for( int j=0 ; j<layers[i] ; j++ ) {
 				this.neurons[i][j] = new Neuron( numNeurons ) ;
@@ -160,7 +176,7 @@ public class Brain  {
 		
 		// Set inputs immediately - no dependencies
 		for( int i=0 ; i<neurons[0].length ; i++ ) {
-			this.neurons[0][i].setPotential( inputs[i] ) ;
+			this.neurons[0][i].setPotential( inputs[i], clock ) ;
 		}
 
 		// Will build up all outputs - before changing any of them
@@ -168,7 +184,7 @@ public class Brain  {
 
 		// Sum all inputs 
 		int n = 0 ;
-		for( int i=0 ; i<neurons.length; i++ ) {
+		for( int i=1 ; i<neurons.length; i++ ) {
 			newPotentials[i] = new double[ neurons[i].length ] ;
 			for( int j=0 ; j<neurons[i].length; j++, n++ ) {
 				newPotentials[i][j] = 0 ;
@@ -181,9 +197,10 @@ public class Brain  {
 		}
 
 		// Then write the output as an atomic op
-		for( int i=0 ; i<neurons.length; i++ ) {
+		// do NOT write inputs though
+		for( int i=1 ; i<neurons.length; i++ ) {
 			for( int j=0 ; j<neurons[i].length; j++ ) {
-				neurons[i][j].setPotential( newPotentials[i][j] ) ;
+				neurons[i][j].setPotential( newPotentials[i][j], clock ) ;
 			}
 		}		
 
@@ -199,7 +216,7 @@ public class Brain  {
 	}
 
 	public void train() {
-		for( int i=0 ; i<neurons.length; i++ ) {
+		for( int i=1 ; i<neurons.length; i++ ) {
 			for( int j=0 ; j<neurons[i].length; j++ ) {
 				neurons[i][j].train( this ) ;
 			}
@@ -258,12 +275,12 @@ public class Brain  {
 
 		int offset = historyIndex ;
 		for( int i=0 ; i<outputHistory.length ; i++ ) {
-			for( int j=0 ; j<outputHistory[i].length ; j++ ) {
-				rc.outputs[outputHistory.length-offset-1][j] = outputHistory[i][j] ;
-			}
 			offset-- ;
 			if( offset<0 ) {
 				offset += outputHistory.length ;
+			}
+			for( int j=0 ; j<outputHistory[i].length ; j++ ) {
+				rc.outputs[outputHistory.length-offset-1][j] = outputHistory[i][j] ;
 			}
 		}
 
