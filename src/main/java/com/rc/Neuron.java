@@ -19,46 +19,46 @@ public class Neuron  {
 	private final static int GENOME_INDEX_SPIKE_VALUE = 5 ;
 	public  final static int GENOME_SIZE = 6 ;
 
-	private final int spikeDuration ;
+	public final int id ;
 	
-	public double 		learningRate ;
-	protected double 	currentPotential ;
-	public  int 		spikeIndex ;
-
-	public final int index ;
-
+	public 		double 		learningRate ;
+	protected 	double 		currentPotential ;
+	public  	double 		lastSpikeTime ;		// when did we spike last
+	private 	double		refractoryEnd ;
+	private 	boolean		isSpiking ;
 	// These must be 0 .. 1  ( to map to a genome )
 	public final double threshold  ;
 	public final double decay ;
 	public final double spikeValue ;
+	private final double spikeDuration ;
+	
 	// This is -0.5 .. +0.5
 	public final double restingPotential ;
 
-	public Neuron( int index ) {
+	public Neuron( int id) {
 		this.restingPotential = 0 ; // ;
-		this.threshold = 0.85 ; // + rng.nextDouble() / 10.0 ;
+		this.threshold = 0.95 ; // + rng.nextDouble() / 10.0 ;
 		this.decay = 0.05 ; 	// rng.nextDouble() / 10.0 ;
-		this.learningRate = rng.nextDouble() / 30.0 ;
+		this.learningRate = 0.01 ;
 		this.spikeValue = 1.0  ;
-		this.index = index ;
+		this.id = id ;
 
 		this.currentPotential = rng.nextDouble() ;
-		spikeDuration = 5 ;
-		spikeIndex = 1 ;
+		spikeDuration = 0.001 ;		// refractory time
+		lastSpikeTime = -1.0 ;
 	}
 
 	public Neuron( Genome genome ) {
 		this.threshold = genome.getDouble( GENOME_INDEX_THRESHOLD ) ;
 		this.restingPotential = genome.getDouble( GENOME_INDEX_RESTING ) - 0.5 ;
 		this.decay = genome.getDouble( GENOME_INDEX_DECAY ) ;
-		this.index = genome.getInt( GENOME_INDEX_ID ) ;
+		this.id = genome.getInt( GENOME_INDEX_ID ) ;
 		this.learningRate = genome.getDouble( GENOME_INDEX_LEARNING_RATE ) ;
 		this.spikeValue = genome.getDouble( GENOME_INDEX_SPIKE_VALUE ) ;
 
-
 		this.currentPotential = rng.nextDouble() ;
-		spikeDuration = 5 ;
-		spikeIndex = 1 ;
+		spikeDuration = 0.001 ;
+		lastSpikeTime = -1.0 ;
 	}
 	
 	public Genome toGenome() {
@@ -66,7 +66,7 @@ public class Neuron  {
 		rc.set( threshold, GENOME_INDEX_THRESHOLD ) ;
 		rc.set( restingPotential + 0.5, GENOME_INDEX_RESTING ) ;
 		rc.set( decay, GENOME_INDEX_DECAY ) ;
-		rc.set( index, GENOME_INDEX_ID ) ;
+		rc.set( id, GENOME_INDEX_ID ) ;
 		rc.set( learningRate, GENOME_INDEX_LEARNING_RATE ) ;
 		rc.set( spikeValue, GENOME_INDEX_SPIKE_VALUE ) ;
 
@@ -74,53 +74,64 @@ public class Neuron  {
 	}
 
 	public void setPotential( double potential, double clock ) {
-		spikeIndex++ ;
-		if( spikeIndex < spikeDuration ) {
+		isSpiking = false ;
+		
+		if( clock < refractoryEnd ) {
 			this.currentPotential = restingPotential ;
 		} else {
+			
 			if( this.currentPotential>threshold ) {
-				spikeIndex = 0 ;
-				this.currentPotential = spikeValue ;
+				spike( clock ) ;
 			} else {
-				this.currentPotential += potential ;
-				this.currentPotential -= decay ;
+				this.currentPotential += potential;
+				decay() ;
 			}
+			
 			if( this.currentPotential < restingPotential ) {
 				this.currentPotential = restingPotential ;
 			} 
 		}
 	}
 	
-	public void spike() {
-		spikeIndex = 0 ;
-		this.currentPotential += spikeValue ;
+	public void decay() {
+		this.currentPotential *= 0.70 ;
+	}
+	
+	public void spike( double clock ) {
+		isSpiking = true ;
+		lastSpikeTime = clock ;
+		this.currentPotential = spikeValue ;
+		refractoryEnd = clock + spikeDuration ;
 	}
 	
 	
 	public void train( Brain brain ) {
-		
+		if( lastSpikeTime < 0 ) {
+			return ;
+		}
 		// Look for pre-synaptic spikes (we received a spike before we spiked)
 		// and post-synaptic spikes (we spiked before receiving a spike)
-		EdgeList edges = brain.getIncomingEdges(index) ;
+		EdgeList edges = brain.getIncomingEdges( id ) ;
 		for( Edge e : edges ) {			
 			Neuron source = brain.findNeuron( e.source() ) ;
-			int deltaFiredTime = source.spikeIndex - spikeIndex ;
+			double deltaFiredTime = source.timeSinceFired( lastSpikeTime ) ;
 			// pre-synaptic spike occurs before ( spikeIndex > ours )
-			if( spikeIndex < 5 && deltaFiredTime > 0 ) {
+			if( deltaFiredTime < 0 ) {
 				//reinforce
-				double delta = learningRate / ( 1 + deltaFiredTime * deltaFiredTime ) ;
+				double delta = learningRate * deltaFiredTime * deltaFiredTime ;
 				e.addWeight( delta ) ;
-			} else if( spikeIndex < 5 && deltaFiredTime < 1 ) {
+			} else if( deltaFiredTime > 0 ) {
 				//suppress
-				double delta = learningRate / ( 2 + deltaFiredTime * deltaFiredTime ) ;
+				double delta = learningRate * deltaFiredTime * deltaFiredTime * deltaFiredTime ;
 				e.addWeight( -delta ) ;
 			}
 		}
 	}
 	
-	public int getIndex() { return index ; }
+	public double timeSinceFired( double clock ) { return clock - lastSpikeTime ; }
+	public int getId() { return id ; }
 	public double getPotential() { return currentPotential ; }
-	public boolean isSpiking() { return spikeIndex == 0 ; }
+	public boolean isSpiking() { return isSpiking ; }
 }
 
 

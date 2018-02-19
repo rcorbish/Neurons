@@ -42,7 +42,7 @@ public class TestBrain {
 				assertEquals( "Invalid neuron recovered", n.decay, nr.decay, accuracy )  ;
 				assertEquals( "Invalid neuron recovered", n.threshold, nr.threshold, accuracy )  ;
 				assertEquals( "Invalid neuron recovered", n.restingPotential, nr.restingPotential, accuracy )  ;
-				assertEquals( "Invalid neuron recovered", n.index, nr.index )  ;
+				assertEquals( "Invalid neuron recovered", n.id, nr.id )  ;
 			}
 		}
 		

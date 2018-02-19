@@ -13,6 +13,7 @@ public class InputNeuron extends Neuron {
 	
 	final double clockOffset ;
 	double nextSpikeTime ;
+	double potential ;
 	
 	public InputNeuron( int id ) {		
 		super( id ) ;
@@ -28,15 +29,16 @@ public class InputNeuron extends Neuron {
 	
 	@Override
 	public void setPotential( double potential, double clock ) {
+		this.potential = potential ;
 		if( nextSpikeTime <= clock ) {
+			spike( clock ) ;
 			double clockDrift = clock - nextSpikeTime ;
 					
-			// 1.0 => 1 kHz
-			//
-			// 	  potential * 1000 = kHz
+			// 	  potential => 1kHz
 			// 	+ clock starting from now
 			// 	+ ( clock - nextSpikeTime ) to keep track of fractions
-			nextSpikeTime = (1.0-potential) / 1_000 + clock - clockDrift ;
+			
+			nextSpikeTime = (1.2-potential) / 1000 + clock ; //- clockDrift ;
 			this.currentPotential = spikeValue ;
 		} else {
 			this.currentPotential = restingPotential ;
@@ -47,6 +49,11 @@ public class InputNeuron extends Neuron {
 	public boolean isSpiking() {
 		return this.currentPotential > restingPotential ;
 	}
+	
+//	@Override
+//	public double potential( double clock ) {
+//		return potential / 1000.0  ;
+//	}
 }
 
 

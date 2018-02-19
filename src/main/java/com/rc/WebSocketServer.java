@@ -13,6 +13,9 @@ import org.eclipse.jetty.websocket.api.annotations.WebSocket;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+
 
 
 @WebSocket
@@ -20,6 +23,8 @@ public class WebSocketServer  {
 	final static Logger logger = LoggerFactory.getLogger( WebSocketServer.class ) ;
 	
 	private List<Session> sessions = new ArrayList<>() ;
+	
+	private int following = -1 ;
 
 	@OnWebSocketConnect
 	public synchronized void connect( Session session )  {
@@ -50,7 +55,10 @@ public class WebSocketServer  {
 	 */
 	@OnWebSocketMessage
 	public void message(Session session, String message) throws IOException {
-		logger.debug( "Received {} from {}.", message, session.getRemoteAddress() ) ;
+		logger.info( "Received {} from {}.", message, session.getRemoteAddress() ) ;
+		if( message.startsWith( "follow " ) ) {
+			setFollowing( Integer.parseInt( message.substring( "follow ".length() ) ) ) ;
+		}
 	}	
 
 
@@ -67,6 +75,14 @@ public class WebSocketServer  {
 //				this.sessions.remove( session ) ;
 			}
 		}
+	}
+
+	public int getFollowing() {
+		return following;
+	}
+
+	public void setFollowing(int following) {
+		this.following = following;
 	}	
 
 }

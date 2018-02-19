@@ -8,7 +8,6 @@ body {
 	background-color: #201713 ;
 }
 .node {
-	stroke: none;
 	font-size: 8pt ;
 	font-family: Arial, Helvetica, sans-serif ;
 }
@@ -21,7 +20,7 @@ body {
 
 .link {
   stroke-opacity: .6;
-  marker-end: url(#arrow-marker);
+  xxmarker-end: url(#arrow-marker);
 }
 
 .status {
@@ -67,9 +66,10 @@ body {
 
 	var width = 800 ;
     var height = 600 ;
+    var following = null ;
 	
 	const firingAge = d3.scaleLinear()
-    			.domain([1, 10, 30])
+    			.domain( [ 0, 0.5, 2.0 ] )
     			.range(["green", "white", "red"]);
 
 	const weightColor = d3.scaleLinear()
@@ -116,7 +116,17 @@ d3.json("data", function(error, graph) {
 		d.fy = null;
 	}
 
-
+	function neuronClicked( id ) {
+		if( following ) {
+			following.style.stroke = "none" ;  
+		}
+		following = document.getElementById( id ) ; 
+		sendToServer( "follow " + id ) ;	
+		if( following ) {
+			following.style.stroke = "white" ;  
+		}
+	}
+	
 	const links = svg
 	    .selectAll("line")
     	.data(graph.links)
@@ -135,11 +145,18 @@ d3.json("data", function(error, graph) {
 				.attr( 'class', 'node' )
 				.attr( 'id', function(d) { return d.id } )
 				.attr("r", function(d) { return 6.5 } ) 
-				.attr("fill", function(d) { return firingAge( d.type ); })
-				.call(d3.drag()
-					.on("start", dragstarted)
-					.on("drag", dragged)
-					.on("end", dragended)) 
+				.attr("stroke", "none" ) 
+				.attr("stroke-width", "3" ) 
+				.attr("fill", function(d) { 
+					return firingAge( d.type ) 
+				}) 
+				.on( "click", function(d) { 
+					neuronClicked( d.id ) 
+				})
+//				.call(d3.drag()
+//					.on("start", dragstarted)
+//					.on("drag", dragged)
+//					.on("end", dragended)) 
   		;
 
 		const texts = svg
@@ -198,10 +215,9 @@ d3.json("data", function(error, graph) {
 	.on("end", tick ) 
 	;
 });
-</script>
 
-		
-<script>
+
+	
 	var c = document.getElementById("chart");
 	var ctx = c.getContext("2d");
 	ctx.fillStyle = "#FF0000";
@@ -225,11 +241,11 @@ d3.json("data", function(error, graph) {
 			for( var i=0 ; i<data.neurons.length ; i++ ) {			
 				var n = document.getElementById( data.neurons[i].id )
 				if( n ) {				
-					n.style.fill = firingAge( data.neurons[i].ago  ) 
+					n.style.fill = firingAge( data.neurons[i].ago*1000  ) 
 				
 					n = document.getElementById( 'txt-' + data.neurons[i].id )
 					if( n ) {								
-						n.textContent = data.neurons[i].ago > 100 ? "" : data.neurons[i].ago 
+						n.textContent = (1000 * data.neurons[i].ago).toFixed(2) 
 					}
 				}
 			}
@@ -243,28 +259,21 @@ d3.json("data", function(error, graph) {
 			
 			c.width = c.width;	// clear screern ( of the chart area - not the graph )		
 			
+			const dx = c.width / data.history.length
+			
 			// Draw the chart at the top of the screen
 			// chart od output values & which outputs are activated
 			const outputColors = d3.scaleLinear()
 				.domain([ 1.0, 2.0 ] )
 				.range([ "orange", "steelblue"]);
 			
-			for( var i=0 ; i<data.outputs.length ; i++ ) {
-				for( var j=0 ; j<data.outputs[i].length ; j++ ) {
-					var h = data.outputs[i][j] ;
-					if( h >= 1.0 ) {
-						ctx.beginPath() ;
-						ctx.strokeStyle = outputColors( h ) ;
-						ctx.fillStyle = outputColors( h ) ;
-						ctx.moveTo( i*12, 110-j*10 );
-						ctx.arc( i*12, 110-j*10, 5, 0, 2*Math.PI);
-						ctx.fill() ;	
-					}
-						//ctx.moveTo( i*12+h, 110 );
-						//ctx.lineTo( i*12+h, 110-(100*history[i][h]) ) ;
-				}
-				//ctx.stroke();
+			ctx.beginPath() ;
+			ctx.strokeStyle = "steelblue"
+			ctx.moveTo( 0, 110-(100*history[i]) );
+			for( var i=1 ; i<data.history.length ; i++ ) {
+				ctx.lineTo( i*dx, 110-(100*data.history[i]) ) ;
 			}
+			ctx.stroke();
 		};
 		
 		// called when socket connection established

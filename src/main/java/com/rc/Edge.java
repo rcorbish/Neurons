@@ -46,10 +46,10 @@ public class Edge {
 		return id ;
 	}
 	public void addWeight( double addition ) {
-		double factor = addition > 0 ? (0.85 - weight ) : ( weight + 0.85 ) ; 
+		double factor = addition > 0 ? (0.5 - weight ) : ( weight + 0.15 ) ; 
 		weight += factor * addition ;
-		if( weight > 0.85 ) weight = 0.85 ;
-		if( weight < -0.85 ) weight = -0.85 ;
+		if( weight > 0.5 ) weight = 0.5 ;
+		if( weight < -0.15 ) weight = -0.15 ;
 	}
 }
 
