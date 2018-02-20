@@ -123,7 +123,7 @@ d3.json("data", function(error, graph) {
 		following = document.getElementById( id ) ; 
 		sendToServer( "follow " + id ) ;	
 		if( following ) {
-			following.style.stroke = "white" ;  
+			following.style.stroke = "#ffff4d" ;  
 		}
 	}
 	
@@ -208,8 +208,8 @@ d3.json("data", function(error, graph) {
 			.strength( function(d) { return 1 ; } ) 
 		)  
 	.force( "y", d3.forceY()
-			.y( function(d) { return height/2 ; } )
-			// .strength( function(d) { return d.fx ? 2 : 0 ; } ) 
+			.y( function(d) { return d.fy || 0 ; } )
+			.strength( function(d) { return 1 ; } ) 
 		)  
 	.on("tick", tick ) 
 	.on("end", tick ) 
@@ -268,7 +268,7 @@ d3.json("data", function(error, graph) {
 				.range([ "orange", "steelblue"]);
 			
 			ctx.beginPath() ;
-			ctx.strokeStyle = "steelblue"
+			ctx.strokeStyle = "steelblue"  
 			ctx.moveTo( 0, 110-(100*history[i]) );
 			for( var i=1 ; i<data.history.length ; i++ ) {
 				ctx.lineTo( i*dx, 110-(100*data.history[i]) ) ;

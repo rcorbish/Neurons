@@ -145,9 +145,12 @@ public class Brain  {
 				EdgeList el = targetEdges[ tgtIndex ] ;
 				
 				for( int j=0 ; j<neurons[l-1].length ; j++ ) {
-					double weight = getRandomWeight() ;
-					Edge e = new Edge( getIndexOfFirstInLayer(l-1)+j, tgtIndex, weight, edgeId++ ) ;
-					el.add( e ) ;
+					int dy = Math.abs( i - j ) ;
+					if( dy < 3 ) {
+						double weight = getRandomWeight() ;
+						Edge e = new Edge( getIndexOfFirstInLayer(l-1)+j, tgtIndex, weight, edgeId++ ) ;
+						el.add( e ) ;
+					}
 				}
 			}
 		}
@@ -214,10 +217,10 @@ public class Brain  {
 		}
 	}
 
-	public void train() {
+	public void train( double clock ) {
 		for( int i=1 ; i<neurons.length; i++ ) {
 			for( int j=0 ; j<neurons[i].length; j++ ) {
-				neurons[i][j].train( this ) ;
+				neurons[i][j].train( this, clock ) ;
 			}
 		}
 	}
@@ -326,6 +329,12 @@ public class Brain  {
 	private void printNodes( StringBuilder rc ) {
 		char sep = ' '  ;
 		int layerWidth = 800 / ( neurons.length - 1 );
+		int n = 0 ;
+		for( int i=0 ; i<neurons.length ; i++ ) {
+			n = Math.max( n,  neurons.length ) ;
+		}
+		int layerHeight = 400 / n - 1 ; 
+
 		for( int i=0 ; i<neurons.length ; i++ ) {
 			
 			boolean shouldDrawThisOne = !tooBigToPrint() || i==0 || i==(neurons.length - 1) ;
@@ -333,13 +342,14 @@ public class Brain  {
 			if( shouldDrawThisOne ) {
 				int x = i * layerWidth ;
 				for( int j=0 ; j<neurons[i].length ; j++ ) {	
-	
+					int y = (j+1) * layerHeight ;
 					rc.append( sep ) 
 					.append( "{ \"id\":"  ) 
 					.append( neurons[i][j].getId() ) 
 					.append( ",\"potential\":" ) 
 					.append( neurons[i][j].getPotential() ) 
 					.append( ",\"fx\":").append( x ) 				
+					.append( ",\"fy\":").append( y ) 				
 					.append( " }" ) 
 					;
 					sep = ',' ;

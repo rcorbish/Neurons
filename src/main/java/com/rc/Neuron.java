@@ -38,9 +38,9 @@ public class Neuron  {
 	public Neuron( int id) {
 		this.restingPotential = 0 ; // ;
 		this.threshold = 0.95 ; // + rng.nextDouble() / 10.0 ;
-		this.decay = 0.05 ; 	// rng.nextDouble() / 10.0 ;
+		this.decay = 0.1 ; 	// rng.nextDouble() / 10.0 ;
 		this.learningRate = 0.01 ;
-		this.spikeValue = 1.0  ;
+		this.spikeValue = 0.9  ;
 		this.id = id ;
 
 		this.currentPotential = rng.nextDouble() ;
@@ -78,23 +78,22 @@ public class Neuron  {
 		
 		if( clock < refractoryEnd ) {
 			this.currentPotential = restingPotential ;
-		} else {
-			
-			if( this.currentPotential>threshold ) {
-				spike( clock ) ;
-			} else {
-				this.currentPotential += potential;
-				decay() ;
-			}
+		} else {			
+			decay() ;
+			this.currentPotential += potential;
 			
 			if( this.currentPotential < restingPotential ) {
 				this.currentPotential = restingPotential ;
 			} 
+			
+			if( this.currentPotential>threshold ) {
+				spike( clock ) ;
+			}			
 		}
 	}
 	
 	public void decay() {
-		this.currentPotential *= 0.70 ;
+		this.currentPotential *= ( 1.0 - decay ) ;
 	}
 	
 	public void spike( double clock ) {
@@ -105,24 +104,26 @@ public class Neuron  {
 	}
 	
 	
-	public void train( Brain brain ) {
+	public void train( Brain brain, double clock ) {
 		if( lastSpikeTime < 0 ) {
 			return ;
 		}
 		// Look for pre-synaptic spikes (we received a spike before we spiked)
 		// and post-synaptic spikes (we spiked before receiving a spike)
 		EdgeList edges = brain.getIncomingEdges( id ) ;
-		for( Edge e : edges ) {			
+		for( Edge e : edges ) {		
 			Neuron source = brain.findNeuron( e.source() ) ;
-			double deltaFiredTime = source.timeSinceFired( lastSpikeTime ) ;
+			double tpre = source.timeSinceFired( clock ) ;
+			double tpost = timeSinceFired( clock )  ;
+			double deltaFiredTime = tpre - tpost ;
 			// pre-synaptic spike occurs before ( spikeIndex > ours )
-			if( deltaFiredTime < 0 ) {
+			if( deltaFiredTime <= 0 ) {
 				//reinforce
-				double delta = learningRate * deltaFiredTime * deltaFiredTime ;
+				double delta = learningRate * e.weight() * ( 1 - e.weight() ) ;
 				e.addWeight( delta ) ;
 			} else if( deltaFiredTime > 0 ) {
 				//suppress
-				double delta = learningRate * deltaFiredTime * deltaFiredTime * deltaFiredTime ;
+				double delta = learningRate * e.weight() * ( 1 - e.weight() ) * 0.75 ;
 				e.addWeight( -delta ) ;
 			}
 		}

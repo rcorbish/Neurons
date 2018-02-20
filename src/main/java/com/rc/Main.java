@@ -160,7 +160,7 @@ public class Main {
 
 				brain.step( clock, inputs ) ;
 				if( train ) {
-					brain.train() ;
+					brain.train( clock ) ;
 				}
 
 				long deltaTime = System.currentTimeMillis() - lastSentTime ;
