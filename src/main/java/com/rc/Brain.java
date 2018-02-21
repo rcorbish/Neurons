@@ -284,7 +284,7 @@ public class Brain  {
 				offset += outputHistory.length ;
 			}
 			rc.history[outputHistory.length-offset-1] = outputHistory[i] ;
-			if( outputHistory[i] > 0.90 ) {
+			if( outputHistory[i] >= 0.90 ) {
 				numSpikes++ ;
 			}
 		}

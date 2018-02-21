@@ -240,7 +240,7 @@ d3.json("data", function(error, graph) {
 		ws.onmessage = function (evt) {
 			var data = JSON.parse( evt.data )
 			
-			scoreDiv.innerHTML = data.clock.toFixed(5) + " S<br>" + data.frequency.toFixed(5) + " Hz" ;
+			scoreDiv.innerHTML = data.clock.toFixed(5) + " S<br>" + data.frequency.toFixed(2) + " Hz" ;
 
 			for( var i=0 ; i<data.neurons.length ; i++ ) {			
 				var n = document.getElementById( data.neurons[i].id )

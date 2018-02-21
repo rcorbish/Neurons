@@ -36,10 +36,10 @@ public class Neuron  {
 
 	public Neuron( int id) {
 		this.restingPotential = 0 ; // ;
-		this.threshold = 0.9 ; // + rng.nextDouble() / 10.0 ;
+		this.threshold = 0.8 ; // + rng.nextDouble() / 10.0 ;
 		this.decay = 0.1 ; 	// rng.nextDouble() / 10.0 ;
 		this.learningRate = 0.01 ;
-		this.spikeValue = 0.9  ;
+		this.spikeValue = 1.0  ;
 		this.id = id ;
 
 		this.currentPotential = rng.nextDouble() ;

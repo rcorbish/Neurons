@@ -149,7 +149,7 @@ public class Main {
 
 				patternCount-- ;
 				if( patternCount<0) {
-					patternCount = 100 ;
+					patternCount = 10_000 ;
 					patternIndex = rng.nextInt(TestPatterns.length) ;
 					testPattern = TestPatterns[ patternIndex ] ;
 
