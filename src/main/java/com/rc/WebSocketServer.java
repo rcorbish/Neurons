@@ -68,8 +68,8 @@ public class WebSocketServer  {
 			if( session.isOpen() ) {
 				try {
 					session.getRemote().sendString( msg );
-				} catch( IOException ioe ){
-// nothing to do
+				} catch( Exception e ){
+					// nothing to do
 				}
 //			} else {
 //				this.sessions.remove( session ) ;

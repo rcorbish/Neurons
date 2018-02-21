@@ -39,10 +39,10 @@ public class TestBrain {
 				Neuron nr = br.getNeuron(i,j) ;
 				Neuron n  =  b.getNeuron(i,j) ;
 	
-				assertEquals( "Invalid neuron recovered", n.decay, nr.decay, accuracy )  ;
-				assertEquals( "Invalid neuron recovered", n.threshold, nr.threshold, accuracy )  ;
-				assertEquals( "Invalid neuron recovered", n.restingPotential, nr.restingPotential, accuracy )  ;
-				assertEquals( "Invalid neuron recovered", n.id, nr.id )  ;
+				assertEquals( "Invalid neuron recovered", n.getDecay(), nr.getDecay(), accuracy )  ;
+				assertEquals( "Invalid neuron recovered", n.getThreshold(), nr.getThreshold(), accuracy )  ;
+				assertEquals( "Invalid neuron recovered", n.getRestingPotential(), nr.getRestingPotential(), accuracy )  ;
+				assertEquals( "Invalid neuron recovered", n.getId(), nr.getId() )  ;
 			}
 		}
 		

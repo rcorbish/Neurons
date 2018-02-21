@@ -39,17 +39,11 @@ public class InputNeuron extends Neuron {
 			// 	+ ( clock - nextSpikeTime ) to keep track of fractions
 			
 			nextSpikeTime = (1.2-potential) / 1000 + clock ; //- clockDrift ;
-			this.currentPotential = spikeValue ;
 		} else {
-			this.currentPotential = restingPotential ;
+			this.rest( clock ) ;
 		}
 	}
 
-	@Override
-	public boolean isSpiking() {
-		return this.currentPotential > restingPotential ;
-	}
-	
 //	@Override
 //	public double potential( double clock ) {
 //		return potential / 1000.0  ;

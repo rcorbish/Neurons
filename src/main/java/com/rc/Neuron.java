@@ -19,25 +19,24 @@ public class Neuron  {
 	private final static int GENOME_INDEX_SPIKE_VALUE = 5 ;
 	public  final static int GENOME_SIZE = 6 ;
 
-	public final int id ;
+	// These are transient state data
+	private 		double 		currentPotential ;
+	private 		boolean		isSpiking ;
+	private  		double 		lastSpikeTime ;		// when did we spike last
+	private 		double		refractoryEnd ;
 	
-	public 		double 		learningRate ;
-	protected 	double 		currentPotential ;
-	public  	double 		lastSpikeTime ;		// when did we spike last
-	private 	double		refractoryEnd ;
-	private 	boolean		isSpiking ;
-	// These must be 0 .. 1  ( to map to a genome )
-	public final double threshold  ;
-	public final double decay ;
-	public final double spikeValue ;
-	private final double spikeDuration ;
-	
-	// This is -0.5 .. +0.5
-	public final double restingPotential ;
+	// The following items are held in the genome
+	private final int 		id ;
+	private final double 	learningRate ;
+	private final double 	threshold  ;
+	private final double 	decay ;
+	private final double 	spikeValue ;
+	private final double 	spikeDuration ;	
+	private final double 	restingPotential ;
 
 	public Neuron( int id) {
 		this.restingPotential = 0 ; // ;
-		this.threshold = 0.95 ; // + rng.nextDouble() / 10.0 ;
+		this.threshold = 0.9 ; // + rng.nextDouble() / 10.0 ;
 		this.decay = 0.1 ; 	// rng.nextDouble() / 10.0 ;
 		this.learningRate = 0.01 ;
 		this.spikeValue = 0.9  ;
@@ -102,6 +101,10 @@ public class Neuron  {
 		this.currentPotential = spikeValue ;
 		refractoryEnd = clock + spikeDuration ;
 	}
+	public void rest( double clock ) {
+		isSpiking = false ;
+		this.currentPotential = restingPotential ;
+	}
 	
 	
 	public void train( Brain brain, double clock ) {
@@ -116,12 +119,12 @@ public class Neuron  {
 			double tpre = source.timeSinceFired( clock ) ;
 			double tpost = timeSinceFired( clock )  ;
 			double deltaFiredTime = tpre - tpost ;
-			// pre-synaptic spike occurs before ( spikeIndex > ours )
-			if( deltaFiredTime <= 0 ) {
+			// pre-synaptic spike occurs before 
+			if( deltaFiredTime <= 0 && deltaFiredTime >= -5e-3 ) {
 				//reinforce
 				double delta = learningRate * e.weight() * ( 1 - e.weight() ) ;
 				e.addWeight( delta ) ;
-			} else if( deltaFiredTime > 0 ) {
+			} else if( deltaFiredTime > 0 && deltaFiredTime < 5e-3) {
 				//suppress
 				double delta = learningRate * e.weight() * ( 1 - e.weight() ) * 0.75 ;
 				e.addWeight( -delta ) ;
@@ -132,6 +135,9 @@ public class Neuron  {
 	public double timeSinceFired( double clock ) { return clock - lastSpikeTime ; }
 	public int getId() { return id ; }
 	public double getPotential() { return currentPotential ; }
+	public double getRestingPotential() { return restingPotential ; }
+	public double getDecay() { return decay ; }
+	public double getThreshold() { return threshold ; }
 	public boolean isSpiking() { return isSpiking ; }
 }
 

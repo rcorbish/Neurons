@@ -1,5 +1,6 @@
 package com.rc ;
 
+import java.awt.image.DataBuffer;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -275,6 +276,7 @@ public class Brain  {
 		rc.clock = clock ;
 		rc.history = new double[outputHistory.length] ;
 
+		int numSpikes = 0 ;
 		int offset = historyIndex ;
 		for( int i=0 ; i<outputHistory.length ; i++ ) {
 			offset-- ;
@@ -282,7 +284,11 @@ public class Brain  {
 				offset += outputHistory.length ;
 			}
 			rc.history[outputHistory.length-offset-1] = outputHistory[i] ;
+			if( outputHistory[i] > 0.90 ) {
+				numSpikes++ ;
+			}
 		}
+		rc.frequency = (double)numSpikes / ( outputHistory.length * Main.TICK_PERIOD ) ;
 
 		rc.neurons = new ArrayList<NeuronState>() ;
 		for( int i=0 ; i<neurons.length; i++ ) {
@@ -342,14 +348,13 @@ public class Brain  {
 			if( shouldDrawThisOne ) {
 				int x = i * layerWidth ;
 				for( int j=0 ; j<neurons[i].length ; j++ ) {	
-					int y = (j+1) * layerHeight ;
 					rc.append( sep ) 
 					.append( "{ \"id\":"  ) 
 					.append( neurons[i][j].getId() ) 
 					.append( ",\"potential\":" ) 
 					.append( neurons[i][j].getPotential() ) 
 					.append( ",\"fx\":").append( x ) 				
-					.append( ",\"fy\":").append( y ) 				
+					.append( ",\"fy\":").append( j*30+30 ) 				
 					.append( " }" ) 
 					;
 					sep = ',' ;
@@ -469,6 +474,7 @@ public class Brain  {
 class Potentials {
 	public double score ;
 	public double clock ;
+	public double frequency ;
 	public List<NeuronState> neurons ;
 	public EdgeState edges[] ;
 	public double history[] ;

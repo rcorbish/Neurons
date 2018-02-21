@@ -1,6 +1,9 @@
 package com.rc ;
 
 public class Edge {
+	static public double MAX_WEIGHT = 0.85 ;
+	static public double MIN_WEIGHT = -0.85 ;
+	
 	static public int GENOME_SIZE = 5 ;
 	
 	private final int id ;
@@ -48,8 +51,8 @@ public class Edge {
 	public void addWeight( double addition ) {
 		double factor = 1.0 ; // addition > 0 ? (0.5 - weight ) : ( weight + 0.15 ) ; 
 		weight += factor * addition ;
-		if( weight > 0.9 ) weight = 0.9 ;
-		if( weight < -0.75 ) weight = -0.75 ;
+		if( weight > MAX_WEIGHT ) weight = MAX_WEIGHT ;
+		if( weight < MIN_WEIGHT ) weight = MIN_WEIGHT ;
 	}
 }
 

@@ -144,10 +144,10 @@ d3.json("data", function(error, graph) {
 			.append("circle")
 				.attr( 'class', 'node' )
 				.attr( 'id', function(d) { return d.id } )
-				.attr("r", function(d) { return 6.5 } ) 
-				.attr("stroke", "none" ) 
-				.attr("stroke-width", "3" ) 
-				.attr("fill", function(d) { 
+				.attr( "r", function(d) { return 7.5 } ) 
+				.attr( "stroke", "none" ) 
+				.attr( "stroke-width", "5" ) 
+				.attr( "fill", function(d) { 
 					return firingAge( d.type ) 
 				}) 
 				.on( "click", function(d) { 
@@ -204,11 +204,15 @@ d3.json("data", function(error, graph) {
 	//.force( "center", d3.forceCenter(width/2, height/2) )
 	.force( "collide", d3.forceCollide( 30 ) ) 
 	.force( "x", d3.forceX()
-			.x( function(d) { return d.fx || 0 ; } )
+			.x( function(d) { 
+				return d.fx ; 
+			})
 			.strength( function(d) { return 1 ; } ) 
 		)  
 	.force( "y", d3.forceY()
-			.y( function(d) { return d.fy || 0 ; } )
+			.y( function(d) { 
+				return d.fy  ; 
+			})
 			.strength( function(d) { return 1 ; } ) 
 		)  
 	.on("tick", tick ) 
@@ -236,7 +240,7 @@ d3.json("data", function(error, graph) {
 		ws.onmessage = function (evt) {
 			var data = JSON.parse( evt.data )
 			
-			scoreDiv.textContent = data.clock.toFixed(5)
+			scoreDiv.innerHTML = data.clock.toFixed(5) + " S<br>" + data.frequency.toFixed(5) + " Hz" ;
 
 			for( var i=0 ; i<data.neurons.length ; i++ ) {			
 				var n = document.getElementById( data.neurons[i].id )
