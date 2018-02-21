@@ -37,7 +37,7 @@ public class Neuron  {
 	public Neuron( int id) {
 		this.restingPotential = 0 ; // ;
 		this.threshold = 0.8 ; // + rng.nextDouble() / 10.0 ;
-		this.decay = 0.1 ; 	// rng.nextDouble() / 10.0 ;
+		this.decay = 0.005 ; 	// rng.nextDouble() / 10.0 ;
 		this.learningRate = 0.01 ;
 		this.spikeValue = 1.0  ;
 		this.id = id ;
@@ -111,23 +111,37 @@ public class Neuron  {
 		if( lastSpikeTime < 0 ) {
 			return ;
 		}
-		// Look for pre-synaptic spikes (we received a spike before we spiked)
-		// and post-synaptic spikes (we spiked before receiving a spike)
-		EdgeList edges = brain.getIncomingEdges( id ) ;
-		for( Edge e : edges ) {		
-			Neuron source = brain.findNeuron( e.source() ) ;
-			double tpre = source.timeSinceFired( clock ) ;
-			double tpost = timeSinceFired( clock )  ;
-			double deltaFiredTime = tpre - tpost ;
-			// pre-synaptic spike occurs before 
-			if( deltaFiredTime <= 0 && deltaFiredTime >= -5e-3 ) {
-				//reinforce
-				double delta = learningRate * e.weight() * ( 1 - e.weight() ) ;
-				e.addWeight( delta ) ;
-			} else if( deltaFiredTime > 0 && deltaFiredTime < 5e-3) {
-				//suppress
-				double delta = learningRate * e.weight() * ( 1 - e.weight() ) * 0.75 ;
-				e.addWeight( -delta ) ;
+		if( isSpiking() ) {
+			// Look for pre-synaptic spikes (we received a spike before we spiked)
+			// and post-synaptic spikes (we spiked before receiving a spike)
+			EdgeList edges = brain.getIncomingEdges( id ) ;
+			for( Edge e : edges ) {		
+				Neuron source = brain.findNeuron( e.source() ) ;
+				double tpre = source.timeSinceFired( clock ) ;
+				double tpost = timeSinceFired( clock )  ;
+				double deltaFiredTime = tpost - tpre ;
+				// pre-synaptic spike occurs before 
+				if( deltaFiredTime > 0 && deltaFiredTime < .1 ) {
+					//reinforce
+					double delta = learningRate * ( 1 - deltaFiredTime*deltaFiredTime ) ;
+					e.addWeight( delta ) ;
+				}
+			}
+		
+			// Look for pre-synaptic spikes (we received a spike before we spiked)
+			// and post-synaptic spikes (we spiked before receiving a spike)
+			EdgeList edges2 = brain.getOutgoingEdges( id ) ;
+			for( Edge e : edges2 ) {		
+				Neuron target = brain.findNeuron( e.target() ) ;
+				double tpost = target.timeSinceFired( clock ) ;
+				double tpre = timeSinceFired( clock )  ;
+				double deltaFiredTime = tpost - tpre ;
+				// pre-synaptic spike occurs before 
+				if( deltaFiredTime >= 0 && deltaFiredTime < .1 ) {
+					//suppress
+					double delta = learningRate * ( 1 - deltaFiredTime*deltaFiredTime ) ;
+					e.addWeight( -delta  ) ;
+				}
 			}
 		}
 	}

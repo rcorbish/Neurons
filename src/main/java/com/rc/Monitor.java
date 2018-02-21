@@ -42,8 +42,12 @@ public class Monitor implements AutoCloseable {
 		try {			
 			spark.Spark.port( 8111 ) ;
 			URL mainPage = getClass().getClassLoader().getResource( "index.html" ) ;
-			File path = new File( mainPage.getPath() ) ;
-			spark.Spark.staticFiles.externalLocation( path.getParent() ) ;
+			if( mainPage != null ) {
+				File path = new File( mainPage.getPath() ) ;
+				spark.Spark.staticFiles.externalLocation( path.getParent() ) ;	
+			} else {
+				spark.Spark.staticFiles.externalLocation( "src/main/resources" ) ;	
+			}
 			spark.Spark.webSocket("/live", wss ) ;			
 			spark.Spark.get( "/data", this::getData ) ; //, gson::toJson ) ;
 			spark.Spark.awaitInitialization() ;

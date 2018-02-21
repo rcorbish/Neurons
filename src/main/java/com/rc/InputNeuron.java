@@ -38,7 +38,7 @@ public class InputNeuron extends Neuron {
 			// 	+ clock starting from now
 			// 	+ ( clock - nextSpikeTime ) to keep track of fractions
 			
-			nextSpikeTime = (1.2-potential) / 1000 + clock ; //- clockDrift ;
+			nextSpikeTime = (1.2-potential) / 100 + clock ; //- clockDrift ;
 		} else {
 			this.rest( clock ) ;
 		}

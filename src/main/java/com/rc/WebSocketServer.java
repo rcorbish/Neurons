@@ -61,7 +61,7 @@ public class WebSocketServer  {
 		}
 	}	
 
-
+	
 	public synchronized void send( String msg ) {
 		
 		for( Session session : this.sessions ) {

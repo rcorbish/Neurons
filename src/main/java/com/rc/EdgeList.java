@@ -22,6 +22,7 @@ public class EdgeList implements Iterable<Edge> {
 		}
 	}
 	
+	
 	public EdgeList( List<Edge> edges ) {
 		this() ;
 		this.edges.addAll( edges ) ;

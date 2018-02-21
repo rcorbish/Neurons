@@ -1,6 +1,5 @@
 package com.rc ;
 
-import java.awt.image.DataBuffer;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -31,7 +30,7 @@ public class Brain  {
 	private final EdgeList targetEdges[] ;		// adjacency list ( directed & weighted )
 
 	private final Neuron neurons[][] ;			// neurons in each layer
-
+ 
 	/**
 	 * Create a brain from a genome (bitmask).
 	 * 
@@ -219,7 +218,7 @@ public class Brain  {
 	}
 
 	public void train( double clock ) {
-		for( int i=1 ; i<neurons.length; i++ ) {
+		for( int i=0 ; i<neurons.length; i++ ) {
 			for( int j=0 ; j<neurons[i].length; j++ ) {
 				neurons[i][j].train( this, clock ) ;
 			}

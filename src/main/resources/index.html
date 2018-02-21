@@ -218,6 +218,8 @@ d3.json("data", function(error, graph) {
 	.on("tick", tick ) 
 	.on("end", tick ) 
 	;
+
+	neuronClicked( 0 ) ;
 });
 
 
@@ -284,6 +286,9 @@ d3.json("data", function(error, graph) {
 		ws.onopen = function() {
 			stopTimer() ;
 			console.log("Connected.")
+			if( following ) {
+				sendToServer( "follow " + following.id ) ;	
+			}
 		};
 		
 		// called when socket connection closed

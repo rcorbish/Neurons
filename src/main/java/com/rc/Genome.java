@@ -16,6 +16,7 @@ public class Genome  implements Serializable {
 
 	private static final long serialVersionUID = 1L;
 
+
 	final public static Logger log = LoggerFactory.getLogger( Genome.class ) ;
 
 	// Numbers have a range of 0..1 in  1/( 2^BITS_PER_NUMBER ) 
