@@ -134,9 +134,7 @@ public class Brain  {
 		for( int i=0 ; i<targetEdges.length ; i++ ) {
 			this.targetEdges[i] = new EdgeList() ;
 		}
-		int edgeId = 100 ;
 		
-
 		// Now connect each layer to the previous layer
 		for( int l=1 ; l<neurons.length ; l++ ) {
 			for( int i=0 ; i<neurons[l].length ; i++ ) {
@@ -148,7 +146,7 @@ public class Brain  {
 					int dy = Math.abs( i - j ) ;
 					if( dy < 3 ) {
 						double weight = getRandomWeight() ;
-						Edge e = new Edge( getIndexOfFirstInLayer(l-1)+j, tgtIndex, weight, edgeId++ ) ;
+						Edge e = new Edge( getIndexOfFirstInLayer(l-1)+j, tgtIndex, weight ) ;
 						el.add( e ) ;
 					}
 				}
@@ -163,7 +161,8 @@ public class Brain  {
 	 * @return
 	 */
 	protected double getRandomWeight() {
-		return Math.abs( rng.nextGaussian() ) ;
+
+		return rng.nextDouble() ;
 	}
 
 	/**
@@ -381,9 +380,9 @@ public class Brain  {
 						.append( target.getId() ) 
 						.append( ",\"weight\":" ) 
 						.append( edge.weight() ) 		
-						.append( ",\"id\":" ) 
+						.append( ",\"id\":\"" ) 
 						.append( edge.id() ) 		
-						.append( " }" ) 
+						.append( "\" }" ) 
 						;
 						sep = ',' ;
 					}
@@ -491,7 +490,7 @@ class NeuronState {
 }
 
 class EdgeState {
-	public int id ;
+	public String id ;
 	public double weight ;
 	public EdgeState( Edge e ) {
 		this.weight = e.weight() ;

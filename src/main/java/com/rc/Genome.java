@@ -20,7 +20,7 @@ public class Genome  implements Serializable {
 	final public static Logger log = LoggerFactory.getLogger( Genome.class ) ;
 
 	// Numbers have a range of 0..1 in  1/( 2^BITS_PER_NUMBER ) 
-	final public static int BITS_PER_NUMBER = 8 ; 
+	final public static int BITS_PER_NUMBER = 10 ; 
 	final public static double NUMBER_GRANULARITY = 1 << BITS_PER_NUMBER ;
 
 	final private BitSet data ;

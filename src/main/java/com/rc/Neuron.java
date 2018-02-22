@@ -17,7 +17,9 @@ public class Neuron  {
 	private final static int GENOME_INDEX_ID = 3 ;
 	private final static int GENOME_INDEX_LEARNING_RATE = 4 ;
 	private final static int GENOME_INDEX_SPIKE_VALUE = 5 ;
-	public  final static int GENOME_SIZE = 6 ;
+	private final static int GENOME_INDEX_LEARNING_WINDOW = 6 ;
+	private final static int GENOME_INDEX_REFRACTORY_DELAY = 7 ;
+	public  final static int GENOME_SIZE = 8 ;
 
 	// These are transient state data
 	private 		double 		currentPotential ;
@@ -51,26 +53,28 @@ public class Neuron  {
 
 	public Neuron( Genome genome ) {
 		this.threshold = genome.getDouble( GENOME_INDEX_THRESHOLD ) ;
-		this.restingPotential = genome.getDouble( GENOME_INDEX_RESTING ) - 0.5 ;
+		this.restingPotential = genome.getDouble( GENOME_INDEX_RESTING ) ;
 		this.decay = genome.getDouble( GENOME_INDEX_DECAY ) ;
 		this.id = genome.getInt( GENOME_INDEX_ID ) ;
 		this.learningRate = genome.getDouble( GENOME_INDEX_LEARNING_RATE ) ;
 		this.spikeValue = genome.getDouble( GENOME_INDEX_SPIKE_VALUE ) ;
+		this.learningWindow = genome.getDouble( GENOME_INDEX_LEARNING_WINDOW ) ;
+		this.refractoryDelay = genome.getDouble( GENOME_INDEX_REFRACTORY_DELAY ) ;
 
 		this.currentPotential = rng.nextDouble() ;
-		refractoryDelay = 0.001 ;
-		this.learningWindow = 0.02 ;  // 20mS
 		lastSpikeTime = -1.0 ;
 	}
 	
 	public Genome toGenome() {
 		Genome rc = new Genome() ;
-		rc.set( threshold, GENOME_INDEX_THRESHOLD ) ;
-		rc.set( restingPotential + 0.5, GENOME_INDEX_RESTING ) ;
-		rc.set( decay, GENOME_INDEX_DECAY ) ;
 		rc.set( id, GENOME_INDEX_ID ) ;
+		rc.set( threshold, GENOME_INDEX_THRESHOLD ) ;
+		rc.set( restingPotential, GENOME_INDEX_RESTING ) ;
+		rc.set( decay, GENOME_INDEX_DECAY ) ;
 		rc.set( learningRate, GENOME_INDEX_LEARNING_RATE ) ;
 		rc.set( spikeValue, GENOME_INDEX_SPIKE_VALUE ) ;
+		rc.set( learningWindow, GENOME_INDEX_LEARNING_WINDOW ) ;
+		rc.set( refractoryDelay, GENOME_INDEX_REFRACTORY_DELAY ) ;
 
 		return rc ;
 	}

@@ -2,37 +2,41 @@ package com.rc ;
 
 public class Edge {
 	static public double MAX_WEIGHT = 0.85 ;
-	static public double MIN_WEIGHT = 0.01 ;
+	static public double MIN_WEIGHT = 0.00 ;
 	
-	static public int GENOME_SIZE = 5 ;
+	static public int GENOME_SIZE = 4 ;
 	
-	private final int id ;
 	private final int source ;
 	private final int target ;
 	private double weight ;
 	
-	public Edge( int sourceIndex, int targetIndex, double weight, int id ) {
+	public Edge( int sourceIndex, int targetIndex, double weight ) {
 		this.target = targetIndex ;
 		this.source = sourceIndex ;
 		this.weight = weight ;
-		this.id = id ;
 	}
 	
 	public Edge( Genome genome ) {
 		this.source = genome.getInt( 0 ) ;
 		this.target = genome.getInt( 1 ) ;
-		this.id = genome.getInt( 2 ) ;
-		this.weight = genome.getDouble( 3 ) * ( genome.getInt( 4 )==0 ? -1 : 1 ) ;
+
+		int w1 = genome.getInt( 2 ) ;
+		double w2 = genome.getDouble( 3 ) ;
+
+		this.weight = (w1 + w2) / 500.0 - 1.0 ;
 	}
 	
 	public Genome toGenome() {
 		Genome rc = new Genome() ;
 		rc.set( source, 0 ) ;
 		rc.set( target, 1 ) ;
-		rc.set( id, 2 ) ;
-		rc.set( Math.abs(weight), 3 ) ;
-		int s = Math.signum(weight) < 0 ? 0 : 1 ;
-		rc.set( s, 4 ) ;
+
+		double w = (weight + 1.0 ) * 500.0 ;
+		int w1 = (int) w ;
+		double w2 = (w - w1) ;
+
+		rc.set( w1, 2 ) ;
+		rc.set( w2, 3 ) ;
 		return rc ;
 	}
 	
@@ -45,8 +49,8 @@ public class Edge {
 	public double weight() {
 		return weight ;
 	}
-	public int id() {
-		return id ;
+	public String id() {
+		return source + "-" + target ;
 	}
 	
 	public void addWeight( double addition ) {
