@@ -163,7 +163,7 @@ public class Brain  {
 	 * @return
 	 */
 	protected double getRandomWeight() {
-		return rng.nextDouble() * ( rng.nextDouble() < inhibitorRatio ? -1 : 1 ) ;
+		return Math.abs( rng.nextGaussian() ) ;
 	}
 
 	/**

@@ -31,19 +31,21 @@ public class Neuron  {
 	private final double 	threshold  ;
 	private final double 	decay ;
 	private final double 	spikeValue ;
-	private final double 	spikeDuration ;	
+	private final double 	refractoryDelay ;	
 	private final double 	restingPotential ;
+	private final double 	learningWindow ;
 
 	public Neuron( int id) {
-		this.restingPotential = 0 ; // ;
-		this.threshold = 0.8 ; // + rng.nextDouble() / 10.0 ;
-		this.decay = 0.005 ; 	// rng.nextDouble() / 10.0 ;
-		this.learningRate = 0.01 ;
+		this.restingPotential = 0 ; 
+		this.threshold = 0.8 ; 
+		this.decay = 0.01 ; 	
+		this.learningRate = 0.001 ;
 		this.spikeValue = 1.0  ;
+		this.learningWindow = 0.02 ;  	// 20mS
+		this.refractoryDelay = 0.001;	// 1mS
 		this.id = id ;
 
 		this.currentPotential = rng.nextDouble() ;
-		spikeDuration = 0.001 ;		// refractory time
 		lastSpikeTime = -1.0 ;
 	}
 
@@ -56,7 +58,8 @@ public class Neuron  {
 		this.spikeValue = genome.getDouble( GENOME_INDEX_SPIKE_VALUE ) ;
 
 		this.currentPotential = rng.nextDouble() ;
-		spikeDuration = 0.001 ;
+		refractoryDelay = 0.001 ;
+		this.learningWindow = 0.02 ;  // 20mS
 		lastSpikeTime = -1.0 ;
 	}
 	
@@ -99,7 +102,7 @@ public class Neuron  {
 		isSpiking = true ;
 		lastSpikeTime = clock ;
 		this.currentPotential = spikeValue ;
-		refractoryEnd = clock + spikeDuration ;
+		refractoryEnd = clock + refractoryDelay ;
 	}
 	public void rest( double clock ) {
 		isSpiking = false ;
@@ -111,7 +114,7 @@ public class Neuron  {
 		if( lastSpikeTime < 0 ) {
 			return ;
 		}
-		if( isSpiking() ) {
+//		if( isSpiking() ) {
 			// Look for pre-synaptic spikes (we received a spike before we spiked)
 			// and post-synaptic spikes (we spiked before receiving a spike)
 			EdgeList edges = brain.getIncomingEdges( id ) ;
@@ -121,30 +124,33 @@ public class Neuron  {
 				double tpost = timeSinceFired( clock )  ;
 				double deltaFiredTime = tpost - tpre ;
 				// pre-synaptic spike occurs before 
-				if( deltaFiredTime > 0 && deltaFiredTime < .1 ) {
+				if( deltaFiredTime > 0 && deltaFiredTime < learningWindow ) {
 					//reinforce
-					double delta = learningRate * ( 1 - deltaFiredTime*deltaFiredTime ) ;
+					double delta = learningRate * e.weight() * ( 1 - e.weight() ) ;
 					e.addWeight( delta ) ;
 				}
 			}
+//		}
 		
-			// Look for pre-synaptic spikes (we received a spike before we spiked)
-			// and post-synaptic spikes (we spiked before receiving a spike)
-			EdgeList edges2 = brain.getOutgoingEdges( id ) ;
-			for( Edge e : edges2 ) {		
-				Neuron target = brain.findNeuron( e.target() ) ;
+		// Look for pre-synaptic spikes (we received a spike before we spiked)
+		// and post-synaptic spikes (we spiked before receiving a spike)
+		EdgeList edges2 = brain.getOutgoingEdges( id ) ;
+		for( Edge e : edges2 ) {		
+			Neuron target = brain.findNeuron( e.target() ) ;
+//			if( target.isSpiking() ) {
 				double tpost = target.timeSinceFired( clock ) ;
 				double tpre = timeSinceFired( clock )  ;
 				double deltaFiredTime = tpost - tpre ;
-				// pre-synaptic spike occurs before 
-				if( deltaFiredTime >= 0 && deltaFiredTime < .1 ) {
+				// post-synaptic spike occurs before pre-synaptic 
+				if( deltaFiredTime <= 0 && deltaFiredTime > -learningWindow ) {
 					//suppress
-					double delta = learningRate * ( 1 - deltaFiredTime*deltaFiredTime ) ;
+					double delta = 0.9 * learningRate * e.weight() * ( 1 - e.weight() ) ;
 					e.addWeight( -delta  ) ;
 				}
-			}
+//			}
 		}
 	}
+	
 	
 	public double timeSinceFired( double clock ) { return clock - lastSpikeTime ; }
 	public int getId() { return id ; }

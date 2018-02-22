@@ -2,7 +2,7 @@ package com.rc ;
 
 public class Edge {
 	static public double MAX_WEIGHT = 0.85 ;
-	static public double MIN_WEIGHT = -0.85 ;
+	static public double MIN_WEIGHT = 0.01 ;
 	
 	static public int GENOME_SIZE = 5 ;
 	
