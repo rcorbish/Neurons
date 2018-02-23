@@ -105,9 +105,9 @@ public class Main {
 			
 			Brain brain ;
 			if( fileExists && !clearFile ) {
-				brain = Brain.load( parameterFile ) ;
+				brain = Brain.load( TICK_PERIOD, parameterFile ) ;
 			} else {
-				brain = new Brain( dims ) ;
+				brain = new Brain( TICK_PERIOD, dims ) ;
 				if( parameterFile != null ) {
 					brain.save( parameterFile ) ;
 				}
@@ -118,23 +118,14 @@ public class Main {
 				logger.info("Population    : {}", POPULATION );
 				logger.info("Simulations   : {}", SIMULATIONS );
 				logger.info("Mutation Rate : {}", MUTATION );
-				brain = evolve( dims ) ;
+				final Evolution evolution = new Evolution(TICK_PERIOD, SIMULATIONS, MUTATION, EPOCHS, POPULATION ) ;
+				brain = evolution.evolve( TICK_PERIOD, dims ) ;
 				
 				if( parameterFile != null ) {
 					brain.save( parameterFile ) ;
 				}
 			}
 
-//			for( int i=0 ; i<TestPatterns.length ; i++ ) {
-//				double sum = 0 ;
-//				for( int j=0 ; j<TestPatterns[i].length ; j++ ) {
-//					sum += TestPatterns[i][j] ;
-//				}
-//				double factor = 0.25 / sum ;
-//				for( int j=0 ; j<TestPatterns[i].length ; j++ ) {
-//					TestPatterns[i][j] *= factor ;
-//				}
-//			}
 			Monitor m = new Monitor( brain ) ;
 			m.start();
 			double inputs[] = new double[ dims[0] ] ;
@@ -158,9 +149,9 @@ public class Main {
 					}
 				}
 
-				brain.step( clock, inputs ) ;
+				brain.step( inputs ) ;
 				if( train ) {
-					brain.train( clock ) ;
+					brain.train() ;
 				}
 
 				long deltaTime = System.currentTimeMillis() - lastSentTime ;
@@ -176,149 +167,10 @@ public class Main {
 			t.printStackTrace();
 		}
 	}
-	
-	public static Brain evolve( final int ... dims ) throws Exception {
-		logger.info( "Evolution starts..." ) ;
 		
-		BrainData brainData[] = new BrainData[ POPULATION ] ;
-		/*
-		for( int i=0 ; i<brainData.length ; i++ ) {
-			BitSet bs = new BitSet( BrainParameters.GENOME_SIZE ) ;
-			for( int j=0 ; j<BrainParameters.GENOME_SIZE ; j++ ) {
-				if( rng.nextBoolean() ) {
-					bs.set(j) ; 
-				}
-			}
-			brainData[i] = new BrainData( bs, dims ) ;
-		}
-
-		logger.info( "Population created." ) ;
-
-		double inputs[] = new double[ INPUT_COUNT ] ;
-		
-		ExecutorService tpool = Executors.newFixedThreadPool(6) ;
-		
-		for( int e=0 ; e<EPOCHS ; e++ ) {			
-			for( int s=0 ; s<SIMULATIONS ; s++ ) {
-				for( int i=0 ; i<inputs.length ; i++ ) {
-					inputs[i] = rng.nextDouble() ;
-				}
-				final CountDownLatch cdl = new CountDownLatch( brainData.length ) ;
-				for( int i=0 ; i<brainData.length ; i++ ) {
-					final Brain brain = brainData[i].brain ;
-					tpool.submit( new Thread() {
-						public void run() {
-							brain.step( inputs ) ;
-							brain.updateScores() ;
-							cdl.countDown();
-						}
-					} ) ;
-				}
-				cdl.await();  // wait for all brains to complete one step and scoring
-			}
-			
-			for( int i=0 ; i<brainData.length ; i++ ) {
-				brainData[i].score = brainData[i].brain.getScore() ;
-			}
-			Arrays.sort( brainData ) ;
-			int survivingIndex = brainData.length ;
-			
-			int numNewBrains = brainData.length / 2 ;
-			CountDownLatch cdl = new CountDownLatch(numNewBrains) ;
-			
-			final Queue<BrainData> newBrains = new ConcurrentArrayQueue<>() ;
-			
-			for( int i=0 ; i<numNewBrains ; i++ ) {
-				int ix1 = rng.nextInt( Math.max(numNewBrains/4, i) ) ;
-				int ix2 = rng.nextInt( Math.max(numNewBrains/4, i) ) ;
-				
-				// Make sure ix1 is higher score than ix2 ( brainData is sorted )
-				if( ix1 > ix2 ) {
-					int tmp = ix2 ;
-					ix2 = ix1 ;
-					ix1 = tmp ;
-				}
-				BitSet p1 = brainData[ ix1 ].genome;
-				BitSet p2 = brainData[ ix2 ].genome;
-				
-				final BitSet bs = new BitSet( BrainParameters.GENOME_SIZE ) ;
-				
-				// Inheritance
-				for( int b=0 ; b<BrainParameters.GENOME_SIZE ; b++ ) {
-					bs.set( b,  rng.nextInt(2)==0 ? p2.get(b) : p1.get(b) ) ;
-				}
-				// Mutation = x%
-				for( int b=0 ; b<BrainParameters.GENOME_SIZE ; b++ ) {
-					if( rng.nextDouble() < MUTATION ) {
-						bs.set( b,  rng.nextBoolean()  ) ;
-					}
-				}
-				Runnable t = new Runnable() {
-					public void run() {
-						try {
-							BrainData bd = new BrainData( bs, dims ) ;
-							newBrains.add( bd ) ;
-						} catch( Throwable t ) {
-							logger.warn( "WTF - brainless.", t ) ;
-						}
-						cdl.countDown();
-					}
-				} ;
-				tpool.submit( t ) ;
-			}
-			cdl.await() ; 
-			
-			for( int i=0 ; i<newBrains.size() ; i++ ) {
-				BrainData bd = newBrains.remove() ;
-				brainData[brainData.length - i - 1] = bd ;				
-			}
-			
-			logger.info( "Epoch {} - best score {}", e, brainData[0].brain.getScore() ) ;
-		}
-		
-		tpool.shutdown();
-		boolean oops = tpool.awaitTermination( 10, TimeUnit.MINUTES ) ;
-		if( !oops  ) {
-			logger.warn( "OMG - too late "); 
-		}
-		
-		BrainData bd =  brainData[0] ;
-		BrainParameters bp = new BrainParameters( bd.genome ) ;
-		bp.numInputs = Main.INPUT_COUNT ;
-		bp.numOutputs = Main.OUTPUT_COUNT ; 
-		logger.info( "Best bp = {}\nScore = {}", bp, bd.score ) ;
-
-		BrainData bdw =  brainData[brainData.length-1] ;
-		bp = new BrainParameters( bdw.genome ) ;
-		bp.numInputs = Main.INPUT_COUNT ;
-		bp.numOutputs = Main.OUTPUT_COUNT ; 
-		
-		logger.info( "Worst bp = {}\nScore = {}", bp, bdw.score ) ;
-		return bd.brain ;
-		*/
-		return null ;
-	}
-	
 	private static List<String> asList( String ... strings ) {
 		List<String> rc = new ArrayList<String>() ;
 		for( String string : strings ) rc.add( string ) ;
 		return rc ;
 	}
-}
-
-class BrainData implements Comparable<BrainData>{
-	Genome genome ;
-	Brain brain ;
-	double score ;
-	
-	public BrainData( Brain b ) {
-		this.genome = b.toGenome() ;
-		this.brain = b ;
-	}
-	@Override
-	public int compareTo(BrainData o) {
-		double diff = o.score - brain.getScore()  ;
-		return diff>0 ? 1 : ( diff==0 ? 0 : -1 ) ;
-	}
-	
 }

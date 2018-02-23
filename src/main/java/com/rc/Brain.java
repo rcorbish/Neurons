@@ -31,12 +31,17 @@ public class Brain  {
 
 	private final Neuron neurons[][] ;			// neurons in each layer
  
+	private double clock ;
+	private final double tick ;
 	/**
 	 * Create a brain from a genome (bitmask).
 	 * 
+	 * @param tick the period each clock tick represents
 	 * @param g
 	 */
-	public Brain( Genome g ) {
+	public Brain( double tick, Genome g ) {
+		this.tick = tick ;
+		this.clock = 0 ;
 		int numNeurons = 0 ;
 		int numlayers  = g.getInt(0) ;
 
@@ -102,12 +107,13 @@ public class Brain  {
 
 	/**
 	 * Create a new instance of a brain.
-	 * @param numInputs 
-	 * @param numOutputs
-	 * @param dims the dimensions, up to 3 are relevant
+	 * @param tick the period of a clock tick
+	 * @param dims the number of neurons in each layer
 	 */
-	public Brain( int ... layers ) {
+	public Brain( double tick, int ... layers ) {
 
+		this.tick = tick ;
+		this.clock = 0 ;
 		this.outputHistory = new double[HISTORY_LENGTH] ; 
 		this.historyIndex = 0 ;
 		
@@ -171,8 +177,9 @@ public class Brain  {
 	 * 
 	 * @param inputs an array of values to set inputs to
 	 */
-	public void step( double clock, double[] inputs ) {
-		
+	public void step( double[] inputs ) {
+		clock += tick ;
+
 		// Set inputs immediately - no dependencies
 		for( int i=0 ; i<neurons[0].length ; i++ ) {
 			this.neurons[0][i].setPotential( inputs[i], clock ) ;
@@ -216,7 +223,7 @@ public class Brain  {
 		}
 	}
 
-	public void train( double clock ) {
+	public void train() {
 		for( int i=0 ; i<neurons.length; i++ ) {
 			for( int j=0 ; j<neurons[i].length; j++ ) {
 				neurons[i][j].train( this, clock ) ;
@@ -408,13 +415,13 @@ public class Brain  {
 	}
 
 
-	public static Brain load( String fileName ) {
+	public static Brain load( double tick, String fileName ) {
 		Brain rc = null ;
 		log.info( "Loading from {}", fileName ) ;
 		try ( InputStream is = new FileInputStream( fileName ) ;
 				ObjectInputStream ois = new ObjectInputStream(is) )  {
 			Genome g = (Genome)ois.readObject() ;
-			rc = new Brain( g ) ;
+			rc = new Brain( tick, g ) ;
 		} catch( Exception ioe ) {
 			rc = null ;
 			log.warn( "Failed loading brain from {}", ioe.getMessage() );
