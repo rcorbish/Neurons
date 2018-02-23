@@ -2,6 +2,7 @@ package com.rc ;
 
 import java.io.Serializable;
 import java.util.BitSet;
+import java.util.Random;
 import java.util.StringJoiner;
 
 import org.slf4j.Logger;
@@ -16,8 +17,8 @@ public class Genome  implements Serializable {
 
 	private static final long serialVersionUID = 1L;
 
-
 	final public static Logger log = LoggerFactory.getLogger( Genome.class ) ;
+	final private static Random rng = new Random( 28 ) ;
 
 	// Numbers have a range of 0..1 in  1/( 2^BITS_PER_NUMBER ) 
 	final public static int BITS_PER_NUMBER = 10 ; 
@@ -27,12 +28,46 @@ public class Genome  implements Serializable {
 	private int capacity ;
 
 	/**
-	 * Create a genome that can hold a fixed amount of data
+	 * Create a genome that can hold a some data
 	 * items. All items are cleared.
 	 */
 	public Genome() {
 		this.data = new BitSet() ;
 		capacity = 0 ;
+	} 
+
+
+	/**
+	 * Create a genome that is a child of two parents.
+	 * Characteristics are taken from each parent. After
+	 * creation a mutation on the child is performed.
+	 * 
+	 * @param p1 the mommy gene
+	 * @param p2 the daddy gene
+	 * @param mutationRate the absolute chance of a mutation occurring (post birth)
+	 */
+	public Genome( Genome p1, Genome p2, double mutationRate ) {
+		this.data = new BitSet() ;
+		int len = Math.max( p1.data.length(), p2.data.length() ) ;
+
+		int run ;
+		for( int i=0 ; i<len ; i+=run ) {
+			run = rng.nextInt( BITS_PER_NUMBER ) ;
+			if( i+run >= len ) {
+				run = len - run - 1 ;
+			}
+			BitSet b = rng.nextBoolean() ? p1.data : p2.data ;
+			
+			for( int j=0 ; j<run ; j++ ) {
+				data.set( i+j, b.get(i+j) ) ;
+			} 
+		}
+
+		for( int i=0 ; i<len ; i++ ) {
+			if( rng.nextDouble() < mutationRate ) {
+				data.set(i, !data.get(i) ) ;
+			}
+		}
 	}
 
 	/**
