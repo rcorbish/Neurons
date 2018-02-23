@@ -56,8 +56,8 @@ public class Monitor implements AutoCloseable {
 		}
 	}
 
-	public void sendBrainData( int patternIndex, double clock ) {
-		wss.send( gson.toJson( brain.getNeuronPotentials( patternIndex, clock ) ) ) ;
+	public void sendBrainData( double clock ) {
+		wss.send( gson.toJson( brain.getNeuronPotentials( clock ) ) ) ;
 		brain.setFollowing( wss.getFollowing() ) ;
 	}
 	/**
@@ -79,7 +79,10 @@ public class Monitor implements AutoCloseable {
 		return rc ;
 	}
 
-
+	
+	public int getPatternId() {
+		return wss.getPattern() ;
+	}
 
 
 	@Override

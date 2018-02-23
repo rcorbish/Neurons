@@ -21,8 +21,8 @@ public class InputNeuron extends Neuron {
 		nextSpikeTime = 0 ;
 	}
 
-	public InputNeuron( Genome genome ) {
-		super( genome ) ;
+	public InputNeuron( Genome genome, int id ) {
+		super( genome, id ) ;
 		clockOffset = rng.nextDouble() ;
 		nextSpikeTime = 0 ;
 	}

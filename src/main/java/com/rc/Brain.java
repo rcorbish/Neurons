@@ -20,7 +20,7 @@ public class Brain  {
 
 	private static final Random rng = new Random(24) ;	// utility random number generator
 
-	final static public int HISTORY_LENGTH = 200 ;
+	final static public int HISTORY_LENGTH = 600 ;
 
 	private final double outputHistory[] ;
 	private int historyIndex ;
@@ -54,17 +54,18 @@ public class Brain  {
 		// 1 .. n = # neurons in each layer
 		int start = 1 + numlayers ;
 
+		int id = 0 ;
 		// 1st layer is always special (input) neurons
 		for( int j=0 ; j<neurons[0].length ; j++ ) {
 			Genome gs = g.subSequence(start, Neuron.GENOME_SIZE ) ;
-			neurons[0][j] = new InputNeuron( gs ) ;
+			neurons[0][j] = new InputNeuron( gs, id++ ) ;
 			start += Neuron.GENOME_SIZE ;	// update Brain size
 		}
 		// Start from 2nd layer onwards ...
 		for( int i=1 ; i<neurons.length ; i++ ) {
 			for( int j=0 ; j<neurons[i].length ; j++ ) {
 				Genome gs = g.subSequence(start, Neuron.GENOME_SIZE ) ;
-				neurons[i][j] = new Neuron( gs ) ;
+				neurons[i][j] = new Neuron( gs, id++  ) ;
 				start += Neuron.GENOME_SIZE ;	// update Brain size
 			}
 		}
@@ -269,7 +270,7 @@ public class Brain  {
 	}		
 
 
-	public Potentials getNeuronPotentials( int patternIndex, double clock ) {
+	public Potentials getNeuronPotentials( double clock ) {
 		Potentials rc = new Potentials() ;
 		rc.clock = clock ;
 		rc.history = new double[outputHistory.length] ;
@@ -308,7 +309,6 @@ public class Brain  {
 				rc.edges[ix++] = new EdgeState( el.get(j) ) ;
 			}
 		}
-		rc.score = patternIndex ;
 		return rc ;
 	}
 

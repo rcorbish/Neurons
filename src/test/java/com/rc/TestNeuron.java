@@ -84,7 +84,7 @@ public class TestNeuron {
 	public void testNeuron() {
 		Neuron n = new Neuron( 1 ) ;
 		Genome g = n.toGenome() ;
-		Neuron n2 = new Neuron( g ) ;
+		Neuron n2 = new Neuron( g, n.getId() ) ;
 		double accuracy = g.accuracy() ;
 		assertEquals( "Bitset copy - bad decay", n.getDecay(), n2.getDecay(), accuracy ) ;
 		assertEquals( "Bitset copy - bad threshold", n.getThreshold(), n2.getThreshold(), accuracy ) ;

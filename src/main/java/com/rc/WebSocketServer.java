@@ -25,6 +25,7 @@ public class WebSocketServer  {
 	private List<Session> sessions = new ArrayList<>() ;
 	
 	private int following = -1 ;
+	private int pattern = 0 ;
 
 	@OnWebSocketConnect
 	public synchronized void connect( Session session )  {
@@ -58,6 +59,8 @@ public class WebSocketServer  {
 		logger.info( "Received {} from {}.", message, session.getRemoteAddress() ) ;
 		if( message.startsWith( "follow " ) ) {
 			setFollowing( Integer.parseInt( message.substring( "follow ".length() ) ) ) ;
+		} else if ( message.startsWith( "pattern " ) ) {
+			setPattern( Integer.parseInt( message.substring( "pattern ".length() ) ) ) ;
 		}
 	}	
 
@@ -83,6 +86,14 @@ public class WebSocketServer  {
 
 	public void setFollowing(int following) {
 		this.following = following;
+	}
+
+	public int getPattern() {
+		return pattern;
+	}
+
+	public void setPattern(int pattern) {
+		this.pattern = pattern;
 	}	
 
 }

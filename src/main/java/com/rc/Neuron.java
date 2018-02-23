@@ -14,12 +14,11 @@ public class Neuron  {
 	private final static int GENOME_INDEX_THRESHOLD = 0 ;
 	private final static int GENOME_INDEX_RESTING = 1 ;
 	private final static int GENOME_INDEX_DECAY = 2 ;
-	private final static int GENOME_INDEX_ID = 3 ;
-	private final static int GENOME_INDEX_LEARNING_RATE = 4 ;
-	private final static int GENOME_INDEX_SPIKE_VALUE = 5 ;
-	private final static int GENOME_INDEX_LEARNING_WINDOW = 6 ;
-	private final static int GENOME_INDEX_REFRACTORY_DELAY = 7 ;
-	public  final static int GENOME_SIZE = 8 ;
+	private final static int GENOME_INDEX_LEARNING_RATE = 3 ;
+	private final static int GENOME_INDEX_SPIKE_VALUE = 4 ;
+	private final static int GENOME_INDEX_LEARNING_WINDOW = 5 ;
+	private final static int GENOME_INDEX_REFRACTORY_DELAY = 6 ;
+	public  final static int GENOME_SIZE = 7 ;
 
 	// These are transient state data
 	private 		double 		currentPotential ;
@@ -44,18 +43,19 @@ public class Neuron  {
 		this.learningRate = 0.001 ;
 		this.spikeValue = 1.0  ;
 		this.learningWindow = 0.02 ;  	// 20mS
-		this.refractoryDelay = 0.001;	// 1mS
+		this.refractoryDelay = 0.0005;	// 1mS
 		this.id = id ;
 
 		this.currentPotential = rng.nextDouble() ;
 		lastSpikeTime = -1.0 ;
 	}
 
-	public Neuron( Genome genome ) {
+	public Neuron( Genome genome, int id ) {
+		this.id = id ;
+		
 		this.threshold = genome.getDouble( GENOME_INDEX_THRESHOLD ) ;
 		this.restingPotential = genome.getDouble( GENOME_INDEX_RESTING ) ;
 		this.decay = genome.getDouble( GENOME_INDEX_DECAY ) ;
-		this.id = genome.getInt( GENOME_INDEX_ID ) ;
 		this.learningRate = genome.getDouble( GENOME_INDEX_LEARNING_RATE ) ;
 		this.spikeValue = genome.getDouble( GENOME_INDEX_SPIKE_VALUE ) ;
 		this.learningWindow = genome.getDouble( GENOME_INDEX_LEARNING_WINDOW ) ;
@@ -67,7 +67,6 @@ public class Neuron  {
 	
 	public Genome toGenome() {
 		Genome rc = new Genome() ;
-		rc.set( id, GENOME_INDEX_ID ) ;
 		rc.set( threshold, GENOME_INDEX_THRESHOLD ) ;
 		rc.set( restingPotential, GENOME_INDEX_RESTING ) ;
 		rc.set( decay, GENOME_INDEX_DECAY ) ;

@@ -31,6 +31,21 @@ body {
 	margin: 5px ;
 	color: #80a0c0 ;
 }
+.pattern {
+	position: absolute ;
+	top: 0 ;
+	left: 0 ;
+	text-align: right ;
+	margin: 5px ;
+}
+.pattern>input {
+	width: 40px ;
+	background-color: transparent ;
+	border: none ;
+	color: #80a0c0 ;
+	font-size: 12pt ;
+}
+
 #chart {
 	left: 0 ;
 	top: 0 ;
@@ -58,6 +73,9 @@ body {
 </head>
 <body>
 <div class="status"></div>
+<div class="pattern">
+	<input type="number" id='pattern-id' min=0 max=9 value="0" >
+</div>
 
 <canvas id="chart"  width='1200' height='150'></canvas>
 <div id='liquid' class='liquid'></div>
@@ -116,17 +134,6 @@ d3.json("data", function(error, graph) {
 		d.fy = null;
 	}
 
-	function neuronClicked( id ) {
-		if( following ) {
-			following.style.stroke = "none" ;  
-		}
-		following = document.getElementById( id ) ; 
-		sendToServer( "follow " + id ) ;	
-		if( following ) {
-			following.style.stroke = "#ffff4d" ;  
-		}
-	}
-	
 	const links = svg
 	    .selectAll("line")
     	.data(graph.links)
@@ -314,11 +321,32 @@ d3.json("data", function(error, graph) {
 	}
 	intervalTimer = setInterval( resetWebSocket, 1000 ) ;
 
+	function neuronClicked( id ) {
+		if( following ) {
+			following.style.stroke = "none" ;  
+		}
+		following = document.getElementById( id ) ; 
+		sendToServer( "follow " + id ) ;	
+		if( following ) {
+			following.style.stroke = "#ffff4d" ;  
+		}
+	}
+	
+	function updatePattern( id ) {
+		sendToServer( "pattern " + id ) ;	
+	}
 	
 	// sends msg to the server over websocket
 	function sendToServer(msg) {
 		if( ws ) ws.send(msg);
 	}		
+	
+	window.addEventListener( "load", function(e) {
+		const patternId = document.getElementById( "pattern-id" )
+		patternId.addEventListener( "change", function(e) {
+			updatePattern( e.target.value ) 
+		})
+	})
 </script>
 
 </body>

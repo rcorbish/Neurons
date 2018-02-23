@@ -151,6 +151,7 @@ public class Main {
 				if( patternCount<0) {
 					patternCount = 100 ;
 					patternIndex = rng.nextInt(TestPatterns.length) ;
+					patternIndex = m.getPatternId() ;
 					testPattern = TestPatterns[ patternIndex ] ;
 
 					for( int i=0 ; i<inputs.length ; i++ ) {
@@ -166,7 +167,7 @@ public class Main {
 				long deltaTime = System.currentTimeMillis() - lastSentTime ;
 				if( !train || deltaTime > DELAY_INTERVAL ) {
 					lastSentTime = System.currentTimeMillis() ;
-					m.sendBrainData( patternIndex, clock ) ; 
+					m.sendBrainData( clock ) ; 
 				}
 				// if( !train ) {
 					Thread.sleep( DELAY_INTERVAL ) ;
