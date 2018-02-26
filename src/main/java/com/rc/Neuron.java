@@ -133,14 +133,14 @@ public class Neuron  {
 			// and post-synaptic spikes (we spiked before receiving a spike)
 			EdgeList edges = brain.getIncomingEdges( id ) ;
 			for( Edge e : edges ) {		
-				Neuron source = brain.findNeuron( e.source() ) ;
+				Neuron source = brain.getNeuron( e.source() ) ;
 				double tpre = source.timeSinceFired( clock ) ;
 				double tpost = timeSinceFired( clock )  ;
 				double deltaFiredTime = tpost - tpre ;
 				// pre-synaptic spike occurs before 
 				if( deltaFiredTime > 0 && deltaFiredTime < learningWindow ) {
 					//reinforce
-					double delta = learningRate * e.weight() * ( 1 - e.weight() ) ;
+					double delta = learningRate * ( 0.1 + e.weight() * ( 0.9 - e.weight() ) ) ;
 					e.addWeight( delta ) ;
 				}
 			}
@@ -150,7 +150,7 @@ public class Neuron  {
 		// and post-synaptic spikes (we spiked before receiving a spike)
 		EdgeList edges2 = brain.getOutgoingEdges( id ) ;
 		for( Edge e : edges2 ) {		
-			Neuron target = brain.findNeuron( e.target() ) ;
+			Neuron target = brain.getNeuron( e.target() ) ;
 //			if( target.isSpiking() ) {
 				double tpost = target.timeSinceFired( clock ) ;
 				double tpre = timeSinceFired( clock )  ;
@@ -158,7 +158,7 @@ public class Neuron  {
 				// post-synaptic spike occurs before pre-synaptic 
 				if( deltaFiredTime <= 0 && deltaFiredTime > -learningWindow ) {
 					//suppress
-					double delta = 0.9 * learningRate * e.weight() * ( 1 - e.weight() ) ;
+					double delta = 0.9 * learningRate * ( 0.1 + e.weight() * ( 0.9 - e.weight() ) ) ;
 					e.addWeight( -delta  ) ;
 				}
 //			}
