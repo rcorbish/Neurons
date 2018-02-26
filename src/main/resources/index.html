@@ -86,9 +86,9 @@ body {
     var height = 600 ;
     var following = null ;
 	
-	const firingAge = d3.scaleLinear()
-    			.domain( [ 0, 0.5, 2.0 ] )
-    			.range(["green", "white", "red"]);
+	const neuronFrequency = d3.scaleLinear()
+    			.domain( [ 0, 2000.0 ] )
+    			.range([ "silver", "green"]);
 
 	const weightColor = d3.scaleLinear()
 				.domain([-1, 0, 1])
@@ -155,7 +155,7 @@ d3.json("data", function(error, graph) {
 				.attr( "stroke", "none" ) 
 				.attr( "stroke-width", "5" ) 
 				.attr( "fill", function(d) { 
-					return firingAge( d.type ) 
+					return "white" 
 				}) 
 				.on( "click", function(d) { 
 					neuronClicked( d.id ) 
@@ -249,16 +249,16 @@ d3.json("data", function(error, graph) {
 		ws.onmessage = function (evt) {
 			var data = JSON.parse( evt.data )
 			
-			scoreDiv.innerHTML = data.clock.toFixed(5) + " S<br>" + data.frequency.toFixed(2) + " Hz" ;
+			scoreDiv.innerHTML = data.clock.toFixed(5) + " S" ;
 
 			for( var i=0 ; i<data.neurons.length ; i++ ) {			
 				var n = document.getElementById( data.neurons[i].id )
 				if( n ) {				
-					n.style.fill = firingAge( data.neurons[i].ago*1000  ) 
+					n.style.fill = neuronFrequency( data.neurons[i].frequency ) 
 				
 					n = document.getElementById( 'txt-' + data.neurons[i].id )
 					if( n ) {								
-						n.textContent = (1000 * data.neurons[i].ago).toFixed(2) 
+						n.textContent = ( data.neurons[i].frequency ).toFixed(2) 
 					}
 				}
 			}

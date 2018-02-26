@@ -46,8 +46,16 @@ public class Genome  implements Serializable {
 	 * @param p2 the daddy gene
 	 * @param mutationRate the absolute chance of a mutation occurring (post birth)
 	 */
-	public Genome( Genome p1, Genome p2, double mutationRate ) {
+	public Genome( Genome p1, Genome p2, double mutationRate, int ... fixedParams ) {
 		this.data = new BitSet() ;
+		
+		for( int i=0 ; i<p1.capacity ; i++ ) {
+			Genome g = rng.nextBoolean() ? p1 : p2 ;			
+			set( g.getInt( i ), i );
+		}
+		
+		/*
+		
 		int len = Math.max( p1.data.length(), p2.data.length() ) ;
 
 		int run ;
@@ -68,6 +76,12 @@ public class Genome  implements Serializable {
 				data.set(i, !data.get(i) ) ;
 			}
 		}
+		
+		for( int i=0 ; i<fixedParams.length ; i++ ) {
+			set( fixedParams[i], p1.getInt( fixedParams[i] ) );
+		}
+		*/
+		capacity = Math.max( p1.capacity, p2.capacity ) ; ;
 	}
 
 	/**

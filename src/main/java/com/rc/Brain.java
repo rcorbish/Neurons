@@ -22,17 +22,21 @@ public class Brain  {
 
 	final static public int HISTORY_LENGTH = 600 ;
 
+	final static double WEIGHT_MEAN = 0.8 ;
+	final static double WEIGHT_SIGMA = 0.05 ;
+	
 	private final double outputHistory[] ;
 	private int historyIndex ;
 	private int followingId ;
 	
-	private final double inhibitorRatio = 0.0 ;
 	private final EdgeList targetEdges[] ;		// adjacency list ( directed & weighted )
 
 	private final Neuron neurons[][] ;			// neurons in each layer
  
 	private double clock ;
 	private final double tick ;
+	private double score ;
+	
 	/**
 	 * Create a brain from a genome (bitmask).
 	 * 
@@ -168,8 +172,7 @@ public class Brain  {
 	 * @return
 	 */
 	protected double getRandomWeight() {
-
-		return rng.nextDouble() ;
+		return rng.nextGaussian() * WEIGHT_SIGMA + WEIGHT_MEAN ;
 	}
 
 	/**
@@ -183,7 +186,7 @@ public class Brain  {
 
 		// Set inputs immediately - no dependencies
 		for( int i=0 ; i<neurons[0].length ; i++ ) {
-			this.neurons[0][i].setPotential( inputs[i], clock ) ;
+			this.neurons[0][i].step( inputs[i], clock ) ;
 		}
 
 		// Will build up all outputs - before changing any of them
@@ -209,10 +212,12 @@ public class Brain  {
 		// do NOT write inputs though
 		for( int i=1 ; i<neurons.length; i++ ) {
 			for( int j=0 ; j<neurons[i].length; j++ ) {
-				neurons[i][j].setPotential( newPotentials[i][j], clock ) ;
+				neurons[i][j].step( newPotentials[i][j], clock ) ;
 			}
 		}		
-
+	}
+	
+	public void follow() {
 		Neuron following = findNeuron( followingId ) ;
 		if( following != null ) {
 			outputHistory[historyIndex] = following.getPotential() ;
@@ -232,16 +237,35 @@ public class Brain  {
 		}
 	}
 
-	// High score is better for survival
-	public void updateScores() {
-	}
 
 
 	/**
 	 * Get the overall score 
+	 * 
+	 * @param y the expected pattern index 
 	 */
-	public double getScore() {
-		return 1.0  ;
+	public double getScore( int p ) {
+		Neuron outputs[] = neurons[ neurons.length-1] ;
+		int numOutputs = outputs.length ;
+		
+		double sf = 0.0 ;
+		for( int i=0 ; i<numOutputs ; i++ ) {
+			sf += outputs[i].frequency() ;
+		}
+		double rc = 0 ;
+		if( sf == 0 ) { 
+			rc = -1e10 ;
+		} else {
+			for( int i=0 ; i<numOutputs ; i++ ) {
+				double yh = outputs[i].frequency() / sf ;
+				if( p==i ) {
+					rc += yh ;
+				} else {
+					rc -= yh ;
+				}
+			}
+		}
+		return rc ;
 	}
 
 
@@ -344,7 +368,6 @@ public class Brain  {
 		for( int i=0 ; i<neurons.length ; i++ ) {
 			n = Math.max( n,  neurons.length ) ;
 		}
-		int layerHeight = 400 / n - 1 ; 
 
 		for( int i=0 ; i<neurons.length ; i++ ) {
 			
@@ -470,8 +493,19 @@ public class Brain  {
 		return rc ;
 	}
 
+	
 	public void setFollowing(int following) {
-		this.followingId = following;
+		if( this.followingId != following ) {
+			Neuron n = findNeuron( following ) ;
+			if( n != null ) {
+				log.info( "Following: {}", n ) ;
+			}
+		}
+		this.followingId = following ;
+	}
+	
+	public double clock() {
+		return clock ;
 	}
 }
 
@@ -488,11 +522,11 @@ class Potentials {
 class NeuronState {
 	public double potential ;
 	public int id ;
-	public double ago ;
+	public double frequency ;
 	public NeuronState( Neuron n, double clock ) {
 		this.potential = n.getPotential() ;
 		this.id = n.getId() ;
-		this.ago = n.timeSinceFired( clock ) ;
+		this.frequency = n.frequency() ;
 	}
 }
 

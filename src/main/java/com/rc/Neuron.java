@@ -36,49 +36,54 @@ public class Neuron  {
 	private final double 	restingPotential ;
 	private final double 	learningWindow ;
 
+	private final double 	lastSpikes[] ;
+	int lastSpikeIndex ;
+
 	public Neuron( int id) {
 		this.restingPotential = 0 ; 
 		this.threshold = 0.8 ; 
 		this.decay = 0.01 ; 	
 		this.learningRate = 0.001 ;
-		this.spikeValue = 1.0  ;
+		this.spikeValue = 1.0 ;
 		this.learningWindow = 0.02 ;  	// 20mS
 		this.refractoryDelay = 0.0005;	// 1mS
 		this.id = id ;
 
 		this.currentPotential = rng.nextDouble() ;
 		lastSpikeTime = -1.0 ;
+		lastSpikes = new double[6] ;
 	}
 
 	public Neuron( Genome genome, int id ) {
 		this.id = id ;
 		
-		this.threshold = genome.getDouble( GENOME_INDEX_THRESHOLD ) ;
+		this.threshold = genome.getDouble( GENOME_INDEX_THRESHOLD ) + 0.5 ;
 		this.restingPotential = genome.getDouble( GENOME_INDEX_RESTING ) ;
 		this.decay = genome.getDouble( GENOME_INDEX_DECAY ) ;
 		this.learningRate = genome.getDouble( GENOME_INDEX_LEARNING_RATE ) ;
-		this.spikeValue = genome.getDouble( GENOME_INDEX_SPIKE_VALUE ) ;
+		this.spikeValue = genome.getDouble( GENOME_INDEX_SPIKE_VALUE ) + 0.5 ;
 		this.learningWindow = genome.getDouble( GENOME_INDEX_LEARNING_WINDOW ) ;
 		this.refractoryDelay = genome.getDouble( GENOME_INDEX_REFRACTORY_DELAY ) ;
 
 		this.currentPotential = rng.nextDouble() ;
 		lastSpikeTime = -1.0 ;
+		lastSpikes = new double[6] ;
 	}
 	
 	public Genome toGenome() {
 		Genome rc = new Genome() ;
-		rc.set( threshold, GENOME_INDEX_THRESHOLD ) ;
+		rc.set( threshold - 0.5, GENOME_INDEX_THRESHOLD ) ;
 		rc.set( restingPotential, GENOME_INDEX_RESTING ) ;
 		rc.set( decay, GENOME_INDEX_DECAY ) ;
 		rc.set( learningRate, GENOME_INDEX_LEARNING_RATE ) ;
-		rc.set( spikeValue, GENOME_INDEX_SPIKE_VALUE ) ;
+		rc.set( spikeValue - 0.5, GENOME_INDEX_SPIKE_VALUE ) ;
 		rc.set( learningWindow, GENOME_INDEX_LEARNING_WINDOW ) ;
 		rc.set( refractoryDelay, GENOME_INDEX_REFRACTORY_DELAY ) ;
 
 		return rc ;
 	}
 
-	public void setPotential( double potential, double clock ) {
+	public void step( double potential, double clock ) {
 		isSpiking = false ;
 		
 		if( clock < refractoryEnd ) {
@@ -106,6 +111,12 @@ public class Neuron  {
 		lastSpikeTime = clock ;
 		this.currentPotential = spikeValue ;
 		refractoryEnd = clock + refractoryDelay ;
+		
+		lastSpikes[ lastSpikeIndex ] = clock ;
+		lastSpikeIndex++ ;
+		if( lastSpikeIndex >= lastSpikes.length ) {
+			lastSpikeIndex = 0 ;
+		}
 	}
 	public void rest( double clock ) {
 		isSpiking = false ;
@@ -154,6 +165,14 @@ public class Neuron  {
 		}
 	}
 	
+	public double frequency() {		
+		double s = lastSpikes[ lastSpikeIndex ] ;
+		int e = lastSpikeIndex-1 ;
+		if( e<0 ) e = lastSpikes.length - 1 ;
+		
+		double dt = lastSpikes[e] - s ;
+		return dt<1e-6 ? 0 : (lastSpikes.length / dt) ;
+	}
 	
 	public double timeSinceFired( double clock ) { return clock - lastSpikeTime ; }
 	public int getId() { return id ; }
@@ -162,6 +181,22 @@ public class Neuron  {
 	public double getDecay() { return decay ; }
 	public double getThreshold() { return threshold ; }
 	public boolean isSpiking() { return isSpiking ; }
+	
+	@Override
+	public String toString() {
+		StringBuilder sb = new StringBuilder( System.lineSeparator() ) ;
+		sb
+		.append( "id          ").append( id ).append( System.lineSeparator() )
+		.append( "potential   ").append( currentPotential ).append( System.lineSeparator() ) 
+		.append( "decay       ").append( decay ).append( System.lineSeparator() ) 
+		.append( "threshold   ").append( threshold ).append( System.lineSeparator() ) 
+		.append( "last spike  ").append( lastSpikeTime ).append( System.lineSeparator() ) 
+		.append( "frequency   ").append( frequency() ).append( System.lineSeparator() ) 
+		.append( "refractory  ").append( refractoryDelay ).append( System.lineSeparator() ) 
+		.append( "spike       ").append( spikeValue ).append( System.lineSeparator() ) 
+		;
+		return sb.toString() ;
+	}
 }
 
 

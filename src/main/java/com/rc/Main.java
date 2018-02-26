@@ -3,7 +3,6 @@ package com.rc ;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.BitSet;
 import java.util.List;
 import java.util.Random;
 import java.util.StringJoiner;
@@ -20,12 +19,14 @@ public class Main {
 
 	final static Random rng = new Random( 660 );
 	
-	static int POPULATION = 5_000 ;
-	static int EPOCHS = 200 ;
-	static int SIMULATIONS = 2000 ;
+	static int POPULATION = 40 ;
+	static int EPOCHS = 10 ;
+	static double LIFESPAN = 1.0 ;
 	static double TICK_PERIOD = 1e-4 ;   // each clock tick in seconds - default 100uS
-	static double MUTATION = 0.1 ;
+	static double MUTATION = 0.01 ;
 	static long DELAY_INTERVAL  = 150 ;
+	
+	public static int FIXED_PARAMS[]  ;
 	
 	static double [][] TestPatterns = {
 		{ 0.5, 0.3, 0.6, 0.1, 0.9, 0.9 },
@@ -51,7 +52,7 @@ public class Main {
 			parser.accepts( "epochs" , "Number of epochs to run" ).withRequiredArg().ofType( Integer.class ) ; 
 			parser.accepts( "clear" , "Delete existing parameters" ) ; 
 			parser.accepts( "train" , "Train the network" ) ; 
-			parser.accepts( "simulations" , "Number of simulations for each brain" ).withRequiredArg().ofType( Integer.class ) ; 
+			parser.accepts( "lifespan" , "Lifespan of each simulation" ).withRequiredArg().ofType( Integer.class ) ; 
 			parser.accepts( "population" , "Number of brains in the population" ).withRequiredArg().ofType( Integer.class ) ; 
 			parser.accepts( "mutation" , "Mutation amount 0.0 - 1.0" ).withRequiredArg().ofType( Double.class ) ; 
 			parser.nonOptions( "Network dimensions ( up to 3 ) (e.g. 3 4, 2 2 2 )" ).ofType( Integer.class ) ; 
@@ -68,7 +69,7 @@ public class Main {
 				}
 			}
 
-	        if( options.has( "simulations" ) ) 	{ SIMULATIONS = (int) options.valueOf("simulations") ; }
+	        if( options.has( "lifespan" ) ) 	{ LIFESPAN = (int) options.valueOf("lifespan") ; }
 	        if( options.has( "population" ) ) 	{ POPULATION = (int) options.valueOf("population") ; }
 	        if( options.has( "epochs" ) ) 		{ EPOCHS = (int) options.valueOf("epochs") ; }
 	        if( options.has( "mutation" ) ) 	{ MUTATION = (double) options.valueOf("mutation") ; }
@@ -90,9 +91,13 @@ public class Main {
 			} else {
 				dims = new int[]{ 3, 3 } ;	// default if no size given
 			}
+			FIXED_PARAMS = new int[ dims.length + 1 ] ;
+			FIXED_PARAMS[0] = 0 ;
+			
 			StringJoiner sj = new StringJoiner( ", " ) ;
-			for( int d : dims ) {
-				sj.add( String.valueOf(d) ) ;
+			for( int i=0 ; i<dims.length ; i++ ) {
+				sj.add( String.valueOf(dims[i]) ) ;
+				FIXED_PARAMS[i+1] = i+1 ;
 			}
 			logger.info("Layers        : {}", sj ) ;
 			logger.info("Delay         : {}", DELAY_INTERVAL ) ;
@@ -116,34 +121,36 @@ public class Main {
 			if( evolve ) {
 				logger.info("Epochs        : {}", EPOCHS );
 				logger.info("Population    : {}", POPULATION );
-				logger.info("Simulations   : {}", SIMULATIONS );
+				logger.info("Lifespan      : {}", LIFESPAN );
 				logger.info("Mutation Rate : {}", MUTATION );
-				final Evolution evolution = new Evolution(TICK_PERIOD, SIMULATIONS, MUTATION, EPOCHS, POPULATION ) ;
-				brain = evolution.evolve( TICK_PERIOD, dims ) ;
+				final Evolution evolution = new Evolution(TICK_PERIOD, LIFESPAN, MUTATION, EPOCHS, POPULATION ) ;
+				brain = evolution.evolve( TestPatterns, TICK_PERIOD, dims ) ;
 				
 				if( parameterFile != null ) {
 					brain.save( parameterFile ) ;
 				}
 			}
 
+			@SuppressWarnings("resource")
 			Monitor m = new Monitor( brain ) ;
 			m.start();
 			double inputs[] = new double[ dims[0] ] ;
 
-			double clock = 0 ;
 			int patternCount = 0 ;
 			int patternIndex = 0 ;
 			double testPattern[] = null ;
 			long lastSentTime = 0 ;
 			for( ; ; ) {
-				clock += TICK_PERIOD ;
 
 				patternCount-- ;
 				if( patternCount<0) {
-					patternCount = 100 ;
-					patternIndex = rng.nextInt(TestPatterns.length) ;
+					patternCount = 1 ;
+					//patternIndex = rng.nextInt(TestPatterns.length) ;
 					patternIndex = m.getPatternId() ;
-					testPattern = TestPatterns[ patternIndex ] ;
+					
+					if( patternIndex >=0 && patternIndex < TestPatterns.length ) {
+						testPattern = TestPatterns[ patternIndex ] ;
+					}
 
 					for( int i=0 ; i<inputs.length ; i++ ) {
 						inputs[i] =  testPattern[i] ;
@@ -151,6 +158,7 @@ public class Main {
 				}
 
 				brain.step( inputs ) ;
+				brain.follow() ;
 				if( train ) {
 					brain.train() ;
 				}
@@ -158,11 +166,11 @@ public class Main {
 				long deltaTime = System.currentTimeMillis() - lastSentTime ;
 				if( !train || deltaTime > DELAY_INTERVAL ) {
 					lastSentTime = System.currentTimeMillis() ;
-					m.sendBrainData( clock ) ; 
+					m.sendBrainData( brain.clock() ) ; 
 				}
-				// if( !train ) {
+				if( DELAY_INTERVAL>0 ) {
 					Thread.sleep( DELAY_INTERVAL ) ;
-				// }
+				}
 			}
 		} catch( Throwable t ) {  
 			t.printStackTrace();

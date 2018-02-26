@@ -28,11 +28,11 @@ public class InputNeuron extends Neuron {
 	}
 	
 	@Override
-	public void setPotential( double potential, double clock ) {
+	public void step( double potential, double clock ) {
 		this.potential = potential ;
 		if( nextSpikeTime <= clock ) {
 			spike( clock ) ;
-			double clockDrift = clock - nextSpikeTime ;
+			//double clockDrift = clock - nextSpikeTime ;
 					
 			// 	  potential => 1kHz
 			// 	+ clock starting from now
