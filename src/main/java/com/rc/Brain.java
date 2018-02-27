@@ -490,8 +490,9 @@ public class Brain  {
 			}
 		}
 		this.followingId = following ;
-	}
+	}	
 	
+
 	public double clock() {
 		return clock ;
 	}

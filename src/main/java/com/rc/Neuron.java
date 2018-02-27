@@ -42,7 +42,7 @@ public class Neuron  {
 	public Neuron( int id) {
 		this.restingPotential = 0 ; 
 		this.threshold = 0.8 ; 
-		this.decay = 0.01 ; 	
+		this.decay = 0.1 ; 	
 		this.learningRate = 0.001 ;
 		this.spikeValue = 1.0 ;
 		this.learningWindow = 0.02 ;  	// 20mS

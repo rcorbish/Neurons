@@ -134,6 +134,7 @@ public class Main {
 			@SuppressWarnings("resource")
 			Monitor m = new Monitor( brain ) ;
 			m.start();
+			
 			double inputs[] = new double[ dims[0] ] ;
 
 			int patternCount = 0 ;
@@ -141,7 +142,6 @@ public class Main {
 			double testPattern[] = null ;
 			long lastSentTime = 0 ;
 			for( ; ; ) {
-
 				patternCount-- ;
 				if( patternCount<0) {
 					patternCount = 1 ;
@@ -159,7 +159,7 @@ public class Main {
 
 				brain.step( inputs ) ;
 				brain.follow() ;
-				if( train ) {
+				if( train || m.getTraining() ) {
 					brain.train() ;
 				}
 

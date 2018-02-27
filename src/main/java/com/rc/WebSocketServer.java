@@ -23,6 +23,7 @@ public class WebSocketServer  {
 	
 	private int following = -1 ;
 	private int pattern = 0 ;
+	private boolean training = false ;
 
 	@OnWebSocketConnect
 	public synchronized void connect( Session session )  {
@@ -58,6 +59,8 @@ public class WebSocketServer  {
 			setFollowing( Integer.parseInt( message.substring( "follow ".length() ) ) ) ;
 		} else if ( message.startsWith( "pattern " ) ) {
 			setPattern( Integer.parseInt( message.substring( "pattern ".length() ) ) ) ;
+		} else if ( message.startsWith( "train " ) ) {
+			setTrainingMode( message.endsWith("on") ) ;
 		}
 	}	
 
@@ -91,8 +94,16 @@ public class WebSocketServer  {
 
 	public void setPattern(int pattern) {
 		this.pattern = pattern;
+	}
+	
+	public void setTrainingMode(boolean training) {
+		logger.info( "Training {}", training ? "enabled" : "disabled" ) ;
+		this.training = training;
 	}	
-
+	public boolean getTraining() {
+		return training;
+	}
+	
 }
 
 
