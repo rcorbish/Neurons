@@ -26,6 +26,7 @@ public class Neuron  {
 	// These are transient state data
 	protected 		double 		currentPotential ;
 	private 		boolean		isSpiking ;
+	private			boolean		isSuppressed ;
 	private  		double 		lastSpikeTime ;		// when did we spike last
 	private 		double		refractoryFactor ;
 	
@@ -94,49 +95,59 @@ public class Neuron  {
 	}
 
 	public void step( double potential, double clock ) {
-		isSpiking = false ;
-		
-//		refractoryFactor = ( clock - lastSpikeTime ) / refractoryDelay ;
-//		refractoryFactor *= refractoryFactor ;
-//		if( refractoryFactor>1.0) refractoryFactor = 1.0 ;
-		
-		if( this.currentPotential>threshold ) {
-			spike( clock ) ;
-		} else {			
-			decay() ;
-			this.currentPotential += potential * refractoryFactor ;
-			
-			if( this.currentPotential < restingPotential ) {
-				this.currentPotential = restingPotential ;
-			} 			
-		}
+		// if( ! isSuppressed ) {
+			isSpiking = false ;
+					
+			if( this.currentPotential>threshold ) {
+				spike( clock ) ;
+			} else {			
+				decay() ;
+				this.currentPotential += potential * refractoryFactor ;
+				
+				if( this.currentPotential < restingPotential ) {
+					this.currentPotential = restingPotential ;
+				} 			
+			}
+		// }
 	}
-	
+
+	public void suppressSpike() {
+		isSuppressed = true ;
+		isSpiking = false ;
+	}
+
 	public void decay() {
 		this.currentPotential *= ( 1.0 - decay ) ;
 	}
 	
 	public void spike( double clock ) {
-		isSpiking = true ;
-		lastSpikeTime = clock ;
-		this.currentPotential -= threshold ;
-//		refractoryEnd = clock + refractoryDelay ;
-		
-		lastSpikes[ lastSpikeIndex ] = clock ;
-		lastSpikeIndex++ ;
-		if( lastSpikeIndex >= lastSpikes.length ) {
-			lastSpikeIndex = 0 ;
+		if( ! isSuppressed ) {
+			isSpiking = true ;
+			lastSpikeTime = clock ;
+			this.currentPotential -= threshold ;
+			
+			lastSpikes[ lastSpikeIndex ] = clock ;
+			lastSpikeIndex++ ;
+			if( lastSpikeIndex >= lastSpikes.length ) {
+				lastSpikeIndex = 0 ;
+			}
 		}
 	}
 	
 	
-	public void updateRefractoryFactor( double clock ) {
-		refractoryFactor = ( clock - lastSpikeTime ) / refractoryDelay ;
+
+	public double calculateRefractoryFactor( double clock ) {
+		double refractoryFactor = timeSinceFired( clock ) / refractoryDelay ;
 		refractoryFactor *= refractoryFactor ;
-		if( refractoryFactor>1.0) refractoryFactor = 1.0 ;
+		if( refractoryFactor > 1.0 ) {
+			isSuppressed = false ;
+			refractoryFactor = 1.0 ;
+		}
+		return refractoryFactor ;
 	}
 	
 	
+
 	public void train( Brain brain, double clock ) {
 		if( lastSpikeTime < 0 ) {
 			return ;
@@ -204,8 +215,14 @@ public class Neuron  {
 		return frequency ;
 	}
 	
-	public void setLayerRefractoryFactor( double refractoryFactor ) {
+	public void updateRefractoryFactor( double clock ) {
+		setRefractoryFactor( calculateRefractoryFactor(clock) ) ; 
+	}
+	public void setRefractoryFactor( double refractoryFactor ) {
 		this.refractoryFactor = refractoryFactor ; 
+	}
+	public double getRefractoryFactor() {
+		return this.refractoryFactor ; 
 	}
 	
 	public double timeSinceFired( double clock ) { return clock - lastSpikeTime ; }
@@ -214,6 +231,8 @@ public class Neuron  {
 	public double getRestingPotential() { return restingPotential ; }
 	public double getDecay() { return decay ; }
 	public double getThreshold() { return threshold ; }
+	public double getThresholdLearningRate() { return thresholdLearningRate ; }
+	public double getLearningRate() { return learningRate ; }
 	public boolean isSpiking() { return isSpiking ; }
 	
 	@Override

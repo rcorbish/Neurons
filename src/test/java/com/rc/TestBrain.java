@@ -18,7 +18,6 @@ public class TestBrain {
 	public void tearDown() throws Exception {
 	}
 
-
 	
 	@Test
 	public void testBrainSaveSummary() {
@@ -39,10 +38,12 @@ public class TestBrain {
 			Neuron nr = br.getNeuron(i) ;
 			Neuron n  =  b.getNeuron(i) ;
 
-			assertEquals( "Invalid neuron recovered", n.getDecay(), nr.getDecay(), accuracy )  ;
-			assertEquals( "Invalid neuron recovered", n.getThreshold(), nr.getThreshold(), accuracy )  ;
-			assertEquals( "Invalid neuron recovered", n.getRestingPotential(), nr.getRestingPotential(), accuracy )  ;
-			assertEquals( "Invalid neuron recovered", n.getId(), nr.getId() )  ;
+			assertEquals( "Invalid neuron recovered - decay", n.getDecay(), nr.getDecay(), accuracy )  ;
+			assertEquals( "Invalid neuron recovered - threshold", n.getThreshold(), nr.getThreshold(), accuracy )  ;
+			assertEquals( "Invalid neuron recovered - resting", n.getRestingPotential(), nr.getRestingPotential(), accuracy )  ;
+			assertEquals( "Invalid neuron recovered - learning rate", n.getLearningRate(), nr.getLearningRate(), accuracy )  ;
+			assertEquals( "Invalid neuron recovered - threshold learning rate", n.getThresholdLearningRate(), nr.getThresholdLearningRate(), accuracy )  ;
+			assertEquals( "Invalid neuron recovered - ID", n.getId(), nr.getId() )  ;
 		}
 		
 		for( int i=0 ; i<b.numNeurons() ; i++ ) {
@@ -92,10 +93,12 @@ public class TestBrain {
 			Neuron nr = br.getNeuron(i) ;
 			Neuron n  =  b.getNeuron(i) ;
 
-			assertEquals( "Invalid neuron recovered", n.getDecay(), nr.getDecay(), accuracy )  ;
-			assertEquals( "Invalid neuron recovered", n.getThreshold(), nr.getThreshold(), accuracy )  ;
-			assertEquals( "Invalid neuron recovered", n.getRestingPotential(), nr.getRestingPotential(), accuracy )  ;
-			assertEquals( "Invalid neuron recovered", n.getId(), nr.getId() )  ;
+			assertEquals( "Invalid neuron recovered - decay", n.getDecay(), nr.getDecay(), accuracy )  ;
+			assertEquals( "Invalid neuron recovered - threshold", n.getThreshold(), nr.getThreshold(), accuracy )  ;
+			assertEquals( "Invalid neuron recovered - resting", n.getRestingPotential(), nr.getRestingPotential(), accuracy )  ;
+			assertEquals( "Invalid neuron recovered - learning rate", n.getLearningRate(), nr.getLearningRate(), accuracy )  ;
+			assertEquals( "Invalid neuron recovered - threshold learning rate", n.getThresholdLearningRate(), nr.getThresholdLearningRate(), accuracy )  ;
+			assertEquals( "Invalid neuron recovered - ID", n.getId(), nr.getId() )  ;
 		}
 		
 		for( int i=0 ; i<b.numNeurons() ; i++ ) {

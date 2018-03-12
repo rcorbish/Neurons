@@ -293,8 +293,8 @@ d3.json("data", function(error, graph) {
 			ctx.stroke();
 			
 			ctx.beginPath() ;
-			ctx.strokeStyle = "orange"  
-			ctx.lineWidth = 0.5 
+			ctx.strokeStyle = "white"  
+			// ctx.lineWidth = 0.75 
 			for( var i=1 ; i<data.history.length ; i++ ) {
 				var v = data.history[i]
 				if( v > data.threshold ) {

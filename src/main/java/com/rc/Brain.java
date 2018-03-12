@@ -220,37 +220,54 @@ public class Brain  {
 			}
 		}
 
-		// Then write the output as an atomic op
-		// do NOT write inputs (start from layer 1)
-		for( int i=layerSizes[0] ; i<neurons.length; i++ ) {
-			neurons[i].step( newPotentials[i], clock ) ;
-			neurons[i].updateRefractoryFactor( clock ) ;
-		}		
 		
 		//---------------------------------------------------------
 		// if any neurons spiked - reduce prob of other neurons
 		// in the same layer firing too (i.e. set their refractory
 		//   factors as if they just fired)
 		//
-		// This effect does not apply to inputs
-		
+		// This effect does not apply to inputs (layers > 0)
+		//
+		// Do this prior to stepping - to prevent spikes happening
+		// 
 		for( int l=1 ; l<layerSizes.length ; l++ ) {
 			int ix = getIndexOfFirstInLayer(l) ;
-			double minRecent = neurons[ix].timeSinceFired( clock ) ;
 
+			double minRecent = neurons[ix].timeSinceFired( clock ) ;
+			double maxPotential =  neurons[ix].getPotential() ;
+			Neuron winner = neurons[ix] ;
 			for( int i=1 ; i<layerSizes[l] ; i++ ) {
 				double mostRecent = neurons[ix+i].timeSinceFired( clock ) ;
 				minRecent = Math.min( mostRecent, minRecent ) ;
+				double potential = neurons[ix+i].getPotential() ;
+				if( potential > maxPotential ) {
+					winner = neurons[ix+i] ;
+					maxPotential = potential ;
+				}
 			}
-			
-			double refractoryFactor = minRecent / 0.005 ;
-			refractoryFactor *= refractoryFactor ;
-			if( refractoryFactor>1.0) refractoryFactor = 1.0 ;
+			// Now we have the neuron with the highest potential
+			// if that highest one just spiked ...
+			// ... set all refractory factors in the layer as if they just fired
+			// and suppress any other spikes 
+			if( winner.isSpiking() ) {
+				double refractoryFactor = winner.getRefractoryFactor() ;
 
-			for( int i=0 ; i<layerSizes[l] ; i++ ) {
-				//neurons[ix+i].setLayerRefractoryFactor( refractoryFactor ) ;
+				for( int i=0 ; i<layerSizes[l] ; i++ ) {
+					neurons[ix+i].setRefractoryFactor( refractoryFactor ) ;
+					if( winner != neurons[ix+1] ) {
+						neurons[ix+i].suppressSpike() ; 
+					}
+				}
 			}
 		}
+
+		// Then write the output as an atomic op
+		// do NOT write inputs (start from layer 1)
+		for( int i=layerSizes[0] ; i<neurons.length; i++ ) {
+			neurons[i].step( newPotentials[i], clock ) ;
+			neurons[i].updateRefractoryFactor( clock ) ;
+		}		
+
 	}
 	
 	public void follow() {

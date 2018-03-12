@@ -147,9 +147,12 @@ public class Main {
 				// Display a pattern for a few cycles, then change
 				patternCount-- ;
 				if( patternCount<0) {
-					patternCount = 1 ;
+					patternCount = 5 ;
+
 					//patternIndex = rng.nextInt(TestPatterns.length) ;
-					patternIndex = m.getPatternId() ;
+					patternIndex = brain.isTrain() ? 
+							rng.nextInt(TestPatterns.length) : 
+							m.getPatternId() ;
 					
 					if( patternIndex >=0 && patternIndex < TestPatterns.length ) {
 						testPattern = TestPatterns[ patternIndex ] ;
