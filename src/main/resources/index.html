@@ -89,8 +89,8 @@ body {
     var following = null ;
 	
 	const neuronFrequency = d3.scaleLinear()
-    			.domain( [ 0, 2000.0 ] )
-    			.range([ "silver", "green"]);
+    			.domain( [ 10, 1500.0 ] )
+    			.range([ "gray", "green"]);
 
 	const weightColor = d3.scaleLinear()
 				.domain([-1, 0, 1])
@@ -177,7 +177,7 @@ d3.json("data", function(error, graph) {
 				.attr( 'font-size', '11pt')
 				.attr( 'font-family', 'arial')
 				.attr( 'id', function(d) { return 'txt-' + d.id } )
-				.text( "0" )
+				.text( "" )
   		;
 
 
@@ -260,7 +260,8 @@ d3.json("data", function(error, graph) {
 				
 					n = document.getElementById( 'txt-' + data.neurons[i].id )
 					if( n ) {								
-						n.textContent = ( data.neurons[i].frequency ).toFixed(2) 
+						var freq = data.neurons[i].frequency 						
+						n.textContent = freq>0 ? freq.toFixed(0) + "\u3390" : "" 
 					}
 				}
 			}
@@ -286,7 +287,20 @@ d3.json("data", function(error, graph) {
 			ctx.strokeStyle = "steelblue"  
 			ctx.moveTo( 0, 110-(100*history[i]) );
 			for( var i=1 ; i<data.history.length ; i++ ) {
-				ctx.lineTo( i*dx, 110-(100*data.history[i]) ) ;
+				var v = data.history[i] 
+				ctx.lineTo( i*dx, 110-(100*v) ) ;
+			}
+			ctx.stroke();
+			
+			ctx.beginPath() ;
+			ctx.strokeStyle = "orange"  
+			ctx.lineWidth = 0.5 
+			for( var i=1 ; i<data.history.length ; i++ ) {
+				var v = data.history[i]
+				if( v > data.threshold ) {
+					ctx.moveTo( i*dx, 0 )
+					ctx.lineTo( i*dx, 110-(100*data.threshold) ) 
+				}
 			}
 			ctx.stroke();
 		};

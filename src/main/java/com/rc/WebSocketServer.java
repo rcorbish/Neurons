@@ -2,6 +2,7 @@ package com.rc;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 
 import org.eclipse.jetty.websocket.api.Session;
@@ -19,12 +20,18 @@ import org.slf4j.LoggerFactory;
 public class WebSocketServer  {
 	final static Logger logger = LoggerFactory.getLogger( WebSocketServer.class ) ;
 	
+	private final Brain brain ;
+	
 	private List<Session> sessions = new ArrayList<>() ;
 	
 	private int following = -1 ;
 	private int pattern = 0 ;
 	private boolean training = false ;
 
+	public WebSocketServer( Brain brain ) {
+		this.brain = brain ;
+	}
+	
 	@OnWebSocketConnect
 	public synchronized void connect( Session session )  {
 		this.sessions.add( session ) ;	// keep tabs on the remote client
@@ -64,18 +71,19 @@ public class WebSocketServer  {
 		}
 	}	
 
-	
+	// Leakage of error sessions ?????
 	public synchronized void send( String msg ) {
 		
-		for( Session session : this.sessions ) {
+		for( Iterator<Session> i=this.sessions.iterator() ; i.hasNext() ; ) {
+			Session session = i.next() ;
 			if( session.isOpen() ) {
 				try {
 					session.getRemote().sendString( msg );
 				} catch( Exception e ){
-					// nothing to do
+					logger.error( "Failed to send msg", e ) ;
+					//session.close( 500, "Error sending text" ) ; 
+					i.remove() ;
 				}
-//			} else {
-//				this.sessions.remove( session ) ;
 			}
 		}
 	}
@@ -98,7 +106,7 @@ public class WebSocketServer  {
 	
 	public void setTrainingMode(boolean training) {
 		logger.info( "Training {}", training ? "enabled" : "disabled" ) ;
-		this.training = training;
+		brain.setTrain( training ) ;
 	}	
 	public boolean getTraining() {
 		return training;

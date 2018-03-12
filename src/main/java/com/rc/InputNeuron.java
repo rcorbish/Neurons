@@ -32,18 +32,21 @@ public class InputNeuron extends Neuron {
 		this.potential = potential ;
 		if( nextSpikeTime <= clock ) {
 			spike( clock ) ;
-			//double clockDrift = clock - nextSpikeTime ;
+			this.currentPotential = 1.0 ;
+			double clockDrift = clock - nextSpikeTime ;
 					
 			// 	  potential => 1kHz
 			// 	+ clock starting from now
 			// 	+ ( clock - nextSpikeTime ) to keep track of fractions
 			
-			nextSpikeTime = (1.0 - potential) / 200 + clock ; //- clockDrift ;
+			nextSpikeTime = (1.0 - potential) / 200 + clock ; 
+			nextSpikeTime -= clockDrift ;
 		} else {
-			this.rest( clock ) ;
+			this.currentPotential = 0 ;
 		}
 	}
 
+	
 //	@Override
 //	public double potential( double clock ) {
 //		return potential / 1000.0  ;

@@ -15,7 +15,7 @@ import joptsimple.OptionSet;
 
 
 public class Main {
-	final static Logger logger = LoggerFactory.getLogger( Monitor.class ) ;
+	final static Logger log = LoggerFactory.getLogger( Monitor.class ) ;
 
 	final static Random rng = new Random( 660 );
 	
@@ -99,8 +99,8 @@ public class Main {
 				sj.add( String.valueOf(dims[i]) ) ;
 				FIXED_PARAMS[i+1] = i+1 ;
 			}
-			logger.info("Layers        : {}", sj ) ;
-			logger.info("Delay         : {}", DELAY_INTERVAL ) ;
+			log.info("Layers        : {}", sj ) ;
+			log.info("Delay         : {}", DELAY_INTERVAL ) ;
 			
 			boolean fileExists = false ;
 			if( parameterFile !=null ) {
@@ -119,10 +119,10 @@ public class Main {
 			}
 
 			if( evolve ) {
-				logger.info("Epochs        : {}", EPOCHS );
-				logger.info("Population    : {}", POPULATION );
-				logger.info("Lifespan      : {}", LIFESPAN );
-				logger.info("Mutation Rate : {}", MUTATION );
+				log.info("Epochs        : {}", EPOCHS );
+				log.info("Population    : {}", POPULATION );
+				log.info("Lifespan      : {}", LIFESPAN );
+				log.info("Mutation Rate : {}", MUTATION );
 				final Evolution evolution = new Evolution(TICK_PERIOD, LIFESPAN, MUTATION, EPOCHS, POPULATION ) ;
 				brain = evolution.evolve( TestPatterns, TICK_PERIOD, dims ) ;
 				
@@ -131,6 +131,8 @@ public class Main {
 				}
 			}
 
+			brain.setTrain( train ) ;
+			
 			@SuppressWarnings("resource")
 			Monitor m = new Monitor( brain ) ;
 			m.start();
@@ -142,6 +144,7 @@ public class Main {
 			double testPattern[] = null ;
 			long lastSentTime = 0 ;
 			for( ; ; ) {
+				// Display a pattern for a few cycles, then change
 				patternCount-- ;
 				if( patternCount<0) {
 					patternCount = 1 ;
@@ -156,20 +159,34 @@ public class Main {
 						inputs[i] =  testPattern[i] ;
 					}
 				}
-
+				
+				// Do one clock period - full network traversal
 				brain.step( inputs ) ;
+				
+				// If necessary - update history for GUI
 				brain.follow() ;
-				if( train || m.getTraining() ) {
-					brain.train() ;
-				}
+				
+				brain.train() ;
 
-				long deltaTime = System.currentTimeMillis() - lastSentTime ;
-				if( !train || deltaTime > DELAY_INTERVAL ) {
+				// -------------------------------------------------
+				// If we're training, 
+				// 	- send periodic updates
+				// 	- operate machine at full speed
+				// If we're not training 
+				// 	- send info each step
+				// 	- operate machine slowly
+				if( brain.isTrain() ) {
+					long sinceLastMessage = System.currentTimeMillis() - lastSentTime ;
+					if( sinceLastMessage > DELAY_INTERVAL ) {
+						lastSentTime = System.currentTimeMillis() ;
+						m.sendBrainData( brain.clock() ) ; 
+					}
+				} else {
 					lastSentTime = System.currentTimeMillis() ;
 					m.sendBrainData( brain.clock() ) ; 
-				}
-				if( DELAY_INTERVAL>0 ) {
-					Thread.sleep( DELAY_INTERVAL ) ;
+					if( DELAY_INTERVAL>0 ) {
+						Thread.sleep( DELAY_INTERVAL ) ;
+					}
 				}
 			}
 		} catch( Throwable t ) {  

@@ -37,16 +37,18 @@ public class Brain  {
 	private final int numNeurons ;
 
 	private double clock ;
-	private final double tick ;
+	private final double tickPeriod ;
+	
+	private boolean train ;
 	
 	/**
 	 * Create a brain from a genome (bitmask).
 	 * 
-	 * @param tick the period each clock tick represents
+	 * @param tickPeriod the period each clock tick represents
 	 * @param g
 	 */
-	public Brain( double tick, Genome g ) {
-		this.tick = tick ;
+	public Brain( double tickPeriod, Genome g ) {
+		this.tickPeriod = tickPeriod ;
 		this.clock = 0 ;
 		int numNeurons = 0 ;
 		int numlayers  = g.getInt(0) ;
@@ -88,6 +90,7 @@ public class Brain  {
 			start += numEdges*Edge.GENOME_SIZE + 1 ;
 		}
 		this.outputHistory = new double[HISTORY_LENGTH] ;
+		this.train = false ;
 	}
 
 	/**
@@ -114,12 +117,12 @@ public class Brain  {
 
 	/**
 	 * Create a new instance of a brain.
-	 * @param tick the period of a clock tick
-	 * @param dims the number of neurons in each layer
+	 * @param tickPeriod the period of a clock tick
+	 * @param layers the number of neurons in each layer
 	 */
-	public Brain( double tick, int ... layers ) {
+	public Brain( double tickPeriod, int ... layers ) {
 
-		this.tick = tick ;
+		this.tickPeriod = tickPeriod ;
 		this.clock = 0 ;
 		this.outputHistory = new double[HISTORY_LENGTH] ; 
 		this.historyIndex = 0 ;
@@ -144,6 +147,7 @@ public class Brain  {
 		this.targetEdges = new EdgeList[ numNeurons ] ;
 
 		connectLayers( 0.5 ) ;		
+		this.train = false ;
 	}
 
 
@@ -195,7 +199,7 @@ public class Brain  {
 	 * @param inputs an array of values to set inputs to
 	 */
 	public void step( double[] inputs ) {
-		clock += tick ;
+		clock += tickPeriod ;
 
 		// Set inputs immediately - no dependencies
 		for( int i=0 ; i<layerSizes[0] ; i++ ) {
@@ -217,10 +221,36 @@ public class Brain  {
 		}
 
 		// Then write the output as an atomic op
-		// do NOT write inputs though
-		for( int i=1 ; i<neurons.length; i++ ) {
+		// do NOT write inputs (start from layer 1)
+		for( int i=layerSizes[0] ; i<neurons.length; i++ ) {
 			neurons[i].step( newPotentials[i], clock ) ;
+			neurons[i].updateRefractoryFactor( clock ) ;
 		}		
+		
+		//---------------------------------------------------------
+		// if any neurons spiked - reduce prob of other neurons
+		// in the same layer firing too (i.e. set their refractory
+		//   factors as if they just fired)
+		//
+		// This effect does not apply to inputs
+		
+		for( int l=1 ; l<layerSizes.length ; l++ ) {
+			int ix = getIndexOfFirstInLayer(l) ;
+			double minRecent = neurons[ix].timeSinceFired( clock ) ;
+
+			for( int i=1 ; i<layerSizes[l] ; i++ ) {
+				double mostRecent = neurons[ix+i].timeSinceFired( clock ) ;
+				minRecent = Math.min( mostRecent, minRecent ) ;
+			}
+			
+			double refractoryFactor = minRecent / 0.005 ;
+			refractoryFactor *= refractoryFactor ;
+			if( refractoryFactor>1.0) refractoryFactor = 1.0 ;
+
+			for( int i=0 ; i<layerSizes[l] ; i++ ) {
+				//neurons[ix+i].setLayerRefractoryFactor( refractoryFactor ) ;
+			}
+		}
 	}
 	
 	public void follow() {
@@ -233,11 +263,17 @@ public class Brain  {
 		if( historyIndex >= outputHistory.length ) {
 			historyIndex = 0 ;
 		}
+		
+		for( int i=0 ; i<neurons.length ; i++ ) {
+			neurons[i].updateFrequency( clock ) ;
+		}
 	}
 
 	public void train() {
-		for( int i=0 ; i<neurons.length; i++ ) {
-			neurons[i].train( this, clock ) ;
+		if( isTrain() ) {
+			for( int i=0 ; i<neurons.length; i++ ) {
+				neurons[i].train( this, clock ) ;
+			}
 		}
 	}
 
@@ -309,6 +345,9 @@ public class Brain  {
 		rc.clock = clock ;
 		rc.history = new double[outputHistory.length] ;
 
+		Neuron following = getNeuron( followingId ) ;
+		rc.threshold = following == null ? 0.8 : following.getThreshold() ;
+			
 		int numSpikes = 0 ;
 		int offset = historyIndex ;
 		for( int i=0 ; i<outputHistory.length ; i++ ) {
@@ -376,13 +415,17 @@ public class Brain  {
 			if( shouldDrawThisOne ) {
 				int x = getLayerFromIndex(i) ;
 				int y = i - getIndexOfFirstInLayer(x) ;
+				int layerHeight = (600-60) / ( layerSizes[x] );
+
 				rc.append( sep ) 
 					.append( "{ \"id\":"  ) 
 					.append( neurons[i].getId() ) 
 					.append( ",\"potential\":" ) 
 					.append( neurons[i].getPotential() ) 
+					.append( ",\"threshold\":" ) 
+					.append( neurons[i].getThreshold() ) 
 					.append( ",\"fx\":").append( x * layerWidth ) 				
-					.append( ",\"fy\":").append( y*30+30 ) 				
+					.append( ",\"fy\":").append( y * layerHeight + 30 /* *30+30 */ ) 				
 					.append( " }" ) 
 					;
 					sep = ',' ;
@@ -500,6 +543,14 @@ public class Brain  {
 	public int numNeurons() {
 		return numNeurons ;
 	}
+
+	public boolean isTrain() {
+		return train;
+	}
+
+	public void setTrain(boolean train) {
+		this.train = train;
+	}
 }
 
 
@@ -507,6 +558,7 @@ class Potentials {
 	public double score ;
 	public double clock ;
 	public double frequency ;
+	public double threshold ;
 	public List<NeuronState> neurons ;
 	public EdgeState edges[] ;
 	public double history[] ;

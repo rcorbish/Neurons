@@ -10,6 +10,8 @@ public class Neuron  {
 
 	final static Logger log = LoggerFactory.getLogger( Neuron.class ) ;
 
+	private final static int NUM_SPIKES_TO_RECORD = 50 ;
+	
 	private final static Random rng = new Random()  ;
 	private final static int GENOME_INDEX_THRESHOLD = 0 ;
 	private final static int GENOME_INDEX_RESTING = 1 ;
@@ -18,24 +20,27 @@ public class Neuron  {
 	private final static int GENOME_INDEX_SPIKE_VALUE = 4 ;
 	private final static int GENOME_INDEX_LEARNING_WINDOW = 5 ;
 	private final static int GENOME_INDEX_REFRACTORY_DELAY = 6 ;
-	public  final static int GENOME_SIZE = 7 ;
+	private final static int GENOME_INDEX_THRESHOLD_LEARNING_RATE = 7 ;
+	public  final static int GENOME_SIZE = 8 ;
 
 	// These are transient state data
-	private 		double 		currentPotential ;
+	protected 		double 		currentPotential ;
 	private 		boolean		isSpiking ;
 	private  		double 		lastSpikeTime ;		// when did we spike last
-	private 		double		refractoryEnd ;
+	private 		double		refractoryFactor ;
 	
 	// The following items are held in the genome
 	private final int 		id ;
 	private final double 	learningRate ;
-	private final double 	threshold  ;
+	private final double 	thresholdLearningRate ;
+	private       double 	threshold  ;
 	private final double 	decay ;
 	private final double 	spikeValue ;
 	private final double 	refractoryDelay ;	
 	private final double 	restingPotential ;
 	private final double 	learningWindow ;
 
+	private 	  double	frequency ;
 	private final double 	lastSpikes[] ;
 	int lastSpikeIndex ;
 
@@ -46,12 +51,14 @@ public class Neuron  {
 		this.learningRate = 0.001 ;
 		this.spikeValue = 1.0 ;
 		this.learningWindow = 0.02 ;  	// 20mS
-		this.refractoryDelay = 0.0005;	// 1mS
+		this.refractoryDelay = 0.005;	// delay between spikes ( see refractoryFactor below )
 		this.id = id ;
-
+		this.thresholdLearningRate = 0.0001 ;
+		
 		this.currentPotential = rng.nextDouble() ;
-		lastSpikeTime = -1.0 ;
-		lastSpikes = new double[6] ;
+		this.lastSpikeTime = -1.0 ;
+		this.refractoryFactor = 1.0 ;
+		this.lastSpikes = new double[NUM_SPIKES_TO_RECORD] ;
 	}
 
 	public Neuron( Genome genome, int id ) {
@@ -64,10 +71,12 @@ public class Neuron  {
 		this.spikeValue = genome.getDouble( GENOME_INDEX_SPIKE_VALUE ) + 0.5 ;
 		this.learningWindow = genome.getDouble( GENOME_INDEX_LEARNING_WINDOW ) ;
 		this.refractoryDelay = genome.getDouble( GENOME_INDEX_REFRACTORY_DELAY ) ;
+		this.thresholdLearningRate = genome.getDouble( GENOME_INDEX_THRESHOLD_LEARNING_RATE ) ;
 
 		this.currentPotential = rng.nextDouble() ;
-		lastSpikeTime = -1.0 ;
-		lastSpikes = new double[6] ;
+		this.lastSpikeTime = -1.0 ;
+		this.refractoryFactor = 1.0 ;
+		this.lastSpikes = new double[NUM_SPIKES_TO_RECORD] ;
 	}
 	
 	public Genome toGenome() {
@@ -79,6 +88,7 @@ public class Neuron  {
 		rc.set( spikeValue - 0.5, GENOME_INDEX_SPIKE_VALUE ) ;
 		rc.set( learningWindow, GENOME_INDEX_LEARNING_WINDOW ) ;
 		rc.set( refractoryDelay, GENOME_INDEX_REFRACTORY_DELAY ) ;
+		rc.set( thresholdLearningRate, GENOME_INDEX_THRESHOLD_LEARNING_RATE ) ;
 
 		return rc ;
 	}
@@ -86,19 +96,19 @@ public class Neuron  {
 	public void step( double potential, double clock ) {
 		isSpiking = false ;
 		
-		if( clock < refractoryEnd ) {
-			this.currentPotential = restingPotential ;
+//		refractoryFactor = ( clock - lastSpikeTime ) / refractoryDelay ;
+//		refractoryFactor *= refractoryFactor ;
+//		if( refractoryFactor>1.0) refractoryFactor = 1.0 ;
+		
+		if( this.currentPotential>threshold ) {
+			spike( clock ) ;
 		} else {			
 			decay() ;
-			this.currentPotential += potential;
+			this.currentPotential += potential * refractoryFactor ;
 			
 			if( this.currentPotential < restingPotential ) {
 				this.currentPotential = restingPotential ;
-			} 
-			
-			if( this.currentPotential>threshold ) {
-				spike( clock ) ;
-			}			
+			} 			
 		}
 	}
 	
@@ -109,8 +119,8 @@ public class Neuron  {
 	public void spike( double clock ) {
 		isSpiking = true ;
 		lastSpikeTime = clock ;
-		this.currentPotential = spikeValue ;
-		refractoryEnd = clock + refractoryDelay ;
+		this.currentPotential -= threshold ;
+//		refractoryEnd = clock + refractoryDelay ;
 		
 		lastSpikes[ lastSpikeIndex ] = clock ;
 		lastSpikeIndex++ ;
@@ -118,9 +128,12 @@ public class Neuron  {
 			lastSpikeIndex = 0 ;
 		}
 	}
-	public void rest( double clock ) {
-		isSpiking = false ;
-		this.currentPotential = restingPotential ;
+	
+	
+	public void updateRefractoryFactor( double clock ) {
+		refractoryFactor = ( clock - lastSpikeTime ) / refractoryDelay ;
+		refractoryFactor *= refractoryFactor ;
+		if( refractoryFactor>1.0) refractoryFactor = 1.0 ;
 	}
 	
 	
@@ -163,15 +176,36 @@ public class Neuron  {
 				}
 //			}
 		}
+		
+		if( isSpiking() ) {
+			threshold += threshold * thresholdLearningRate ;
+			if( threshold > 1 ) threshold = 1 ;
+		} else {
+			threshold -= threshold * thresholdLearningRate / 100 ;
+			if( threshold < 0.2 ) threshold = 0.2 ;
+		}
+	}
+	
+	public void updateFrequency( double clock ) {
+		double earliestSpike = lastSpikes[0] ; 
+		for( int i=1 ; i<lastSpikes.length ; i++ ) {
+			earliestSpike = Math.min( earliestSpike, lastSpikes[i] ) ;
+		}
+		// If we haven't filled up the buffer ... 
+		if( earliestSpike == 0 ) {
+			frequency = 0 ;
+		} else {
+			double dt = clock - earliestSpike ;
+			frequency = ( dt < 1e-6 ) ? 10_000 : lastSpikes.length / dt ;
+		}
 	}
 	
 	public double frequency() {		
-		double s = lastSpikes[ lastSpikeIndex ] ;
-		int e = lastSpikeIndex-1 ;
-		if( e<0 ) e = lastSpikes.length - 1 ;
-		
-		double dt = lastSpikes[e] - s ;
-		return dt<1e-6 ? 0 : (lastSpikes.length / dt) ;
+		return frequency ;
+	}
+	
+	public void setLayerRefractoryFactor( double refractoryFactor ) {
+		this.refractoryFactor = refractoryFactor ; 
 	}
 	
 	public double timeSinceFired( double clock ) { return clock - lastSpikeTime ; }
