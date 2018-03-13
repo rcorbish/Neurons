@@ -27,7 +27,8 @@ public class Neuron  {
 	protected 		double 		currentPotential ;
 	private 		boolean		isSpiking ;
 	private			boolean		isSuppressed ;
-	private  		double 		lastSpikeTime ;		// when did we spike last
+	private  		double 		lastSpikeTime ;				// when did we spike last
+	private  		double 		refractoryPeriodStart ;		// how to calc refractory factor
 	private 		double		refractoryFactor ;
 	
 	// The following items are held in the genome
@@ -52,9 +53,9 @@ public class Neuron  {
 		this.learningRate = 0.001 ;
 		this.spikeValue = 1.0 ;
 		this.learningWindow = 0.02 ;  	// 20mS
-		this.refractoryDelay = 0.005;	// delay between spikes ( see refractoryFactor below )
+		this.refractoryDelay = 0.001;	// delay between spikes ( see refractoryFactor below )
 		this.id = id ;
-		this.thresholdLearningRate = 0.0001 ;
+		this.thresholdLearningRate = 0.00005 ;
 		
 		this.currentPotential = rng.nextDouble() ;
 		this.lastSpikeTime = -1.0 ;
@@ -95,25 +96,24 @@ public class Neuron  {
 	}
 
 	public void step( double potential, double clock ) {
-		// if( ! isSuppressed ) {
-			isSpiking = false ;
-					
-			if( this.currentPotential>threshold ) {
-				spike( clock ) ;
-			} else {			
-				decay() ;
-				this.currentPotential += potential * refractoryFactor ;
+		isSpiking = false ;
 				
-				if( this.currentPotential < restingPotential ) {
-					this.currentPotential = restingPotential ;
-				} 			
-			}
-		// }
+		if( this.currentPotential>threshold ) {
+			spike( clock ) ;
+		} else {			
+			decay() ;
+			this.currentPotential += potential * refractoryFactor ;
+			
+			if( this.currentPotential < restingPotential ) {
+				this.currentPotential = restingPotential ;
+			} 			
+		}
 	}
 
-	public void suppressSpike() {
+	public void suppressSpike( double clock ) {
 		isSuppressed = true ;
 		isSpiking = false ;
+		refractoryPeriodStart = clock ;
 	}
 
 	public void decay() {
@@ -121,32 +121,20 @@ public class Neuron  {
 	}
 	
 	public void spike( double clock ) {
-		if( ! isSuppressed ) {
-			isSpiking = true ;
-			lastSpikeTime = clock ;
-			this.currentPotential -= threshold ;
-			
-			lastSpikes[ lastSpikeIndex ] = clock ;
-			lastSpikeIndex++ ;
-			if( lastSpikeIndex >= lastSpikes.length ) {
-				lastSpikeIndex = 0 ;
-			}
-		}
+		isSpiking = true ;
+		lastSpikeTime = clock ;
+		refractoryPeriodStart = clock ;
+		this.currentPotential -= threshold ;
+		
+		lastSpikes[ lastSpikeIndex ] = clock ;
+		lastSpikeIndex++ ;
+		if( lastSpikeIndex >= lastSpikes.length ) {
+			lastSpikeIndex = 0 ;
+		}			
 	}
 	
 	
 
-	public double calculateRefractoryFactor( double clock ) {
-		double refractoryFactor = timeSinceFired( clock ) / refractoryDelay ;
-		refractoryFactor *= refractoryFactor ;
-		if( refractoryFactor > 1.0 ) {
-			isSuppressed = false ;
-			refractoryFactor = 1.0 ;
-		}
-		return refractoryFactor ;
-	}
-	
-	
 
 	public void train( Brain brain, double clock ) {
 		if( lastSpikeTime < 0 ) {
@@ -202,17 +190,29 @@ public class Neuron  {
 		for( int i=1 ; i<lastSpikes.length ; i++ ) {
 			earliestSpike = Math.min( earliestSpike, lastSpikes[i] ) ;
 		}
+		double dt = clock - earliestSpike ;
+
 		// If we haven't filled up the buffer ... 
-		if( earliestSpike == 0 ) {
+		if( earliestSpike == 0 || dt>1) {
 			frequency = 0 ;
 		} else {
-			double dt = clock - earliestSpike ;
 			frequency = ( dt < 1e-6 ) ? 10_000 : lastSpikes.length / dt ;
 		}
 	}
 	
 	public double frequency() {		
 		return frequency ;
+	}
+	
+
+	public double calculateRefractoryFactor( double clock ) {
+		double refractoryFactor = ( clock - refractoryPeriodStart ) / refractoryDelay ;
+		refractoryFactor *= refractoryFactor ;
+		if( refractoryFactor > 1.0 ) {
+			isSuppressed = false ;
+			refractoryFactor = 1.0 ;
+		}
+		return refractoryFactor ;
 	}
 	
 	public void updateRefractoryFactor( double clock ) {
@@ -247,6 +247,9 @@ public class Neuron  {
 		.append( "frequency   ").append( frequency() ).append( System.lineSeparator() ) 
 		.append( "refractory  ").append( refractoryDelay ).append( System.lineSeparator() ) 
 		.append( "spike       ").append( spikeValue ).append( System.lineSeparator() ) 
+		.append( "spiking     ").append( isSpiking ).append( System.lineSeparator() ) 
+		.append( "suppressed  ").append( isSuppressed ).append( System.lineSeparator() ) 
+		.append( "ref. factor ").append( refractoryFactor ).append( System.lineSeparator() ) 
 		;
 		return sb.toString() ;
 	}

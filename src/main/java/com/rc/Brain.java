@@ -146,7 +146,7 @@ public class Brain  {
 		this.numNeurons = numNeurons ;
 		this.targetEdges = new EdgeList[ numNeurons ] ;
 
-		connectLayers( 0.5 ) ;		
+		connectLayers( 0.7 ) ;		
 		this.train = false ;
 	}
 
@@ -220,6 +220,13 @@ public class Brain  {
 			}
 		}
 
+
+		// Then write the output as an atomic op
+		// do NOT write inputs (start from layer 1)
+		for( int i=layerSizes[0] ; i<neurons.length; i++ ) {
+			neurons[i].step( newPotentials[i], clock ) ;
+			neurons[i].updateRefractoryFactor( clock ) ;
+		}		
 		
 		//---------------------------------------------------------
 		// if any neurons spiked - reduce prob of other neurons
@@ -227,8 +234,6 @@ public class Brain  {
 		//   factors as if they just fired)
 		//
 		// This effect does not apply to inputs (layers > 0)
-		//
-		// Do this prior to stepping - to prevent spikes happening
 		// 
 		for( int l=1 ; l<layerSizes.length ; l++ ) {
 			int ix = getIndexOfFirstInLayer(l) ;
@@ -255,18 +260,11 @@ public class Brain  {
 				for( int i=0 ; i<layerSizes[l] ; i++ ) {
 					neurons[ix+i].setRefractoryFactor( refractoryFactor ) ;
 					if( winner != neurons[ix+1] ) {
-						neurons[ix+i].suppressSpike() ; 
+						//neurons[ix+i].suppressSpike( clock ) ; 
 					}
 				}
 			}
 		}
-
-		// Then write the output as an atomic op
-		// do NOT write inputs (start from layer 1)
-		for( int i=layerSizes[0] ; i<neurons.length; i++ ) {
-			neurons[i].step( newPotentials[i], clock ) ;
-			neurons[i].updateRefractoryFactor( clock ) ;
-		}		
 
 	}
 	
