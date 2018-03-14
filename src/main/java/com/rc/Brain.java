@@ -26,6 +26,7 @@ public class Brain  {
 	final static double WEIGHT_SIGMA = 0.05 ;
 	
 	private final double outputHistory[] ;
+	private final boolean outputSpikeHistory[] ;
 	private int historyIndex ;
 	private int followingId ;
 	
@@ -90,6 +91,7 @@ public class Brain  {
 			start += numEdges*Edge.GENOME_SIZE + 1 ;
 		}
 		this.outputHistory = new double[HISTORY_LENGTH] ;
+		this.outputSpikeHistory = new boolean[HISTORY_LENGTH] ;
 		this.train = false ;
 	}
 
@@ -125,6 +127,7 @@ public class Brain  {
 		this.tickPeriod = tickPeriod ;
 		this.clock = 0 ;
 		this.outputHistory = new double[HISTORY_LENGTH] ; 
+		this.outputSpikeHistory = new boolean[HISTORY_LENGTH] ;
 		this.historyIndex = 0 ;
 		this.layerSizes = layers ;
 
@@ -272,6 +275,7 @@ public class Brain  {
 		Neuron following = getNeuron( followingId ) ;
 		if( following != null ) {
 			outputHistory[historyIndex] = following.getPotential() ;
+			outputSpikeHistory[historyIndex] = following.isSpiking() ;
 		}
 		
 		historyIndex++ ;
@@ -359,23 +363,18 @@ public class Brain  {
 		Potentials rc = new Potentials() ;
 		rc.clock = clock ;
 		rc.history = new double[outputHistory.length] ;
+		rc.spikeHistory = new boolean[outputHistory.length] ;
 
-		Neuron following = getNeuron( followingId ) ;
-		rc.threshold = following == null ? 0.8 : following.getThreshold() ;
-			
-		int numSpikes = 0 ;
 		int offset = historyIndex ;
 		for( int i=0 ; i<outputHistory.length ; i++ ) {
 			offset-- ;
 			if( offset<0 ) {
 				offset += outputHistory.length ;
 			}
-			rc.history[outputHistory.length-offset-1] = outputHistory[i] ;
-			if( outputHistory[i] >= 0.90 ) {
-				numSpikes++ ;
-			}
+			int ix = outputHistory.length-offset-1 ;
+			rc.history[ix] = outputHistory[i] ;
+			rc.spikeHistory[ix] = outputSpikeHistory[i] ;
 		}
-		rc.frequency = (double)numSpikes / ( outputHistory.length * Main.TICK_PERIOD ) ;
 
 		rc.neurons = new ArrayList<NeuronState>() ;
 		for( int i=0 ; i<neurons.length; i++ ) {
@@ -570,13 +569,11 @@ public class Brain  {
 
 
 class Potentials {
-	public double score ;
 	public double clock ;
-	public double frequency ;
-	public double threshold ;
 	public List<NeuronState> neurons ;
 	public EdgeState edges[] ;
 	public double history[] ;
+	public boolean spikeHistory[] ;
 }
 
 class NeuronState {

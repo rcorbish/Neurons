@@ -25,7 +25,7 @@ public class Neuron  {
 
 	// These are transient state data
 	protected 		double 		currentPotential ;
-	private 		boolean		isSpiking ;
+	protected 		boolean		isSpiking ;
 	private			boolean		isSuppressed ;
 	private  		double 		lastSpikeTime ;				// when did we spike last
 	private  		double 		refractoryPeriodStart ;		// how to calc refractory factor
@@ -49,7 +49,7 @@ public class Neuron  {
 	public Neuron( int id) {
 		this.restingPotential = 0 ; 
 		this.threshold = 0.8 ; 
-		this.decay = 0.1 ; 	
+		this.decay = 0.25 ; 	
 		this.learningRate = 0.001 ;
 		this.spikeValue = 1.0 ;
 		this.learningWindow = 0.02 ;  	// 20mS
@@ -107,6 +107,12 @@ public class Neuron  {
 			if( this.currentPotential < restingPotential ) {
 				this.currentPotential = restingPotential ;
 			} 			
+		}
+
+		for( int i=0 ; i<lastSpikes.length ; i++ ) {
+			if( (clock - lastSpikes[i]) > 1.0 ) {
+				lastSpikes[i] = 0 ;
+			}
 		}
 	}
 
@@ -187,16 +193,19 @@ public class Neuron  {
 	
 	public void updateFrequency( double clock ) {
 		double earliestSpike = lastSpikes[0] ; 
+
 		for( int i=1 ; i<lastSpikes.length ; i++ ) {
-			earliestSpike = Math.min( earliestSpike, lastSpikes[i] ) ;
+			if( lastSpikes[i] > 0 ) {
+				earliestSpike = Math.min( earliestSpike, lastSpikes[i] ) ;
+			}
 		}
-		double dt = clock - earliestSpike ;
 
 		// If we haven't filled up the buffer ... 
-		if( earliestSpike == 0 || dt>1) {
+		if( earliestSpike == 0 ) {
 			frequency = 0 ;
 		} else {
-			frequency = ( dt < 1e-6 ) ? 10_000 : lastSpikes.length / dt ;
+			double dt = clock - earliestSpike ;
+			frequency = ( dt < 1e-6 ) ? 10_000 : (lastSpikes.length / dt) ;
 		}
 	}
 	
@@ -241,15 +250,15 @@ public class Neuron  {
 		sb
 		.append( "id          ").append( id ).append( System.lineSeparator() )
 		.append( "potential   ").append( currentPotential ).append( System.lineSeparator() ) 
-		.append( "decay       ").append( decay ).append( System.lineSeparator() ) 
 		.append( "threshold   ").append( threshold ).append( System.lineSeparator() ) 
-		.append( "last spike  ").append( lastSpikeTime ).append( System.lineSeparator() ) 
 		.append( "frequency   ").append( frequency() ).append( System.lineSeparator() ) 
 		.append( "refractory  ").append( refractoryDelay ).append( System.lineSeparator() ) 
+		.append( "ref. factor ").append( refractoryFactor ).append( System.lineSeparator() ) 
 		.append( "spike       ").append( spikeValue ).append( System.lineSeparator() ) 
+		.append( "last spike  ").append( lastSpikeTime ).append( System.lineSeparator() ) 
 		.append( "spiking     ").append( isSpiking ).append( System.lineSeparator() ) 
 		.append( "suppressed  ").append( isSuppressed ).append( System.lineSeparator() ) 
-		.append( "ref. factor ").append( refractoryFactor ).append( System.lineSeparator() ) 
+		.append( "decay       ").append( decay ).append( System.lineSeparator() ) 
 		;
 		return sb.toString() ;
 	}

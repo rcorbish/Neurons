@@ -29,6 +29,7 @@ public class InputNeuron extends Neuron {
 	
 	@Override
 	public void step( double potential, double clock ) {
+		isSpiking = false ;
 		this.potential = potential ;
 		if( nextSpikeTime <= clock ) {
 			spike( clock ) ;
