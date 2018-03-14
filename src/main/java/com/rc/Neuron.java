@@ -100,18 +100,18 @@ public class Neuron  {
 	}
 
 	public void step( double potential, double clock ) {
-		isSpiking = false ;
-				
-		if( this.currentPotential>threshold ) {
-			spike( clock ) ;
-		} else {			
-			decay() ;
-			this.currentPotential += potential * refractoryFactor ;
-			
-			if( this.currentPotential < restingPotential ) {
-				this.currentPotential = restingPotential ;
-			} 			
+		if( isSpiking() ) {
+			resetRefractoryFactor( clock ) ;
+			isSpiking = false ;
+			this.currentPotential -= threshold ;
 		}
+		
+		decay() ;
+		this.currentPotential += potential * refractoryFactor ;
+		
+		if( this.currentPotential < restingPotential ) {
+			this.currentPotential = restingPotential ;
+		} 			
 
 		for( int i=0 ; i<lastSpikes.length ; i++ ) {
 			if( (clock - lastSpikes[i]) > 1.0 ) {
@@ -120,16 +120,22 @@ public class Neuron  {
 		}
 	}
 
+	public void checkForSpike( double clock ) {
+		if( this.currentPotential>threshold ) {
+			spike( clock ) ;
+		} 			
+	}	
+
 	public void suppressSpike( double clock ) {
 		isSpiking = false ;
-		refractoryPeriodStart = clock ;
+		this.currentPotential = 0 ;
+
+		resetRefractoryFactor(clock);
 	}
 	
 	public void spike( double clock ) {
 		isSpiking = true ;
 		lastSpikeTime = clock ;
-		refractoryPeriodStart = clock ;
-		this.currentPotential -= threshold ;
 		
 		lastSpikes[ lastSpikeIndex ] = clock ;
 		lastSpikeIndex++ ;

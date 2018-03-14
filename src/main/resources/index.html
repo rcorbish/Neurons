@@ -251,7 +251,7 @@ d3.json("data", function(error, graph) {
 			scoreDiv.innerHTML = data.clock.toFixed(5) + " S" ;
 			
 			const neuronFrequency = d3.scaleLinear()
-			.domain( [ data.minFrequency, data.maxFrequency ] )
+			.domain( [ 100/*data.minFrequency*/, data.maxFrequency ] )
 			.range([ "steelblue", " #ff00ff"]);
 
 			for( var i=0 ; i<data.neurons.length ; i++ ) {			
