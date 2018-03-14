@@ -88,9 +88,6 @@ body {
     var height = 600 ;
     var following = null ;
 	
-	const neuronFrequency = d3.scaleLinear()
-    			.domain( [ 10, 1500.0 ] )
-    			.range([ "gray", "green"]);
 
 	const weightColor = d3.scaleLinear()
 				.domain([-1, 0, 1])
@@ -252,6 +249,10 @@ d3.json("data", function(error, graph) {
 			var data = JSON.parse( evt.data )
 			
 			scoreDiv.innerHTML = data.clock.toFixed(5) + " S" ;
+			
+			const neuronFrequency = d3.scaleLinear()
+			.domain( [ data.minFrequency, data.maxFrequency ] )
+			.range([ "steelblue", " #ff00ff"]);
 
 			for( var i=0 ; i<data.neurons.length ; i++ ) {			
 				var n = document.getElementById( data.neurons[i].id )

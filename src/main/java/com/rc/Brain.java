@@ -258,10 +258,8 @@ public class Brain  {
 			// ... set all refractory factors in the layer as if they just fired
 			// and suppress any other spikes 
 			if( winner.isSpiking() ) {
-				double refractoryFactor = winner.getRefractoryFactor() ;
-
 				for( int i=0 ; i<layerSizes[l] ; i++ ) {
-					neurons[ix+i].setRefractoryFactor( refractoryFactor ) ;
+					neurons[ix+i].resetRefractoryFactor( clock ) ;
 					if( winner != neurons[ix+1] ) {
 						//neurons[ix+i].suppressSpike( clock ) ; 
 					}
@@ -364,6 +362,8 @@ public class Brain  {
 		rc.clock = clock ;
 		rc.history = new double[outputHistory.length] ;
 		rc.spikeHistory = new boolean[outputHistory.length] ;
+		rc.maxFrequency = 0 ;
+		rc.minFrequency = 100000 ;
 
 		int offset = historyIndex ;
 		for( int i=0 ; i<outputHistory.length ; i++ ) {
@@ -379,6 +379,11 @@ public class Brain  {
 		rc.neurons = new ArrayList<NeuronState>() ;
 		for( int i=0 ; i<neurons.length; i++ ) {
 			rc.neurons.add( new NeuronState( neurons[i], clock ) ) ;
+		}
+		
+		for( int i=getIndexOfFirstInLayer( layerSizes.length-1 ) ; i<neurons.length; i++ ) {
+			rc.maxFrequency = Math.max( neurons[i].frequency(), rc.maxFrequency ) ;
+			rc.minFrequency = Math.min( neurons[i].frequency(), rc.minFrequency ) ;
 		}
 
 		int numEdges = 0 ;
@@ -570,6 +575,8 @@ public class Brain  {
 
 class Potentials {
 	public double clock ;
+	public double maxFrequency ;
+	public double minFrequency ;
 	public List<NeuronState> neurons ;
 	public EdgeState edges[] ;
 	public double history[] ;

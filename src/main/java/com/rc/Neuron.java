@@ -10,7 +10,7 @@ public class Neuron  {
 
 	final static Logger log = LoggerFactory.getLogger( Neuron.class ) ;
 
-	private final static int NUM_SPIKES_TO_RECORD = 50 ;
+	private final static int NUM_SPIKES_TO_RECORD = 25 ;
 	
 	private final static Random rng = new Random()  ;
 	private final static int GENOME_INDEX_THRESHOLD = 0 ;
@@ -53,7 +53,7 @@ public class Neuron  {
 		this.learningRate = 0.001 ;
 		this.spikeValue = 1.0 ;
 		this.learningWindow = 0.02 ;  	// 20mS
-		this.refractoryDelay = 0.001;	// delay between spikes ( see refractoryFactor below )
+		this.refractoryDelay = 0.002;	// delay between spikes ( see refractoryFactor below )
 		this.id = id ;
 		this.thresholdLearningRate = 0.00005 ;
 		
@@ -225,10 +225,11 @@ public class Neuron  {
 	}
 	
 	public void updateRefractoryFactor( double clock ) {
-		setRefractoryFactor( calculateRefractoryFactor(clock) ) ; 
+		this.refractoryFactor = calculateRefractoryFactor(clock) ; 
 	}
-	public void setRefractoryFactor( double refractoryFactor ) {
-		this.refractoryFactor = refractoryFactor ; 
+	public void resetRefractoryFactor( double clock ) {
+		this.refractoryFactor = 0 ;
+		this.refractoryPeriodStart = clock ;
 	}
 	public double getRefractoryFactor() {
 		return this.refractoryFactor ; 
