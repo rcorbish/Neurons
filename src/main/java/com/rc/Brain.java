@@ -241,12 +241,15 @@ public class Brain  {
 		for( int l=1 ; l<layerSizes.length ; l++ ) {
 			int ix = getIndexOfFirstInLayer(l) ;
 
-			double minRecent = neurons[ix].timeSinceFired( clock ) ;
+			// double minRecent = neurons[ix].timeSinceFired( clock ) ;
 			double maxPotential =  neurons[ix].getPotential() ;
 			Neuron winner = neurons[ix] ;
 			for( int i=1 ; i<layerSizes[l] ; i++ ) {
-				double mostRecent = neurons[ix+i].timeSinceFired( clock ) ;
-				minRecent = Math.min( mostRecent, minRecent ) ;
+				// Find most recently fired time
+				// double mostRecent = neurons[ix+i].timeSinceFired( clock ) ;
+				// minRecent = Math.min( mostRecent, minRecent ) ;
+
+				// Find the neuron with max output in a layer
 				double potential = neurons[ix+i].getPotential() ;
 				if( potential > maxPotential ) {
 					winner = neurons[ix+i] ;
@@ -259,15 +262,15 @@ public class Brain  {
 			// and suppress any other spikes 
 			if( winner.isSpiking() ) {
 				for( int i=0 ; i<layerSizes[l] ; i++ ) {
-					neurons[ix+i].resetRefractoryFactor( clock ) ;
 					if( winner != neurons[ix+1] ) {
-						//neurons[ix+i].suppressSpike( clock ) ; 
+						neurons[ix+i].suppressSpike( clock ) ; 
 					}
 				}
 			}
 		}
-
 	}
+
+
 	
 	public void follow() {
 		Neuron following = getNeuron( followingId ) ;
@@ -301,7 +304,7 @@ public class Brain  {
 	 * 
 	 * @param y the expected pattern index 
 	 */
-	public double getScore( int p ) {
+	public double getScore( int y ) {
 		int outputStart = numNeurons-layerSizes[ layerSizes.length-1 ] ;
 		
 		double sf = 0.0 ;
@@ -314,10 +317,11 @@ public class Brain  {
 		} else {
 			for( int i=outputStart ; i<neurons.length ; i++ ) {
 				double yh = neurons[i].frequency() / sf ;
-				if( p==i ) {
-					rc += yh ;
+
+				if( y==i ) {
+					rc += yh ;	// ideally yh = 1.0 for pth output
 				} else {
-					rc -= yh ;
+					rc -= yh ; 	// ideally yh = 0.0 for other outputs
 				}
 			}
 		}

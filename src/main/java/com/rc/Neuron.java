@@ -26,7 +26,6 @@ public class Neuron  {
 	// These are transient state data
 	protected 		double 		currentPotential ;
 	protected 		boolean		isSpiking ;
-	private			boolean		isSuppressed ;
 	private  		double 		lastSpikeTime ;				// when did we spike last
 	private  		double 		refractoryPeriodStart ;		// how to calc refractory factor
 	private 		double		refractoryFactor ;
@@ -95,6 +94,11 @@ public class Neuron  {
 		return rc ;
 	}
 
+
+	public void decay() {
+		this.currentPotential *= ( 1.0 - decay ) ;
+	}
+
 	public void step( double potential, double clock ) {
 		isSpiking = false ;
 				
@@ -117,13 +121,8 @@ public class Neuron  {
 	}
 
 	public void suppressSpike( double clock ) {
-		isSuppressed = true ;
 		isSpiking = false ;
 		refractoryPeriodStart = clock ;
-	}
-
-	public void decay() {
-		this.currentPotential *= ( 1.0 - decay ) ;
 	}
 	
 	public void spike( double clock ) {
@@ -218,7 +217,6 @@ public class Neuron  {
 		double refractoryFactor = ( clock - refractoryPeriodStart ) / refractoryDelay ;
 		refractoryFactor *= refractoryFactor ;
 		if( refractoryFactor > 1.0 ) {
-			isSuppressed = false ;
 			refractoryFactor = 1.0 ;
 		}
 		return refractoryFactor ;
@@ -258,7 +256,6 @@ public class Neuron  {
 		.append( "spike       ").append( spikeValue ).append( System.lineSeparator() ) 
 		.append( "last spike  ").append( lastSpikeTime ).append( System.lineSeparator() ) 
 		.append( "spiking     ").append( isSpiking ).append( System.lineSeparator() ) 
-		.append( "suppressed  ").append( isSuppressed ).append( System.lineSeparator() ) 
 		.append( "decay       ").append( decay ).append( System.lineSeparator() ) 
 		;
 		return sb.toString() ;
