@@ -51,7 +51,7 @@ public class Neuron  {
 		this.decay = 0.25 ; 	
 		this.learningRate = 0.001 ;
 		this.spikeValue = 1.0 ;
-		this.learningWindow = 0.02 ;  	// 20mS
+		this.learningWindow = 0.003 ;  	// learn from spikes happening max this far apart (in time) 
 		this.refractoryDelay = 0.002;	// delay between spikes ( see refractoryFactor below )
 		this.id = id ;
 		this.thresholdLearningRate = 0.00005 ;
@@ -161,14 +161,21 @@ public class Neuron  {
 				double tsrc = source.timeSinceFired( clock ) ;
 				double ttgt = timeSinceFired( clock ) ;
 				double deltaFiredTime = ttgt - tsrc ;
-				// pre-synaptic spike occurs before 
-				if( deltaFiredTime > 0 && deltaFiredTime < learningWindow ) {
-					//reinforce
-					double delta = learningRate * ( 0.1 + e.weight() ) * ( 1.0 - e.weight() ) ;
-					e.addWeight( delta ) ;
+				if( Math.abs( deltaFiredTime ) < learningWindow ) {
+					// pre-synaptic spike occurs before 
+					if( deltaFiredTime > 0 ) {
+						// reinforce
+						double delta = learningRate * ( 0.1 + e.weight() ) * ( 1.0 - e.weight() ) ;
+						e.addWeight( delta ) ;
+					} else if( deltaFiredTime <= 0 ) {
+						// attenuate
+						double delta = learningRate * e.weight() * e.weight() / 2.0  ;
+						e.addWeight( -delta ) ;
+					}
 				}
 			}
 //		}
+/*
 		
 		// Look for pre-synaptic spikes (we received a spike before we spiked)
 		// and post-synaptic spikes (we spiked before receiving a spike)
@@ -187,7 +194,7 @@ public class Neuron  {
 				}
 //			}
 		}
-		
+*/		
 		if( isSpiking() ) {
 			threshold += threshold * thresholdLearningRate ;
 			if( threshold > 1 ) threshold = 1 ;
