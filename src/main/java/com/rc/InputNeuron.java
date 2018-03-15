@@ -48,10 +48,10 @@ public class InputNeuron extends Neuron {
 	}
 
 	
-//	@Override
-//	public double potential( double clock ) {
-//		return potential / 1000.0  ;
-//	}
+	@Override
+	public void train( Brain brain, double clock ) {
+	// don't train inputs
+	}
 }
 
 

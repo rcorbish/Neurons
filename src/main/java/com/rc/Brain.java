@@ -146,10 +146,11 @@ public class Brain  {
 		for( int i=layers[0] ; i<numNeurons ; i++ ) {
 			this.neurons[i] = new Neuron( i ) ;
 		}
+
 		this.numNeurons = numNeurons ;
 		this.targetEdges = new EdgeList[ numNeurons ] ;
 
-		connectLayers( 0.7 ) ;		
+		connectLayers( 0.75 ) ;
 		this.train = false ;
 	}
 
@@ -186,8 +187,8 @@ public class Brain  {
 	}
 
 	/**
-	 * Choose a random weight. Weights may be positive or negative, depending on the
-	 * inhibitor ratio (fraction of negative weights)
+	 * Choose a random weight. Weights may be positive or negative, 
+	 * depending on the inhibitor ratio (fraction of negative weights)
 	 *  
 	 * @return
 	 */
@@ -196,8 +197,12 @@ public class Brain  {
 	}
 
 	/**
-	 * Execute one time step, traverse the graph, summing all inputs to each
-	 * neuron. Then (atomically) update the weights.
+	 * Execute one time step: traverse the graph, 
+	 * 	sum all inputs to each neuron. 
+	 * 	atomically update the weights
+	 * 	find winner in each layer
+	 * 	suppress non winning spikes
+	 * 	find new spiking neurons
 	 * 
 	 * @param inputs an array of values to set inputs to
 	 */
@@ -212,7 +217,7 @@ public class Brain  {
 		// Will build up all outputs - before changing any of them
 		double newPotentials[] = new double[ neurons.length ] ;
 
-		// Sum all inputs 
+		// Sum inputs of spiking neurons
 		for( int i=layerSizes[0] ; i<neurons.length; i++ ) {
 			newPotentials[i] = 0 ;
 			for( Edge edge : targetEdges[i] ) {
@@ -226,9 +231,12 @@ public class Brain  {
 
 		// Then write the output as an atomic op
 		// do NOT write inputs (start from layer 1)
+		// This 
+		// 	clears any o/p spikes
+		// 	decays current chargs
+		// 	adds the given charge to potential
 		for( int i=layerSizes[0] ; i<neurons.length; i++ ) {
 			neurons[i].step( newPotentials[i], clock ) ;
-			neurons[i].updateRefractoryFactor( clock ) ;
 		}		
 		
 		//---------------------------------------------------------
@@ -242,16 +250,13 @@ public class Brain  {
 			int ix = getIndexOfFirstInLayer(l) ;
 
 			// double minRecent = neurons[ix].timeSinceFired( clock ) ;
-			double maxPotential =  neurons[ix].getPotential() ;
+			double maxPotential =  0 ;
 			Neuron winner = neurons[ix] ;
-			for( int i=1 ; i<layerSizes[l] ; i++ ) {
-				// Find most recently fired time
-				// double mostRecent = neurons[ix+i].timeSinceFired( clock ) ;
-				// minRecent = Math.min( mostRecent, minRecent ) ;
+			for( int i=0 ; i<layerSizes[l] ; i++ ) {
 
 				// Find the neuron with max output in a layer
 				double potential = neurons[ix+i].getPotential() ;
-				if( potential > maxPotential ) {
+				if( potential > maxPotential && neurons[ix+i].isSpiking() ) {
 					winner = neurons[ix+i] ;
 					maxPotential = potential ;
 				}
@@ -272,12 +277,28 @@ public class Brain  {
 		// are spiking
 		for( int i=layerSizes[0] ; i<neurons.length; i++ ) {
 			neurons[i].checkForSpike( clock ) ;
+			neurons[i].updateRefractoryFactor( clock ) ;
 		}		
 
 	}
 
 
 	
+	/**
+	 * Train all neurons
+	 */
+	public void train() {
+		if( isTrain() ) {
+			for( int i=0 ; i<neurons.length; i++ ) {
+				neurons[i].train( this, clock ) ;
+			}
+		}
+	}
+
+	/**
+	 * If we are following - maintain a history of ouput
+	 * and spiking activity
+	 */
 	public void follow() {
 		Neuron following = getNeuron( followingId ) ;
 		if( following != null ) {
@@ -294,15 +315,6 @@ public class Brain  {
 			neurons[i].updateFrequency( clock ) ;
 		}
 	}
-
-	public void train() {
-		if( isTrain() ) {
-			for( int i=0 ; i<neurons.length; i++ ) {
-				neurons[i].train( this, clock ) ;
-			}
-		}
-	}
-
 
 
 	/**

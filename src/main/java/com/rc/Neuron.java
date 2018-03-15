@@ -127,9 +127,10 @@ public class Neuron  {
 	}	
 
 	public void suppressSpike( double clock ) {
-		isSpiking = false ;
-		this.currentPotential = 0 ;
-
+		if( isSpiking() ) {
+			isSpiking = false ;
+			this.currentPotential -= threshold ;
+		}
 		resetRefractoryFactor(clock);
 	}
 	
@@ -157,13 +158,13 @@ public class Neuron  {
 			EdgeList edges = brain.getIncomingEdges( id ) ;
 			for( Edge e : edges ) {		
 				Neuron source = brain.getNeuron( e.source() ) ;
-				double tpre = source.timeSinceFired( clock ) ;
-				double tpost = timeSinceFired( clock )  ;
-				double deltaFiredTime = tpost - tpre ;
+				double tsrc = source.timeSinceFired( clock ) ;
+				double ttgt = timeSinceFired( clock ) ;
+				double deltaFiredTime = ttgt - tsrc ;
 				// pre-synaptic spike occurs before 
 				if( deltaFiredTime > 0 && deltaFiredTime < learningWindow ) {
 					//reinforce
-					double delta = learningRate * ( 0.1 + e.weight() * ( 0.9 - e.weight() ) ) ;
+					double delta = learningRate * ( 0.1 + e.weight() ) * ( 1.0 - e.weight() ) ;
 					e.addWeight( delta ) ;
 				}
 			}
@@ -181,7 +182,7 @@ public class Neuron  {
 				// post-synaptic spike occurs before pre-synaptic 
 				if( deltaFiredTime <= 0 && deltaFiredTime > -learningWindow ) {
 					//suppress
-					double delta = 0.9 * learningRate * ( 0.1 + e.weight() * ( 0.9 - e.weight() ) ) ;
+					double delta = 0.9 * learningRate * ( 0.1 + e.weight() ) * ( 1.0 - e.weight() ) ;
 					e.addWeight( -delta  ) ;
 				}
 //			}
