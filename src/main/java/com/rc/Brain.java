@@ -215,19 +215,7 @@ public class Brain  {
 		}
 
 		// Will build up all outputs - before changing any of them
-		double newPotentials[] = new double[ neurons.length ] ;
-
-		// Sum inputs of spiking neurons
-		for( int i=layerSizes[0] ; i<neurons.length; i++ ) {
-			newPotentials[i] = 0 ;
-			for( Edge edge : targetEdges[i] ) {
-				Neuron src = getNeuron( edge.source() ) ;
-				if( src.isSpiking() ) {
-					newPotentials[i] += edge.weight() ;
-				}
-			}
-		}
-
+		double newPotentials[] = calculateNewPotentials() ;
 
 		// Then write the output as an atomic op
 		// do NOT write inputs (start from layer 1)
@@ -239,6 +227,9 @@ public class Brain  {
 			neurons[i].step( newPotentials[i], clock ) ;
 		}		
 		
+		// List of most active neuron in a layer
+		Neuron winners[] = getWinnersInEachLayer() ;
+
 		//---------------------------------------------------------
 		// if any neurons spiked - reduce prob of other neurons
 		// in the same layer firing too (i.e. set their refractory
@@ -249,33 +240,70 @@ public class Brain  {
 		
 		for( int l=1 ; l<layerSizes.length ; l++ ) {
 			int ix = getIndexOfFirstInLayer(l) ;
-
-			// double minRecent = neurons[ix].timeSinceFired( clock ) ;
-			double maxPotential =  0 ;
-			Neuron winner = neurons[ix] ;
-			for( int i=0 ; i<layerSizes[l] ; i++ ) {
-
-				// Find the neuron with max output in a layer
-				double potential = neurons[ix+i].getPotential() ;
-				if( potential > maxPotential && neurons[ix+i].isSpiking() ) {
-					winner = neurons[ix+i] ;
-					maxPotential = potential ;
-				}
-			}
 			
 			for( int i=0 ; i<layerSizes[l] ; i++ ) {
 				Neuron n = neurons[ix+i] ; 
+				int distanceToWinningNeuron = Math.abs( n.getId() - winners[l].getId() ) ;
 				n.checkForSpike( clock ) ;
-				if( winner != n && n.isSpiking() ) {
-//					n.suppressSpike( clock ) ;
+				if( distanceToWinningNeuron<3 && n.isSpiking() ) {
+					n.suppressSpike( clock ) ;
 				} 
+				if( n.isSpiking() ) {
+					n.recordSpike(clock);
+				}
 				n.updateRefractoryFactor( clock ) ;				
 			}
 		}		
 	}
 
+	protected double[] calculateNewPotentials() {
+		// Will build up all outputs - before changing any of them
+		double rc[] = new double[ neurons.length ] ;
+
+		// Sum inputs of spiking neurons
+		for( int i=layerSizes[0] ; i<neurons.length; i++ ) {
+			rc[i] = 0 ;
+			for( Edge edge : targetEdges[i] ) {
+				Neuron src = getNeuron( edge.source() ) ;
+				if( src.isSpiking() ) {
+					rc[i] += edge.weight() ;
+				}
+			}
+		}
+		return rc ;		
+	}
 
 	
+		//---------------------------------------------------------
+		// if any neurons spiked - reduce prob of other neurons
+		// in the same layer firing too (i.e. set their refractory
+		//   factors as if they just fired)
+		//
+		// This effect does not apply to inputs (layers > 0)
+		// 
+		protected Neuron[] getWinnersInEachLayer() {
+				
+			Neuron rc[] = new Neuron[ layerSizes.length ] ;
+
+			for( int l=1 ; l<layerSizes.length ; l++ ) {
+				int ix = getIndexOfFirstInLayer(l) ;
+
+				// double minRecent = neurons[ix].timeSinceFired( clock ) ;
+				double maxPotential =  0 ;
+				Neuron winner = neurons[ix] ;
+				for( int i=0 ; i<layerSizes[l] ; i++ ) {
+
+					// Find the neuron with max output in a layer
+					double potential = neurons[ix+i].getPotential() ;
+					if( potential > maxPotential && neurons[ix+i].isSpiking() ) {
+						winner = neurons[ix+i] ;
+						maxPotential = potential ;
+					}
+				}
+				rc[l] = winner ;				
+			}		
+			return rc ;
+		}
 	/**
 	 * Train all neurons
 	 */

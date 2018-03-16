@@ -112,12 +112,6 @@ public class Neuron  {
 		if( this.currentPotential < restingPotential ) {
 			this.currentPotential = restingPotential ;
 		} 			
-
-		for( int i=0 ; i<lastSpikes.length ; i++ ) {
-			if( (clock - lastSpikes[i]) > 1.0 ) {
-				lastSpikes[i] = 0 ;
-			}
-		}
 	}
 
 	public void checkForSpike( double clock ) {
@@ -136,17 +130,16 @@ public class Neuron  {
 	
 	public void spike( double clock ) {
 		isSpiking = true ;
-		lastSpikeTime = clock ;
-		
+		lastSpikeTime = clock ;		
+	}
+	
+	public void recordSpike( double clock ) {
 		lastSpikes[ lastSpikeIndex ] = clock ;
 		lastSpikeIndex++ ;
 		if( lastSpikeIndex >= lastSpikes.length ) {
 			lastSpikeIndex = 0 ;
 		}			
 	}
-	
-	
-
 
 	public void train( Brain brain, double clock ) {
 		if( lastSpikeTime < 0 ) {
@@ -205,21 +198,26 @@ public class Neuron  {
 	}
 	
 	public void updateFrequency( double clock ) {
-		double earliestSpike = lastSpikes[0] ; 
 
-		for( int i=1 ; i<lastSpikes.length ; i++ ) {
-			if( lastSpikes[i] > 0 ) {
-				earliestSpike = Math.min( earliestSpike, lastSpikes[i] ) ;
+		// remove any old spikes from history
+		for( int i=0 ; i<lastSpikes.length ; i++ ) {
+			if( (clock - lastSpikes[i]) > .02 ) {
+				lastSpikes[i] = 0 ;
 			}
 		}
 
-		// If we haven't filled up the buffer ... 
-		if( earliestSpike == 0 ) {
-			frequency = 0 ;
-		} else {
-			double dt = clock - earliestSpike ;
-			frequency = ( dt < 1e-6 ) ? 10_000 : (lastSpikes.length / dt) ;
+		int numSpikes = 0 ;
+		// find earliest spike
+		double earliestSpike = Double.MAX_VALUE ; 
+		for( int i=0 ; i<lastSpikes.length ; i++ ) {
+			if( lastSpikes[i] > 0 ) {
+				numSpikes++ ;
+				earliestSpike = Math.min( earliestSpike, lastSpikes[i] ) ;
+			}
 		}
+		// freq = spikes / second
+		double dt = clock - earliestSpike ;
+		frequency = ( dt < 1e-6 ) ? 10_000 : (numSpikes / dt) ;
 	}
 	
 	public double frequency() {		
