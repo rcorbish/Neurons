@@ -246,6 +246,7 @@ public class Brain  {
 		//
 		// This effect does not apply to inputs (layers > 0)
 		// 
+		
 		for( int l=1 ; l<layerSizes.length ; l++ ) {
 			int ix = getIndexOfFirstInLayer(l) ;
 
@@ -261,25 +262,16 @@ public class Brain  {
 					maxPotential = potential ;
 				}
 			}
-			// Now we have the neuron with the highest potential
-			// if that highest one just spiked ...
-			// ... set all refractory factors in the layer as if they just fired
-			// ... and suppress any other spikes 
-			if( winner.isSpiking() ) {
-				for( int i=0 ; i<layerSizes[l] ; i++ ) {
-					if( winner != neurons[ix+i] ) {
-						neurons[ix+i].suppressSpike( clock ) ; 
-					}
-				}
+			
+			for( int i=0 ; i<layerSizes[l] ; i++ ) {
+				Neuron n = neurons[ix+i] ; 
+				n.checkForSpike( clock ) ;
+				if( winner != n && n.isSpiking() ) {
+//					n.suppressSpike( clock ) ;
+				} 
+				n.updateRefractoryFactor( clock ) ;				
 			}
-		}
-		// After all processing check whether any neurons
-		// are spiking
-		for( int i=layerSizes[0] ; i<neurons.length; i++ ) {
-			neurons[i].checkForSpike( clock ) ;
-			neurons[i].updateRefractoryFactor( clock ) ;
 		}		
-
 	}
 
 

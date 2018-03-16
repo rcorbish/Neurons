@@ -52,7 +52,7 @@ public class Neuron  {
 		this.learningRate = 0.001 ;
 		this.spikeValue = 1.0 ;
 		this.learningWindow = 0.003 ;  	// learn from spikes happening max this far apart (in time) 
-		this.refractoryDelay = 0.002;	// delay between spikes ( see refractoryFactor below )
+		this.refractoryDelay = 0.005;	// delay between spikes ( see refractoryFactor below )
 		this.id = id ;
 		this.thresholdLearningRate = 0.00005 ;
 		
@@ -195,13 +195,13 @@ public class Neuron  {
 //			}
 		}
 */		
-		if( isSpiking() ) {
-			threshold += threshold * thresholdLearningRate ;
-			if( threshold > 1 ) threshold = 1 ;
-		} else {
-			threshold -= threshold * thresholdLearningRate / 100 ;
-			if( threshold < 0.2 ) threshold = 0.2 ;
-		}
+//		if( isSpiking() ) {
+//			threshold += threshold * thresholdLearningRate ;
+//			if( threshold > 1 ) threshold = 1 ;
+//		} else {
+//			threshold -= threshold * thresholdLearningRate / 100 ;
+//			if( threshold < 0.2 ) threshold = 0.2 ;
+//		}
 	}
 	
 	public void updateFrequency( double clock ) {
