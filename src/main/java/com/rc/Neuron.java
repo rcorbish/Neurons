@@ -49,7 +49,7 @@ public class Neuron  {
 		this.restingPotential = 0 ; 
 		this.threshold = 0.8 ; 
 		this.decay = 0.25 ; 	
-		this.learningRate = 0.001 ;
+		this.learningRate = 0.01 ;
 		this.spikeValue = 1.0 ;
 		this.learningWindow = 0.003 ;  	// learn from spikes happening max this far apart (in time) 
 		this.refractoryDelay = 0.005;	// delay between spikes ( see refractoryFactor below )
@@ -100,12 +100,12 @@ public class Neuron  {
 	}
 
 	public void step( double potential, double clock ) {
+		updateRefractoryFactor( clock ) ;
 		if( isSpiking() ) {
-			resetRefractoryFactor( clock ) ;
 			isSpiking = false ;
-			this.currentPotential -= threshold ;
+			currentPotential -= threshold ;
+			resetRefractoryFactor(clock);
 		}
-		
 		decay() ;
 		this.currentPotential += potential * refractoryFactor ;
 		
@@ -114,26 +114,18 @@ public class Neuron  {
 		} 			
 	}
 
+	
 	public void checkForSpike( double clock ) {
 		if( this.currentPotential>threshold ) {
 			spike( clock ) ;
 		} 			
 	}	
 
-	public void suppressSpike( double clock ) {
-		if( isSpiking() ) {
-			isSpiking = false ;
-			this.currentPotential -= threshold ;
-		}
-		resetRefractoryFactor(clock);
-	}
 	
 	public void spike( double clock ) {
 		isSpiking = true ;
 		lastSpikeTime = clock ;		
-	}
-	
-	public void recordSpike( double clock ) {
+
 		lastSpikes[ lastSpikeIndex ] = clock ;
 		lastSpikeIndex++ ;
 		if( lastSpikeIndex >= lastSpikes.length ) {
@@ -145,6 +137,8 @@ public class Neuron  {
 		if( lastSpikeTime < 0 ) {
 			return ;
 		}
+		double ttgt = timeSinceFired( clock ) ;
+		
 //		if( isSpiking() ) {
 			// Look for pre-synaptic spikes (we received a spike before we spiked)
 			// and post-synaptic spikes (we spiked before receiving a spike)
@@ -152,17 +146,18 @@ public class Neuron  {
 			for( Edge e : edges ) {		
 				Neuron source = brain.getNeuron( e.source() ) ;
 				double tsrc = source.timeSinceFired( clock ) ;
-				double ttgt = timeSinceFired( clock ) ;
 				double deltaFiredTime = ttgt - tsrc ;
-				if( Math.abs( deltaFiredTime ) < learningWindow ) {
+				double factor = ( learningWindow - deltaFiredTime ) / learningWindow ;   
+				factor *= factor ;
+				if( ttgt < learningWindow || tsrc < learningWindow ) {
 					// pre-synaptic spike occurs before 
 					if( deltaFiredTime > 0 ) {
 						// reinforce
-						double delta = learningRate * ( 0.1 + e.weight() ) * ( 1.0 - e.weight() ) ;
+						double delta = factor * learningRate * ( 0.1 + e.weight() ) * ( 1.0 - e.weight() ) ;
 						e.addWeight( delta ) ;
 					} else if( deltaFiredTime <= 0 ) {
 						// attenuate
-						double delta = learningRate * e.weight() * e.weight() / 2.0  ;
+						double delta = factor * learningRate * e.weight() * e.weight() / 2.0  ;
 						e.addWeight( -delta ) ;
 					}
 				}
@@ -199,9 +194,10 @@ public class Neuron  {
 	
 	public void updateFrequency( double clock ) {
 
-		// remove any old spikes from history
+		// remove any very old spikes from history
+		// they won't count towards frequency calc.
 		for( int i=0 ; i<lastSpikes.length ; i++ ) {
-			if( (clock - lastSpikes[i]) > .02 ) {
+			if( (clock - lastSpikes[i]) > .2 ) {
 				lastSpikes[i] = 0 ;
 			}
 		}
@@ -215,10 +211,13 @@ public class Neuron  {
 				earliestSpike = Math.min( earliestSpike, lastSpikes[i] ) ;
 			}
 		}
+		
 		// freq = spikes / second
 		double dt = clock - earliestSpike ;
-		frequency = ( dt < 1e-6 ) ? 10_000 : (numSpikes / dt) ;
+		if( dt < 1e-9 ) dt = 1e-9 ;  // zero would be bad ( i.e 0/0 ) 
+		frequency = numSpikes / dt ;
 	}
+	
 	
 	public double frequency() {		
 		return frequency ;

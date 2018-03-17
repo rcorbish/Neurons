@@ -22,6 +22,7 @@ public class Brain  {
 
 	final static public int HISTORY_LENGTH = 600 ;
 
+	// Used to calc rands with the following stats
 	final static double WEIGHT_MEAN = 0.8 ;
 	final static double WEIGHT_SIGMA = 0.05 ;
 	
@@ -219,10 +220,6 @@ public class Brain  {
 
 		// Then write the output as an atomic op
 		// do NOT write inputs (start from layer 1)
-		// This 
-		// 	clears any o/p spikes
-		// 	decays current chargs
-		// 	adds the given charge to potential
 		for( int i=layerSizes[0] ; i<neurons.length; i++ ) {
 			neurons[i].step( newPotentials[i], clock ) ;
 		}		
@@ -240,22 +237,27 @@ public class Brain  {
 		
 		for( int l=1 ; l<layerSizes.length ; l++ ) {
 			int ix = getIndexOfFirstInLayer(l) ;
+			Neuron w = winners[l] ;
+			w.checkForSpike(clock) ;
 			
 			for( int i=0 ; i<layerSizes[l] ; i++ ) {
 				Neuron n = neurons[ix+i] ; 
-				int distanceToWinningNeuron = Math.abs( n.getId() - winners[l].getId() ) ;
-				n.checkForSpike( clock ) ;
-				if( distanceToWinningNeuron<3 && n.isSpiking() ) {
-					n.suppressSpike( clock ) ;
-				} 
-				if( n.isSpiking() ) {
-					n.recordSpike(clock);
+				if( n == w ) {
+					continue ;		// should not suppress own activity
 				}
-				n.updateRefractoryFactor( clock ) ;				
+				int distanceToWinningNeuron = Math.abs( n.getId() - w.getId() ) ;
+				if( distanceToWinningNeuron<3 && w.isSpiking() ) {
+					n.resetRefractoryFactor( clock ) ;
+					n.decay();
+					n.decay();
+				} 
+				n.checkForSpike(clock) ;
 			}
-		}		
+		}
 	}
 
+	
+	
 	protected double[] calculateNewPotentials() {
 		// Will build up all outputs - before changing any of them
 		double rc[] = new double[ neurons.length ] ;
@@ -290,12 +292,12 @@ public class Brain  {
 
 				// double minRecent = neurons[ix].timeSinceFired( clock ) ;
 				double maxPotential =  0 ;
-				Neuron winner = neurons[ix] ;
+				Neuron winner = null ;
 				for( int i=0 ; i<layerSizes[l] ; i++ ) {
 
 					// Find the neuron with max output in a layer
 					double potential = neurons[ix+i].getPotential() ;
-					if( potential > maxPotential && neurons[ix+i].isSpiking() ) {
+					if( potential > maxPotential ) {
 						winner = neurons[ix+i] ;
 						maxPotential = potential ;
 					}
@@ -375,7 +377,7 @@ public class Brain  {
 		int rc = -1 ;
 		
 		if( index < 0 ) {
-			return rc ;		// input neuron
+			return rc ;		// -ve index == WTF
 		}
 		for( rc=0 ; rc<layerSizes.length ; rc++ ) {
 			index -= layerSizes[rc] ;
@@ -611,6 +613,10 @@ public class Brain  {
 
 	public void setTrain(boolean train) {
 		this.train = train;
+	}
+
+	public double getTickPeriod() {
+		return tickPeriod;
 	}
 }
 
