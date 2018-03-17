@@ -8,9 +8,11 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.OutputStream;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
 
+import org.jtransforms.fft.DoubleFFT_1D;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -20,7 +22,7 @@ public class Brain  {
 
 	private static final Random rng = new Random(24) ;	// utility random number generator
 
-	final static public int HISTORY_LENGTH = 600 ;
+	final static public int HISTORY_LENGTH = 1024 ;
 
 	// Used to calc rands with the following stats
 	final static double WEIGHT_MEAN = 0.8 ;
@@ -42,6 +44,7 @@ public class Brain  {
 	private final double tickPeriod ;
 	
 	private boolean train ;
+	private DoubleFFT_1D fft ;
 	
 	/**
 	 * Create a brain from a genome (bitmask).
@@ -94,6 +97,7 @@ public class Brain  {
 		this.outputHistory = new double[HISTORY_LENGTH] ;
 		this.outputSpikeHistory = new boolean[HISTORY_LENGTH] ;
 		this.train = false ;
+		this.fft = null ;
 	}
 
 	/**
@@ -153,6 +157,7 @@ public class Brain  {
 
 		connectLayers( 0.75 ) ;
 		this.train = false ;
+		this.fft = null ;
 	}
 
 
@@ -410,16 +415,32 @@ public class Brain  {
 		rc.minFrequency = 100000 ;
 
 		int offset = historyIndex ;
-		for( int i=0 ; i<outputHistory.length ; i++ ) {
-			offset-- ;
-			if( offset<0 ) {
-				offset += outputHistory.length ;
+		
+		if( isFourier() ) {
+			double tmp[] = new double[ outputHistory.length ] ;
+			System.arraycopy( outputHistory, 0, tmp, 0, tmp.length ) ;
+			fft.realForward( tmp ) ;
+			for( int i=0 ; i<tmp.length ; i++ ) {
+				offset-- ;
+				if( offset<0 ) {
+					offset += tmp.length ;
+				}
+				int ix = outputHistory.length-offset-1 ;
+				rc.history[i] = ( tmp[i] + 20 ) / 50.0 ;
+				rc.spikeHistory[ix] = outputSpikeHistory[i] ;
+			}			
+		} else {
+			for( int i=0 ; i<outputHistory.length ; i++ ) {
+				offset-- ;
+				if( offset<0 ) {
+					offset += outputHistory.length ;
+				}
+				int ix = outputHistory.length-offset-1 ;
+				rc.history[ix] = outputHistory[i] ;
+				rc.spikeHistory[ix] = outputSpikeHistory[i] ;
 			}
-			int ix = outputHistory.length-offset-1 ;
-			rc.history[ix] = outputHistory[i] ;
-			rc.spikeHistory[ix] = outputSpikeHistory[i] ;
 		}
-
+		
 		rc.neurons = new ArrayList<NeuronState>() ;
 		for( int i=0 ; i<neurons.length; i++ ) {
 			rc.neurons.add( new NeuronState( neurons[i], clock ) ) ;
@@ -594,6 +615,9 @@ public class Brain  {
 			if( n != null ) {
 				log.info( "Following: {}", n ) ;
 			}
+			Arrays.fill( outputHistory, 0 ) ;
+			Arrays.fill( outputSpikeHistory, false ) ;
+
 		}
 		this.followingId = following ;
 	}	
@@ -613,6 +637,14 @@ public class Brain  {
 
 	public void setTrain(boolean train) {
 		this.train = train;
+	}
+
+	public boolean isFourier() {
+		return fft != null ;
+	}
+
+	public void setFourier(boolean fourier) {
+		this.fft = fourier ? new DoubleFFT_1D(HISTORY_LENGTH) : null ;			
 	}
 
 	public double getTickPeriod() {

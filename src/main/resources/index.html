@@ -77,6 +77,7 @@ body {
 <div class="pattern">
 	<input type="number" id='pattern-id' min=0 max=8 value="0" >
 	<input type="checkbox" id='train' value="on" >train
+	<input type="checkbox" id='fourier' value="on" >FFT
 </div>
 
 <canvas id="chart"  width='1200' height='150'></canvas>
@@ -355,6 +356,10 @@ d3.json("data", function(error, graph) {
 	function requestTraining( train ) {
 		sendToServer( "train " + train ) ;	
 	}
+
+	function requestFourier( fourier ) {
+		sendToServer( "fourier " + fourier ) ;	
+	}
 	
 	// sends msg to the server over websocket
 	function sendToServer(msg) {
@@ -370,7 +375,10 @@ d3.json("data", function(error, graph) {
 		train.addEventListener( "change", function(e) {
 			requestTraining( e.target.checked ? "on" : "off" ) 
 		})
-
+		const fourier = document.getElementById( "fourier" )
+		fourier.addEventListener( "change", function(e) {
+			requestFourier( e.target.checked ? "on" : "off" ) 
+		})
 	})
 </script>
 

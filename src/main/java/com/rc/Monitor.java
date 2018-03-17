@@ -84,10 +84,6 @@ public class Monitor implements AutoCloseable {
 		return wss.getPattern() ;
 	}
 
-	public boolean getTraining() {
-		return wss.getTraining() ;
-	}
-
 
 	@Override
 	public void close() {

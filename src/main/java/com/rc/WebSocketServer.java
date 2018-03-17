@@ -68,6 +68,8 @@ public class WebSocketServer  {
 			setPattern( Integer.parseInt( message.substring( "pattern ".length() ) ) ) ;
 		} else if ( message.startsWith( "train " ) ) {
 			setTrainingMode( message.endsWith("on") ) ;
+		} else if ( message.startsWith( "fourier " ) ) {
+			setFourierMode( message.endsWith("on") ) ;
 		}
 	}	
 
@@ -108,9 +110,11 @@ public class WebSocketServer  {
 		logger.info( "Training {}", training ? "enabled" : "disabled" ) ;
 		brain.setTrain( training ) ;
 	}	
-	public boolean getTraining() {
-		return training;
-	}
+
+	public void setFourierMode(boolean fourier) {
+		logger.info( "Fourier mode {}", fourier ? "enabled" : "disabled" ) ;
+		brain.setFourier( fourier ) ;
+	}	
 	
 }
 

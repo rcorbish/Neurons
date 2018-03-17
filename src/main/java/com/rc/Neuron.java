@@ -49,9 +49,9 @@ public class Neuron  {
 		this.restingPotential = 0 ; 
 		this.threshold = 0.8 ; 
 		this.decay = 0.25 ; 	
-		this.learningRate = 0.01 ;
+		this.learningRate = 0.0001 ;
 		this.spikeValue = 1.0 ;
-		this.learningWindow = 0.003 ;  	// learn from spikes happening max this far apart (in time) 
+		this.learningWindow = 0.005 ;  	// learn from spikes happening max this far apart (in time) 
 		this.refractoryDelay = 0.005;	// delay between spikes ( see refractoryFactor below )
 		this.id = id ;
 		this.thresholdLearningRate = 0.00005 ;
