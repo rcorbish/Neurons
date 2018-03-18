@@ -70,6 +70,8 @@ public class WebSocketServer  {
 			setTrainingMode( message.endsWith("on") ) ;
 		} else if ( message.startsWith( "fourier " ) ) {
 			setFourierMode( message.endsWith("on") ) ;
+		} else if ( message.startsWith( "fourierSpike " ) ) {
+			setFourierSpikeMode( message.endsWith("on") ) ;
 		}
 	}	
 
@@ -113,7 +115,14 @@ public class WebSocketServer  {
 
 	public void setFourierMode(boolean fourier) {
 		logger.info( "Fourier mode {}", fourier ? "enabled" : "disabled" ) ;
+		brain.setFourierSpike( false ) ;
 		brain.setFourier( fourier ) ;
+	}
+	
+	public void setFourierSpikeMode(boolean fourier) {
+		logger.info( "Fourier spike mode {}", fourier ? "enabled" : "disabled" ) ;
+		brain.setFourier( false ) ;
+		brain.setFourierSpike( fourier ) ;
 	}	
 	
 }

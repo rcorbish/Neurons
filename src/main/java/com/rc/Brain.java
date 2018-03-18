@@ -44,6 +44,7 @@ public class Brain  {
 	private final double tickPeriod ;
 	
 	private boolean train ;
+	private boolean fftSpike ;
 	private DoubleFFT_1D fft ;
 	
 	/**
@@ -98,6 +99,7 @@ public class Brain  {
 		this.outputSpikeHistory = new boolean[HISTORY_LENGTH] ;
 		this.train = false ;
 		this.fft = null ;
+		this.fftSpike = false ;
 	}
 
 	/**
@@ -157,6 +159,7 @@ public class Brain  {
 
 		connectLayers( 0.75 ) ;
 		this.train = false ;
+		this.fftSpike = false ;
 		this.fft = null ;
 	}
 
@@ -418,7 +421,14 @@ public class Brain  {
 		
 		if( isFourier() ) {
 			double tmp[] = new double[ outputHistory.length ] ;
-			System.arraycopy( outputHistory, 0, tmp, 0, tmp.length ) ;
+			if( this.fftSpike ) {
+				for( int i=0 ; i<tmp.length ; i++ ) {
+					tmp[i] = outputSpikeHistory[i] ? 3 : 0 ;
+				}
+			} else {	
+				System.arraycopy( outputHistory, 0, tmp, 0, tmp.length ) ;
+			}
+			
 			fft.realForward( tmp ) ;
 			for( int i=0 ; i<tmp.length ; i++ ) {
 				offset-- ;
@@ -426,7 +436,7 @@ public class Brain  {
 					offset += tmp.length ;
 				}
 				int ix = outputHistory.length-offset-1 ;
-				rc.history[i] = ( tmp[i] + 20 ) / 50.0 ;
+				rc.history[i] = ( tmp[i] + 20 ) / 40.0 ;
 				rc.spikeHistory[ix] = outputSpikeHistory[i] ;
 			}			
 		} else {
@@ -645,6 +655,12 @@ public class Brain  {
 
 	public void setFourier(boolean fourier) {
 		this.fft = fourier ? new DoubleFFT_1D(HISTORY_LENGTH) : null ;			
+		this.fftSpike = false ;
+	}
+	
+	public void setFourierSpike(boolean fourier) {
+		this.fft = fourier ? new DoubleFFT_1D(HISTORY_LENGTH) : null ;
+		this.fftSpike = true ;
 	}
 
 	public double getTickPeriod() {
