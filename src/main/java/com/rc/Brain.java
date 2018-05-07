@@ -231,37 +231,10 @@ public class Brain  {
 		for( int i=layerSizes[0] ; i<neurons.length; i++ ) {
 			neurons[i].step( newPotentials[i], clock ) ;
 		}		
-		
-		// List of most active neuron in a layer
-		Neuron winners[] = getWinnersInEachLayer() ;
+		for( int i=0 ; i<neurons.length; i++ ) {
+			neurons[i].checkForSpike(clock) ;
+		}		
 
-		//---------------------------------------------------------
-		// if any neurons spiked - reduce prob of other neurons
-		// in the same layer firing too (i.e. set their refractory
-		//   factors as if they just fired)
-		//
-		// This effect does not apply to inputs (layers > 0)
-		// 
-		
-		for( int l=1 ; l<layerSizes.length ; l++ ) {
-			int ix = getIndexOfFirstInLayer(l) ;
-			Neuron w = winners[l] ;
-			w.checkForSpike(clock) ;
-			
-			for( int i=0 ; i<layerSizes[l] ; i++ ) {
-				Neuron n = neurons[ix+i] ; 
-				if( n == w ) {
-					continue ;		// should not suppress own activity
-				}
-				int distanceToWinningNeuron = Math.abs( n.getId() - w.getId() ) ;
-				if( distanceToWinningNeuron<3 && w.isSpiking() ) {
-					n.resetRefractoryFactor( clock ) ;
-					n.decay();
-					n.decay();
-				} 
-				n.checkForSpike(clock) ;
-			}
-		}
 	}
 
 	

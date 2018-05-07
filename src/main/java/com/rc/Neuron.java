@@ -103,7 +103,7 @@ public class Neuron  {
 		updateRefractoryFactor( clock ) ;
 		if( isSpiking() ) {
 			isSpiking = false ;
-			currentPotential -= threshold ;
+			currentPotential = restingPotential ;
 			resetRefractoryFactor(clock);
 		}
 		decay() ;
@@ -134,27 +134,39 @@ public class Neuron  {
 	}
 
 	public void train( Brain brain, double clock ) {
-		if( isSpiking() ) {
-			// Look for pre-synaptic spikes (we received a spike before we spiked)
-			// and post-synaptic spikes (we spiked before receiving a spike)
-			EdgeList edges = brain.getIncomingEdges( id ) ;
-			for( Edge e : edges ) {		
-				Neuron source = brain.getNeuron( e.source() ) ;
-				double tsrc = source.timeSinceFired( clock ) ;
-				double deltaFiredTime = learningWindow - tsrc ;
-				
-				// pre-synaptic spike occurs before 
-				if( deltaFiredTime>0 /*&& tsrc>0*/ ) {
-					// reinforce
-					double factor = Math.exp( 1e5 * deltaFiredTime * learningRate ) ;
-					factor = 1.5 - deltaFiredTime ;
-					e.scaleWeight( factor ) ;
-				} else {
-					// attenuate
-					double factor = Math.exp( -1e5 * deltaFiredTime * learningRate ) - 0.01 ;
-					factor = 1.0 - 3*learningRate ;
-					e.addWeight( -13 * learningRate ) ;
-				}
+		// Look for pre-synaptic spikes (we received a spike before we spiked)
+		// and post-synaptic spikes (we spiked before receiving a spike)
+		EdgeList edges = brain.getIncomingEdges( id ) ;
+		for( Edge e : edges ) {		
+			Neuron source = brain.getNeuron( e.source() ) ;
+			double tsrc = source.timeSinceFired( clock ) ;
+			double ttgt = timeSinceFired( clock ) ;
+			// TODO consider simultaneous 
+			boolean srcFiredRecently = tsrc < learningWindow ;
+			boolean tgtFiredRecently = ttgt < learningWindow ;
+			boolean srcFiredFirst = tsrc > ttgt ;
+
+			// if we are spiking ...
+			// 	enhance weights fired recently
+			// 	else suppress weight
+			// else (not spiking)
+			//	suppress weights fired recently
+			//	else nothing
+
+			if( srcFiredRecently && tgtFiredRecently && srcFiredFirst ) {
+				// reinforce
+				e.scaleWeight( 1.0 + 30 * learningRate ) ;
+			} else if( srcFiredRecently && tgtFiredRecently && !srcFiredFirst ) {
+				// suppress
+				e.scaleWeight( 1 - 1 * learningRate ) ;
+			} else if( tgtFiredRecently && !srcFiredRecently ) {
+				// suppress
+				e.scaleWeight( 1 - 1 * learningRate ) ;
+			} else if( !tgtFiredRecently && srcFiredRecently ) {
+				// suppress
+				//e.scaleWeight( 1 - learningRate ) ;
+			} else {
+				// nothing if neither fired recently
 			}
 		}
 	}

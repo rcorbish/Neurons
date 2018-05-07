@@ -24,7 +24,7 @@ public class Main {
 	static double LIFESPAN = 1.0 ;
 	static double TICK_PERIOD = 1e-4 ;   // each clock tick in seconds - default 100uS
 	static double MUTATION = 0.01 ;
-	static long DELAY_INTERVAL  = 0 ;
+	static long DELAY_INTERVAL  = 50 ;
 	
 	public static int FIXED_PARAMS[]  ;
 	
