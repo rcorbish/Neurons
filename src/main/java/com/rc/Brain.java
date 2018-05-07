@@ -23,7 +23,7 @@ public class Brain  {
 	private static final Random rng = new Random(24) ;	// utility random number generator
 
 	final static public int HISTORY_LENGTH = 1024 ;
-
+	final static public double ConnectionProbability = 1.0 ;
 	// Used to calc rands with the following stats
 	final static double WEIGHT_MEAN = 0.8 ;
 	final static double WEIGHT_SIGMA = 0.05 ;
@@ -157,7 +157,7 @@ public class Brain  {
 		this.numNeurons = numNeurons ;
 		this.targetEdges = new EdgeList[ numNeurons ] ;
 
-		connectLayers( 0.75 ) ;
+		connectLayers( ConnectionProbability ) ;
 		this.train = false ;
 		this.fftSpike = false ;
 		this.fft = null ;

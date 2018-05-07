@@ -59,5 +59,11 @@ public class Edge {
 		if( weight > MAX_WEIGHT ) weight = MAX_WEIGHT ;
 		if( weight < MIN_WEIGHT ) weight = MIN_WEIGHT ;
 	}
+
+	public void scaleWeight( double factor ) {
+		weight *= factor ;
+		if( weight > MAX_WEIGHT ) weight = MAX_WEIGHT ;
+		if( weight < MIN_WEIGHT ) weight = MIN_WEIGHT ;
+	}
 }
 
