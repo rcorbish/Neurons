@@ -16,6 +16,11 @@ import org.jtransforms.fft.DoubleFFT_1D;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.rc.neurons.InputNeuron;
+import com.rc.neurons.Neuron;
+import com.rc.neurons.NeuronFactory;
+import com.rc.neurons.NeuronRS;
+
 public class Brain  {
 
 	final static Logger log = LoggerFactory.getLogger( Brain.class ) ;
@@ -23,10 +28,11 @@ public class Brain  {
 	private static final Random rng = new Random(24) ;	// utility random number generator
 
 	final static public int HISTORY_LENGTH = 1024 ;
-	final static public double ConnectionProbability = 1.0 ;
+	final static public double CONNECTION_PROBABILITY = 0.05 ;
+	
 	// Used to calc rands with the following stats
-	final static double WEIGHT_MEAN = 0.8 ;
-	final static double WEIGHT_SIGMA = 0.05 ;
+	final static double WEIGHT_MEAN = 0.7 ;
+	final static double WEIGHT_SIGMA = 0.15 ;
 	
 	private final double outputHistory[] ;
 	private final boolean outputSpikeHistory[] ;
@@ -82,7 +88,7 @@ public class Brain  {
 		// Start from 2nd layer onwards ...
 		for( int i=layerSizes[0] ; i<neurons.length ; i++ ) {
 			Genome gs = g.subSequence(start, Neuron.GENOME_SIZE ) ;
-			neurons[i] = new Neuron( gs, i  ) ;
+			neurons[i] = new NeuronRS( gs, i  ) ;
 			start += Neuron.GENOME_SIZE ;	// update Brain size
 		}
 
@@ -151,13 +157,13 @@ public class Brain  {
 		}
 
 		for( int i=layers[0] ; i<numNeurons ; i++ ) {
-			this.neurons[i] = new Neuron( i ) ;
+			this.neurons[i] = NeuronFactory.getNeuron(i) ; // new NeuronRS( i ) ;
 		}
 
 		this.numNeurons = numNeurons ;
 		this.targetEdges = new EdgeList[ numNeurons ] ;
 
-		connectLayers( ConnectionProbability ) ;
+		connectLayers( CONNECTION_PROBABILITY ) ;
 		this.train = false ;
 		this.fftSpike = false ;
 		this.fft = null ;
@@ -202,7 +208,10 @@ public class Brain  {
 	 * @return
 	 */
 	protected double getRandomWeight() {
-		return rng.nextGaussian() * WEIGHT_SIGMA + WEIGHT_MEAN ;
+		double rc = rng.nextGaussian() * WEIGHT_SIGMA + WEIGHT_MEAN ;
+		rc = Math.max( rc, 0.1 ) ;
+		rc = Math.min( rc, 1.0 ) ;
+		return rc ;
 	}
 
 	/**
@@ -230,11 +239,11 @@ public class Brain  {
 		// do NOT write inputs (start from layer 1)
 		for( int i=layerSizes[0] ; i<neurons.length; i++ ) {
 			neurons[i].step( newPotentials[i], clock ) ;
-		}		
+		}
+		
 		for( int i=0 ; i<neurons.length; i++ ) {
 			neurons[i].checkForSpike(clock) ;
 		}		
-
 	}
 
 	
@@ -250,6 +259,9 @@ public class Brain  {
 				Neuron src = getNeuron( edge.source() ) ;
 				if( src.isSpiking() ) {
 					rc[i] += edge.weight() ;
+					if( src.isInhibitor() ) {
+						rc[i] -= 0.085 ;
+					}
 				}
 			}
 		}
@@ -419,7 +431,7 @@ public class Brain  {
 					offset += outputHistory.length ;
 				}
 				int ix = outputHistory.length-offset-1 ;
-				rc.history[ix] = outputHistory[i] ;
+				rc.history[ix] = ( outputHistory[i] + .100 ) * 4.0 ;
 				rc.spikeHistory[ix] = outputSpikeHistory[i] ;
 			}
 		}
@@ -466,7 +478,7 @@ public class Brain  {
 	}
 
 	private boolean tooBigToPrint() {
-		return neurons.length > 200 ;
+		return neurons.length > 200000 ;
 	}
 	private void printNodes( StringBuilder rc ) {
 		char sep = ' '  ;
@@ -561,15 +573,8 @@ public class Brain  {
 	public int getNumLayers() {
 		return neurons.length ;
 	}
-/*
-	public Neuron[] getLayer( int layer ) {
-		return neurons[layer] ;
-	}
 
-	public Neuron getNeuron( int layer, int ix ) {
-		return neurons[layer][ix] ;
-	}
-*/	
+
 	public Neuron getNeuron( int id ) {
 		return id>=0 && id<neurons.length ? neurons[id] : null ;
 	}

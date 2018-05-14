@@ -21,7 +21,6 @@ body {
 
 .link {
   stroke-opacity: .6;
-  xxmarker-end: url(#arrow-marker);
 }
 
 .status {
@@ -78,9 +77,9 @@ body {
 <div class="pattern">
 	<input type="number" id='pattern-id' min=0 max=8 value="0" >
 	<input type="checkbox" id='train' value="on" >Train
-	<input type="radio" name='ft-type' id='fourier-off' value="off" >No Fourier 
-	<input type="radio" name='ft-type' id='fourier' value="on" >Fourier 
-	<input type="radio" name='ft-type' id='fourier-spike' value="on" >Fourier (Spike)
+	<input type="radio" name='ft-type' id='fourier-off' value="off" >No FT 
+	<input type="radio" name='ft-type' id='fourier' value="on" >FT 
+	<input type="radio" name='ft-type' id='fourier-spike' value="on" >FT (Spike)
 </div>
 
 <canvas id="chart"  width='1200' height='150'></canvas>
@@ -104,19 +103,6 @@ body {
 
 	const width2 = svg.width ;
 	
-	var marker = svg.append( "marker" )
-	.attr( "id", "arrow-marker" )
-	.attr( "markerWidth", "50"  ) 
-	.attr( "markerHeight", "50" )  
-	.attr( "refX", "15"  ) 
-	.attr( "refY", "3" ) 
-	.attr( "orient", "auto" ) 
-	.attr( "markerUnits", "userSpaceOnUse" ) ;
-
-	marker.append( "path" )
-	.attr( "d", "M0,0 L0,6 L9,3 z" )
-	.attr( "fill", "#aaa"  ) ;
-
 d3.json("data", function(error, graph) {
   if (error) return console.warn(error);
 
@@ -175,7 +161,7 @@ d3.json("data", function(error, graph) {
 		.enter()
 			.append( 'text' )
 				.attr( 'class', 'potential' )
-				.attr( 'font-size', '11pt')
+				.attr( 'font-size', '13pt')
 				.attr( 'font-family', 'arial')
 				.attr( 'id', function(d) { return 'txt-' + d.id } )
 				.text( "" )
@@ -255,7 +241,7 @@ d3.json("data", function(error, graph) {
 			scoreDiv.innerHTML = data.clock.toFixed(5) + " S" ;
 			
 			const neuronFrequency = d3.scaleLinear()
-			.domain( [ 100/*data.minFrequency*/, data.maxFrequency ] )
+			.domain( [ 50, 300 ] )
 			.range([ "steelblue", " #ff00ff"]);
 
 			for( var i=0 ; i<data.neurons.length ; i++ ) {			

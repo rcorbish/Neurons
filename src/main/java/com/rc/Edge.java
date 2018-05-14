@@ -54,16 +54,18 @@ public class Edge {
 	}
 	
 	public void addWeight( double addition ) {
-		double factor = 1.0 ; // addition > 0 ? (0.5 - weight ) : ( weight + 0.15 ) ; 
-		weight += factor * addition ;
+		setWeight( weight + addition ) ;
+	}
+
+	public void scaleWeight( double factor ) {
+		setWeight( weight *= factor ) ;
+	}
+
+	public void setWeight( double value ) {
+		weight = value ;
 		if( weight > MAX_WEIGHT ) weight = MAX_WEIGHT ;
 		if( weight < MIN_WEIGHT ) weight = MIN_WEIGHT ;
 	}
 
-	public void scaleWeight( double factor ) {
-		weight *= factor ;
-		if( weight > MAX_WEIGHT ) weight = MAX_WEIGHT ;
-		if( weight < MIN_WEIGHT ) weight = MIN_WEIGHT ;
-	}
 }
 
