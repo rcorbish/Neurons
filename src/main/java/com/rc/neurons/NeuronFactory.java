@@ -12,6 +12,7 @@ public class NeuronFactory {
 	final static private double ibProb  = .15 ;
 	final static private double ltsProb = .05 ;
 	final static private double rzProb  = .05 ;
+	@SuppressWarnings("unused")
 	final static private double tcProb  = .05 ;
 	
 	static public Neuron getNeuron( int id ) {
