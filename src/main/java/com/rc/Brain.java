@@ -28,10 +28,10 @@ public class Brain  {
 	private static final Random rng = new Random(24) ;	// utility random number generator
 
 	final static public int HISTORY_LENGTH = 1024 ;
-	final static public double CONNECTION_PROBABILITY = 0.05 ;
+	final static public double CONNECTION_PROBABILITY = 0.50 ;
 	
 	// Used to calc rands with the following stats
-	final static double WEIGHT_MEAN = 0.7 ;
+	final static double WEIGHT_MEAN = 0.07 ;
 	final static double WEIGHT_SIGMA = 0.15 ;
 	
 	private final double outputHistory[] ;

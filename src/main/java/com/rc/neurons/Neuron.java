@@ -66,7 +66,7 @@ abstract public class Neuron  {
 
 		this.learningRate = 0.03 ;				// how fast to adjust weights
 		
-		this.currentPotential = rng.nextDouble() ;
+		this.currentPotential = -.07 ; //rng.nextDouble() ;
 		this.lastSpikeTime = 0 ;
 		this.lastSpikes = new double[NUM_SPIKES_TO_RECORD] ;
 	}
