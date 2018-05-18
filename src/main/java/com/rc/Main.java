@@ -89,7 +89,7 @@ public class Main {
 					dims[i] =  Integer.parseInt( dimArgs.get(i).toString() ) ;
 				}
 			} else {
-				dims = new int[]{ 3, 3 } ;	// default if no size given
+				dims = new int[]{ 5, 5 } ;	// default if no size given
 			}
 			FIXED_PARAMS = new int[ dims.length + 1 ] ;
 			FIXED_PARAMS[0] = 0 ;
@@ -109,15 +109,17 @@ public class Main {
 			}
 			
 			Brain brain ;
+			brain = new Brain( TICK_PERIOD, 6, 10, 15, 15 ) ;
+			/*
 			if( fileExists && !clearFile ) {
 				brain = Brain.load( TICK_PERIOD, parameterFile ) ;
 			} else {
-				brain = new Brain( TICK_PERIOD, dims ) ;
+				brain = new Brain( TICK_PERIOD, 8, 10, 5, 5 ) ;
 				if( parameterFile != null ) {
 					brain.save( parameterFile ) ;
 				}
 			}
-
+			
 			if( evolve ) {
 				log.info("Epochs        : {}", EPOCHS );
 				log.info("Population    : {}", POPULATION );
@@ -130,14 +132,14 @@ public class Main {
 					brain.save( parameterFile ) ;
 				}
 			}
-
+			*/
 			brain.setTrain( train ) ;
 			
 			@SuppressWarnings("resource")
 			Monitor m = new Monitor( brain ) ;
 			m.start();
 			
-			double inputs[] = new double[ dims[0] ] ;
+			double inputs[] = new double[ brain.getNumInputs() ] ;
 
 			int patternCount = 0 ;
 			int patternIndex = 0 ;
@@ -159,7 +161,7 @@ public class Main {
 					}
 
 					for( int i=0 ; i<inputs.length ; i++ ) {
-						inputs[i] =  testPattern[i] ;
+						inputs[i] = testPattern[i] ;
 					}
 				}
 				

@@ -22,7 +22,7 @@ public class TestBrain {
 	public void tearDown() throws Exception {
 	}
 
-	
+	/*
 	@Test
 	public void testBrainSaveSummary() {
 		// create a brain with 
@@ -123,5 +123,5 @@ public class TestBrain {
 			}
 		}
 	}
-
+*/
 }

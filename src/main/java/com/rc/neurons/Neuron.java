@@ -150,29 +150,12 @@ abstract public class Neuron  {
 
 	public void train( Brain brain, double clock ) {
 		
-		EdgeList edges = brain.getIncomingEdges( id ) ;
 		
 		// NB this relies on step() being called
 		double dt = ( clock - lastStepClock ) * 1000.0 ;
 		
-		for( Edge e : edges ) {
-		}
 	}
 	
-	public void normalizeInputWeights( Brain brain, double clock ) {
-		EdgeList edges = brain.getIncomingEdges( id ) ;
-		double len = 0.0 ;
-		for( Edge e : edges ) {
-			len += e.weight() * e.weight() ;
-		}
-
-		len = Math.sqrt( len ) ;
-		if( len < (threshold/1.0) ) {
-			for( Edge e : edges ) {
-				e.setWeight( e.weight() / len * threshold ) ;
-			}
-		}
-	}
 
 
 	public void updateFrequency( double clock ) {

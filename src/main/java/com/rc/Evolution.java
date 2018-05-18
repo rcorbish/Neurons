@@ -43,7 +43,7 @@ public class Evolution {
 		BrainData brainData[] = new BrainData[ population ] ;
 
 		for( int i=0 ; i<brainData.length ; i++ ) {
-			brainData[i] = new BrainData( new Brain( tick, layers ) ) ;
+			// brainData[i] = new BrainData( new Brain( tick, layers ) ) ;
 		}
 
 		logger.info( "Population created." ) ;
@@ -131,7 +131,7 @@ public class Evolution {
 
 				Genome child = new Genome( p1, p2, mutationRate, Main.FIXED_PARAMS ) ;
 				
-				brainData[brainData.length-i-1] = new BrainData( new Brain( tick, child ) ) ;
+				// brainData[brainData.length-i-1] = new BrainData( new Brain( tick, child ) ) ;
 			}	
 			logger.info( "Generation {} - best score {}", g, brainData[0].score ) ;
 		} // A3 - all generations have been tested
@@ -157,7 +157,7 @@ public class Evolution {
 		}
 
 		public Genome genome() {
-			return brain.toGenome() ;
+			return null ; //brain.toGenome() ;
 		}
 
 		public void resetScore() {
