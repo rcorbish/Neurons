@@ -28,7 +28,7 @@ public class Brain  {
 	private static final Random rng = new Random(24) ;	// utility random number generator
 
 	final static public int HISTORY_LENGTH = 1024 ;
-	final static public double CONNECTION_PROBABILITY = 0.50 ;
+	final static public double CONNECTION_PROBABILITY = 0.5 ;
 	
 	// Used to calc rands with the following stats
 	final static double WEIGHT_MEAN = 0.07 ;
@@ -178,10 +178,9 @@ public class Brain  {
 		int r = 0 ;
 		int c = 0 ;
 		for( int i=0 ; i<synapses.length ; i++ ) {
-
 			synapses[i] = 0.0f ;
-			if( r!= c ) {
-				double p = 0.1 - 0.1 / ( (r-c) * (r-c) ) ;
+			if( r != c ) {
+				double p = connectionProbability / ( (r-c) * (r-c) ) ;
 				if( rng.nextFloat() < p ) {
 					synapses[i] = getRandomWeight() ;				
 				}
@@ -246,10 +245,15 @@ public class Brain  {
 
 		float weights[] = new float[synapses.length] ;
 
+		int r = 0 ;
+		int c = 0 ;
 		for( int i=0 ; i<weights.length ; i++ ) {
-			int r = i / neurons.length ;
-			int c = i % neurons.length ;
 			weights[i] = neurons[r].isSpiking() ? synapses[i] : 0f ;
+			r++ ;
+			if( r>=neurons.length ) {
+				c++ ;
+				r = 0 ;
+			}
 		}
 
 		// 
@@ -266,17 +270,22 @@ public class Brain  {
 		double rc[] = new double[ neurons.length ] ;
 		for( int i=0 ; i<rc.length ; i++ ) {
 			rc[i] = 0 ;
-			int j = i % inputNeurons.length ; 
-			rc[i] += inputNeurons[j].isSpiking() ? 0.35 : 0 ;
+			if( i<inputNeurons.length ) {
+				rc[i] += inputNeurons[i].isSpiking() ? 0.35 : 0 ;
+			}
 		}
 
-		int ix=0;
+		r = 0 ;
+		c = 0 ;
 		for( int i=0 ; i<neurons.length ; i++ ) { // weight columns
-			ix = i*neurons.length ;
 			for( int j=0 ; j<neurons.length ; j++ ) {
-				rc[j] += weights[ix] * 0.35 ;
-				ix++ ;
+				rc[c] += weights[r] * 0.35 ;
 			}		
+			r++ ;
+			if( r>=neurons.length ) {
+				c++ ;
+				r = 0 ;
+			}
 		}
 		for( int i=0 ; i<rc.length ; i++ ) {
 			if( neurons[i].isInhibitor() && neurons[i].isSpiking() ) {
