@@ -12,6 +12,11 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
 
+import org.ejml.data.DGrowArray;
+import org.ejml.data.DMatrixRMaj;
+import org.ejml.data.DMatrixSparseCSC;
+import org.ejml.data.IGrowArray;
+import org.ejml.sparse.csc.CommonOps_DSCC;
 import org.jtransforms.fft.DoubleFFT_1D;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,10 +33,10 @@ public class Brain  {
 	private static final Random rng = new Random(24) ;	// utility random number generator
 
 	final static public int HISTORY_LENGTH = 1024 ;
-	final static public double CONNECTION_PROBABILITY = 0.5 ;
+	final static public double CONNECTION_PROBABILITY = .40 ;
 	
 	// Used to calc rands with the following stats
-	final static double WEIGHT_MEAN = 0.07 ;
+	final static double WEIGHT_MEAN = 0.7 ;
 	final static double WEIGHT_SIGMA = 0.15 ;
 	
 	private final double outputHistory[] ;
@@ -39,7 +44,7 @@ public class Brain  {
 	private int historyIndex ;
 	private int followingId ;
 	
-	private final float synapses[] ;		// adjacency matrix
+	private final DMatrixSparseCSC synapses ;		// adjacency matrix
 
 	private final int numColumns ;
 	private final int numRows ;
@@ -47,7 +52,12 @@ public class Brain  {
 	private final Neuron inputNeurons[] ;			// neurons in each layer
 	private final Neuron outputNeurons[] ;			// neurons in each layer
 
-	private double clock ;
+    // These are temp work areas - used in calculating transfer
+    private final DMatrixSparseCSC A ;
+    private final DMatrixRMaj res ;
+    private final DMatrixRMaj neu ;
+
+    private double clock ;
 	private final double tickPeriod ;
 	
 	private boolean train ;
@@ -132,7 +142,10 @@ public class Brain  {
 	/**
 	 * Create a new instance of a brain.
 	 * @param tickPeriod the period of a clock tick
-	 * @param layers the number of neurons in each layer
+     * @param numInputs the number of input neurons
+     * @param numOutputs the number of output neurons
+     * @param rows the number of rows in the liquid
+     * @param cols the number of cols in the liquid
 	 */
 	public Brain( double tickPeriod, int numInputs, int numOutputs, int rows, int cols ) {
 
@@ -150,17 +163,25 @@ public class Brain  {
 		this.outputNeurons = new Neuron[numOutputs] ;
 		
 		int ix = 0 ;
-		for( int i=0 ; i<this.neurons.length ; i++, ix++ ) {
-			this.neurons[i] = NeuronFactory.getNeuron( ix ) ; // new NeuronRS( i ) ;
-		}
 		for( int i=0 ; i<this.inputNeurons.length ; i++, ix++ ) {
 			this.inputNeurons[i] = new InputNeuron( ix ) ;
+			this.neurons[i] = this.inputNeurons[i] ;
+		}
+		for( int i=this.inputNeurons.length ; i<this.neurons.length-this.outputNeurons.length ; i++, ix++ ) {
+			this.neurons[i] = NeuronFactory.getNeuron( ix ) ; // new NeuronRS( i ) ;
 		}
 		for( int i=0 ; i<this.outputNeurons.length ; i++, ix++ ) {
 			this.outputNeurons[i] = new NeuronRS( ix ) ;
+			this.neurons[this.neurons.length-i-1] = this.outputNeurons[i] ;
 		}
-		
-		this.synapses = new float[ neurons.length*neurons.length ] ;
+
+		// Temporary work areas
+        // don't need to keep recreating
+        A = new DMatrixSparseCSC(neurons.length,neurons.length,0) ;
+        res = new DMatrixRMaj( neurons.length , 1 ) ;
+        neu = new DMatrixRMaj( neurons.length, 1 ) ;
+
+        this.synapses = new DMatrixSparseCSC(neurons.length,neurons.length,0) ;
 		connectLayers( CONNECTION_PROBABILITY ) ;
 		this.train = false ;
 		this.fftSpike = false ;
@@ -175,14 +196,15 @@ public class Brain  {
 	 */
 	private void connectLayers( double connectionProbability ) {
 
+		int n = 0 ;
 		int r = 0 ;
 		int c = 0 ;
-		for( int i=0 ; i<synapses.length ; i++ ) {
-			synapses[i] = 0.0f ;
-			if( r != c ) {
-				double p = connectionProbability / ( (r-c) * (r-c) ) ;
-				if( rng.nextFloat() < p ) {
-					synapses[i] = getRandomWeight() ;				
+		for( int i=0 ; i<synapses.getNumRows() * synapses.getNumCols() ; i++ ) {
+			if( r > c /*!= c */) {
+				double p = connectionProbability / Math.sqrt( (r-c) * (r-c) ) ;
+				if( rng.nextDouble() < p ) {
+					synapses.set( r,c, getRandomWeight() ) ;
+					n++ ;
 				}
 			}
 			r++ ;
@@ -191,6 +213,7 @@ public class Brain  {
 				r = 0 ;
 			}
 		}
+		log.info( "Created {} synapses", n ) ;
 	}
 
 	/**
@@ -243,56 +266,54 @@ public class Brain  {
 	
 	protected double[] calculateNewPotentials() {
 
-		float weights[] = new float[synapses.length] ;
+		//
+		// Weight Matrix is an adjacency matrix  A
+		// Neuron vector n is the neuron potentials
+		//
+		// in A
+		// 	columns represent the source ( i.e. from )
+		// 	rows represent the target ( i.e. to )
+		//
+		// transfer across the grid =
+		// 	A * n   ( adjacency x neuron outputs )
+		//
+//		DMatrixSparseCSC A = new DMatrixSparseCSC(neurons.length,neurons.length,0) ;
+//      DMatrixRMaj res = new DMatrixRMaj( neurons.length , 1 ) ;
+//      DMatrixRMaj neu = new DMatrixRMaj( neurons.length, 1 ) ;
+
+        log.debug( "Starting transfer" ) ;
+
+        A.zero() ;
 
 		int r = 0 ;
 		int c = 0 ;
-		for( int i=0 ; i<weights.length ; i++ ) {
-			weights[i] = neurons[r].isSpiking() ? synapses[i] : 0f ;
+		int n = 0 ;
+		for( int i=0 ; i<synapses.getNumRows() * synapses.getNumCols() ; i++ ) {
+			if( neurons[c].isSpiking() && synapses.isAssigned(r,c) ) {
+				A.set( r, c, synapses.get(r,c) ) ;
+				n++ ;
+			}
 			r++ ;
-			if( r>=neurons.length ) {
+			if( r >= neurons.length ) {
 				c++ ;
 				r = 0 ;
 			}
 		}
+        log.debug( "Sparse matrix size: {}", n ) ;
 
-		// 
-		// outs = W x c
-		//
-		// W = n x n
-		// c = n x 1
-		//
-		// @TODO
-		// LAPACK sparse - gemm 
-		//
-		
-		// Will build up all outputs - before changing any of them
-		double rc[] = new double[ neurons.length ] ;
-		for( int i=0 ; i<rc.length ; i++ ) {
-			rc[i] = 0 ;
-			if( i<inputNeurons.length ) {
-				rc[i] += inputNeurons[i].isSpiking() ? 0.35 : 0 ;
-			}
+		for( int i=0 ; i<neurons.length ; i++ ) {
+			neu.set( i, 0, neurons[i].isSpiking() ? 0.35 : 0 ) ;
 		}
 
-		r = 0 ;
-		c = 0 ;
-		for( int i=0 ; i<neurons.length ; i++ ) { // weight columns
-			for( int j=0 ; j<neurons.length ; j++ ) {
-				rc[c] += weights[r] * 0.35 ;
-			}		
-			r++ ;
-			if( r>=neurons.length ) {
-				c++ ;
-				r = 0 ;
-			}
-		}
-		for( int i=0 ; i<rc.length ; i++ ) {
-			if( neurons[i].isInhibitor() && neurons[i].isSpiking() ) {
-				rc[i] -= 0.085 ;
-			}
-		}
-		return rc ;		
+        log.debug( "Neuron outputs created" ) ;
+
+		CommonOps_DSCC.mult( A, neu, res ) ;
+
+        log.debug( "Transfered gemm done" ) ;
+
+		double rc[] = res.getData() ;
+
+		return rc ;
 	}
 
 	
@@ -389,43 +410,38 @@ public class Brain  {
 	}
 
 
-	public CharSequence toJson() {
+	public Object toJson() {
 
-		StringBuilder rc  = new StringBuilder() ;
-		rc.append( "{ \"nodes\": [") ;
-		printNodes( rc ) ;
-		rc.append( "] }") ;
+	    Nodes rc = new Nodes() ;
+	    rc.nodes = 	printNodes() ;
 
 		return rc ;
 	}
 
-	private void printNodes( StringBuilder rc ) {
-		char sep = ' '  ;
-		int layerWidth = 800 / 10 ;  // cols ?
+	private Node [] printNodes() {
+
+		int layerWidth = 800 / 80 ;  // cols ?
+
+        Node rc[] = new Node[ neurons.length ] ;
 
 		int x = 0 ;
 		int y = 0 ;
-		for( int i=0 ; i<neurons.length ; i++ ) {
-			int layerHeight = (600-60) / numRows ;
+        int layerHeight = (600-60) / numRows ;
 
-			rc.append( sep ) 
-				.append( "{ \"id\":"  ) 
-				.append( neurons[i].getId() ) 
-				.append( ",\"potential\":" ) 
-				.append( neurons[i].getPotential() ) 
-				.append( ",\"threshold\":" ) 
-				.append( neurons[i].getThreshold() ) 
-				.append( ",\"fx\":").append( x * layerWidth ) 				
-				.append( ",\"fy\":").append( y * layerHeight + 30 /* *30+30 */ ) 				
-				.append( " }" ) 
-				;
-				sep = ',' ;
-				y++ ;
-				if( y>= numRows ) {
-					x++ ;
-					y = 0 ;
-				}
+		for( int i=0 ; i<neurons.length ; i++ ) {
+            rc[i] = new Node() ;
+            rc[i].id = neurons[i].getId() ;
+            rc[i].potential = neurons[i].getPotential() ;
+            rc[i].type = neurons[i].getType() ;
+            rc[i].fx =  x * layerWidth ;
+            rc[i].fy =  y * layerHeight + 30 /* *30+30 */ ;
+			y++ ;
+			if( y >= numRows ) {
+				x++ ;
+				y = 0 ;
+			}
 		}
+		return rc ;
 	}
 
 
@@ -536,4 +552,16 @@ class NeuronState {
 		this.id = n.getId() ;
 		this.frequency = n.frequency() ;
 	}
+}
+
+class Node {
+    int id;
+    double potential;
+    String type ;
+    double fx;
+    double fy;
+}
+
+class Nodes {
+    Node [] nodes ;
 }

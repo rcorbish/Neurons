@@ -163,7 +163,7 @@ abstract public class Neuron  {
 		// remove any very old spikes from history
 		// they won't count towards frequency calc.
 		for( int i=0 ; i<lastSpikes.length ; i++ ) {
-			if( (clock - lastSpikes[i]) > .2 ) {
+			if( (clock - lastSpikes[i]) > .02 ) {
 				lastSpikes[i] = 0 ;
 			}
 		}

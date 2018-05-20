@@ -49,7 +49,7 @@ public class Monitor implements AutoCloseable {
 				spark.Spark.staticFiles.externalLocation( "src/main/resources" ) ;	
 			}
 			spark.Spark.webSocket("/live", wss ) ;			
-			spark.Spark.get( "/data", this::getData ) ; //, gson::toJson ) ;
+			spark.Spark.get( "/data", this::getData, gson::toJson ) ;
 			spark.Spark.awaitInitialization() ;
 		} catch( Exception ohohChongo ) {
 			logger.error( "Server start failure.", ohohChongo );

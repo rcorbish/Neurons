@@ -1,4 +1,4 @@
-
+.idea/
 build/
 libs/
 bin/
@@ -10,5 +10,6 @@ target/
 .classpath
 .vscode
 sync.sh
+matlab
 *.dat
 

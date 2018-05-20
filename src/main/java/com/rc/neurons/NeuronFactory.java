@@ -6,12 +6,12 @@ public class NeuronFactory {
 
 	final static private Random rng = new Random( 128 ) ;
 	
-	final static private double chProb  = .10 ;
-	final static private double rsProb  = .40 ;
-	final static private double fsProb  = .20 ;
-	final static private double ibProb  = .15 ;
-	final static private double ltsProb = .05 ;
+	final static private double chProb  = .20 ;
+	final static private double rsProb  = .60 ;
+	final static private double fsProb  = .10 ;
+	final static private double ibProb  = .10 ;
 	final static private double rzProb  = .05 ;
+	final static private double ltsProb = .05 ;
 	@SuppressWarnings("unused")
 	final static private double tcProb  = .05 ;
 	
@@ -21,9 +21,9 @@ public class NeuronFactory {
 		r -= chProb ;  if( r<0 ) return new NeuronCH(id) ;
 		r -= rsProb ;  if( r<0 ) return new NeuronRS(id) ;
 		r -= fsProb ;  if( r<0 ) return new NeuronFS(id) ;
-		r -= ltsProb ; if( r<0 ) return new NeuronLTS(id) ;
 		r -= rzProb ;  if( r<0 ) return new NeuronRZ(id) ;
 		r -= ibProb ;  if( r<0 ) return new NeuronIB(id) ;
+		r -= ltsProb ; if( r<0 ) return new NeuronLTS(id) ;
 		return new NeuronTC(id) ;
 	}
 }

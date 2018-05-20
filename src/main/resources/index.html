@@ -140,7 +140,7 @@ d3.json("data", function(error, graph) {
 			.append("circle")
 				.attr( 'class', 'node' )
 				.attr( 'id', function(d) { return d.id } )
-				.attr( "r", function(d) { return 7.5 } ) 
+				.attr( "r", function(d) { return 3 } )
 				.attr( "stroke", "none" ) 
 				.attr( "stroke-width", "5" ) 
 				.attr( "fill", function(d) { 
@@ -155,17 +155,17 @@ d3.json("data", function(error, graph) {
 //					.on("end", dragended)) 
   		;
 
-		const texts = svg
-    	.selectAll("text.potential")
-    	.data( graph.nodes )
-		.enter()
-			.append( 'text' )
-				.attr( 'class', 'potential' )
-				.attr( 'font-size', '13pt')
-				.attr( 'font-family', 'arial')
-				.attr( 'id', function(d) { return 'txt-' + d.id } )
-				.text( "" )
-  		;
+//		const texts = svg
+//    	.selectAll("text.potential")
+//    	.data( graph.nodes )
+//		.enter()
+//			.append( 'text' )
+//				.attr( 'class', 'potential' )
+//				.attr( 'font-size', '13pt')
+//				.attr( 'font-family', 'arial')
+//				.attr( 'id', function(d) { return 'txt-' + d.id } )
+//				.text( "" )
+//  		;
 
 
   function tick() {
@@ -173,10 +173,10 @@ d3.json("data", function(error, graph) {
 		.attr("cx", function(d) { return d.x; })
 		.attr("cy", function(d) { return d.y; })
 		;
-		texts
-    	.attr("x", function(d) { return d.x+7; })
-        .attr("y", function(d) { return d.y-3; })
-    	;
+		// texts
+    	// .attr("x", function(d) { return d.x+7; })
+        // .attr("y", function(d) { return d.y-3; })
+    	// ;
 
     	// links
         // .attr("x1", function(d) { return d.source.x; })
@@ -241,8 +241,8 @@ d3.json("data", function(error, graph) {
 			scoreDiv.innerHTML = data.clock.toFixed(5) + " S" ;
 			
 			const neuronFrequency = d3.scaleLinear()
-			.domain( [ 50, 300 ] )
-			.range([ "steelblue", " #ff00ff"]);
+			.domain( [ 50, 2000 ] )
+			.range([ "#008000", " #ff00ff"]);
 
 			for( var i=0 ; i<data.neurons.length ; i++ ) {			
 				var n = document.getElementById( data.neurons[i].id )

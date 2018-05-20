@@ -22,7 +22,7 @@ public class Main {
 	static int POPULATION = 40 ;
 	static int EPOCHS = 10 ;
 	static double LIFESPAN = 1.0 ;
-	static double TICK_PERIOD = 1e-4 ;   // each clock tick in seconds - default 100uS
+	static double TICK_PERIOD = 2e-4 ;   // each clock tick in seconds
 	static double MUTATION = 0.01 ;
 	static long DELAY_INTERVAL  = 25 ;
 	
@@ -109,7 +109,7 @@ public class Main {
 			}
 			
 			Brain brain ;
-			brain = new Brain( TICK_PERIOD, 6, 10, 15, 15 ) ;
+			brain = new Brain( TICK_PERIOD, 6, 10, 60, 100 ) ;
 			/*
 			if( fileExists && !clearFile ) {
 				brain = Brain.load( TICK_PERIOD, parameterFile ) ;
