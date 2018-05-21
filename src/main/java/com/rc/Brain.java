@@ -1,22 +1,11 @@
 package com.rc ;
 
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
-import java.io.OutputStream;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Random;
+import java.util.*;
 
-import org.ejml.data.DGrowArray;
 import org.ejml.data.DMatrixRMaj;
 import org.ejml.data.DMatrixSparseCSC;
-import org.ejml.data.IGrowArray;
 import org.ejml.sparse.csc.CommonOps_DSCC;
+
 import org.jtransforms.fft.DoubleFFT_1D;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,16 +17,16 @@ import com.rc.neurons.NeuronRS;
 
 public class Brain  {
 
-	final static Logger log = LoggerFactory.getLogger( Brain.class ) ;
+	private final static Logger log = LoggerFactory.getLogger( Brain.class ) ;
 
 	private static final Random rng = new Random(24) ;	// utility random number generator
 
-	final static public int HISTORY_LENGTH = 1024 ;
-	final static public double CONNECTION_PROBABILITY = .40 ;
+    private final static int HISTORY_LENGTH = 1024 ;
+    private final static double CONNECTION_PROBABILITY = .30 ;
 	
 	// Used to calc rands with the following stats
-	final static double WEIGHT_MEAN = 0.7 ;
-	final static double WEIGHT_SIGMA = 0.15 ;
+	private final static double WEIGHT_MEAN = 0.7 ;
+    private final static double WEIGHT_SIGMA = 0.15 ;
 	
 	private final double outputHistory[] ;
 	private final boolean outputSpikeHistory[] ;
@@ -182,6 +171,7 @@ public class Brain  {
         neu = new DMatrixRMaj( neurons.length, 1 ) ;
 
         this.synapses = new DMatrixSparseCSC(neurons.length,neurons.length,0) ;
+
 		connectLayers( CONNECTION_PROBABILITY ) ;
 		this.train = false ;
 		this.fftSpike = false ;
@@ -241,9 +231,8 @@ public class Brain  {
 	 */
 	public void step( double[] inputs ) {
 		clock += tickPeriod ;
- 
-		// log.info( "Stepping, input len={}, inputNeurons.length={}", inputs.length, inputNeurons.length ) ;
-		// Set inputs immediately - no dependencies
+
+ 		// Set inputs immediately - no dependencies
 		for( int i=0 ; i<inputNeurons.length ; i++ ) {
 			this.inputNeurons[i].step( inputs[i], clock ) ;
 		}
@@ -262,8 +251,14 @@ public class Brain  {
 		}		
 	}
 
-	
-	
+
+    /**
+     * Calculate the potential of each output neuron. This is
+     * going to be 0.35 for each spiking neuron scaled by each
+     * weight.
+     *
+     * @return return an array of output potentials (1 per neuron )
+     */
 	protected double[] calculateNewPotentials() {
 
 		//
@@ -277,9 +272,6 @@ public class Brain  {
 		// transfer across the grid =
 		// 	A * n   ( adjacency x neuron outputs )
 		//
-//		DMatrixSparseCSC A = new DMatrixSparseCSC(neurons.length,neurons.length,0) ;
-//      DMatrixRMaj res = new DMatrixRMaj( neurons.length , 1 ) ;
-//      DMatrixRMaj neu = new DMatrixRMaj( neurons.length, 1 ) ;
 
         log.debug( "Starting transfer" ) ;
 
@@ -329,7 +321,7 @@ public class Brain  {
 	}
 
 	/**
-	 * If we are following - maintain a history of ouput
+	 * If we are following - maintain a history of output
 	 * and spiking activity
 	 */
 	public void follow() {
@@ -413,12 +405,12 @@ public class Brain  {
 	public Object toJson() {
 
 	    Nodes rc = new Nodes() ;
-	    rc.nodes = 	printNodes() ;
+	    rc.nodes = 	getNodes() ;
 
 		return rc ;
 	}
 
-	private Node [] printNodes() {
+	private Node [] getNodes() {
 
 		int layerWidth = 800 / 80 ;  // cols ?
 
@@ -479,6 +471,37 @@ public class Brain  {
 */
 
 
+    /**
+     * Determine whether a route exists to an input node
+     * from the given node.
+     *
+     * @param id the node from which to start the search
+     */
+    public boolean routeToAnyInput( final int id ) {
+        Queue<Integer> queue = new LinkedList<>() ;
+        Set<Integer> visited = new HashSet<>() ;
+
+        queue.add( id ) ;
+        visited.add( id ) ;
+
+        while( !queue.isEmpty() ) {
+            int n = queue.poll() ;
+            if( n<getNumInputs() ) {
+                log.info( "Found route to an input from {}", id ) ;
+                return true ;
+            }
+            for( int i=0 ; i<neurons.length ; i++ ) {
+                if( synapses.isAssigned( n, i ) && !visited.contains(i) ) {
+                    queue.add( i ) ;
+                    visited.add( i ) ;
+                }
+            }
+        }
+        log.info( "No route to any input from {}", id ) ;
+        return false ;
+    }
+
+
 	public Neuron getNeuron( int id ) {
 		return id>=0 && id<neurons.length ? neurons[id] : null ;
 	}
@@ -494,7 +517,9 @@ public class Brain  {
 			}
 			Arrays.fill( outputHistory, 0 ) ;
 			Arrays.fill( outputSpikeHistory, false ) ;
-
+			if( following > getNumInputs() ) {
+                routeToAnyInput(following);
+            }
 		}
 		this.followingId = following ;
 	}	

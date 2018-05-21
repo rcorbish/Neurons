@@ -15,9 +15,9 @@ abstract public class Neuron  {
 
 	final static Logger log = LoggerFactory.getLogger( Neuron.class ) ;
 
-	protected final static int NUM_SPIKES_TO_RECORD = 25 ;
+	private final static int NUM_SPIKES_TO_RECORD = 25 ;
 	
-	protected final static Random rng = new Random()  ;
+	private final static Random rng = new Random()  ;
 	private final static int GENOME_INDEX_THRESHOLD = 0 ;
 	private final static int GENOME_INDEX_RESTING = 1 ;
 	private final static int GENOME_INDEX_DECAY = 2 ;
@@ -32,7 +32,7 @@ abstract public class Neuron  {
 	protected 		double 		currentPotential ;
 	protected 		boolean		isSpiking ;
 	private  		double 		lastSpikeTime ;				// when did we spike last
-	
+
 	protected final boolean isInhibitor ;
 	protected final double	a ;
 	protected final double	b ;
@@ -40,16 +40,16 @@ abstract public class Neuron  {
 	protected final double	d ;		
 
 	protected double	u ;
-	private final static double tau = 10 ;
-	
+
+
 	// The following items are held in the genome
 	private final int 		id ;
 	private final double 	learningRate ;
-	protected     double 	threshold  ;
+	protected	  double 	threshold  ;
 	private 	  double 	lastStepClock ;
 	private 	  double	frequency ;
 	private final double 	lastSpikes[] ;
-	int lastSpikeIndex ;
+	private 	  int 		lastSpikeIndex ;
 
 	protected Neuron( int id, double A, double B, double C, double D, boolean inhibitor  ) {
 		this.id = id ;
@@ -71,6 +71,7 @@ abstract public class Neuron  {
 		this.lastSpikes = new double[NUM_SPIKES_TO_RECORD] ;
 	}
 
+
 	public Neuron( Genome genome, int id ) {
 		this.id = id ;
 		
@@ -87,7 +88,8 @@ abstract public class Neuron  {
 		this.d = 8 ;
 		this.isInhibitor = false ;
 	}
-	
+
+
 	public Genome toGenome() {
 		Genome rc = new Genome() ;
 		rc.set( threshold - 0.5, GENOME_INDEX_THRESHOLD ) ;
