@@ -121,12 +121,7 @@ abstract public class Neuron  {
 		double cp = currentPotential * 1000.0 ;
 		double p  = potential * 1000.0 ;
 		
-		double v =  0.04 * cp * cp + 
-					5 * cp +
-					140 - 
-					u +
-					p
-				;
+		double v =  ( 0.04 * cp + 5 ) * cp + 140 - u + p ;
 		this.u += dt * this.a * ( this.b * cp - this.u ) ;
 		this.currentPotential += dt * v / 1000.0 ;
 	}

@@ -2,11 +2,11 @@ package com.rc ;
 
 import java.util.*;
 
-import org.ejml.data.DMatrixRMaj;
-import org.ejml.data.DMatrixSparseCSC;
-import org.ejml.sparse.csc.CommonOps_DSCC;
-
 import org.jtransforms.fft.DoubleFFT_1D;
+import org.la4j.Vector;
+import org.la4j.matrix.sparse.CCSMatrix;
+import org.la4j.vector.DenseVector;
+import org.la4j.vector.dense.BasicVector;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -33,18 +33,13 @@ public class Brain  {
 	private int historyIndex ;
 	private int followingId ;
 	
-	private final DMatrixSparseCSC synapses ;		// adjacency matrix
+	private final CCSMatrix synapses ;		// adjacency matrix
 
 	private final int numColumns ;
 	private final int numRows ;
 	private final Neuron neurons[] ;			// neurons in each layer
 	private final Neuron inputNeurons[] ;			// neurons in each layer
 	private final Neuron outputNeurons[] ;			// neurons in each layer
-
-    // These are temp work areas - used in calculating transfer
-    private final DMatrixSparseCSC A ;
-    private final DMatrixRMaj res ;
-    private final DMatrixRMaj neu ;
 
     private double clock ;
 	private final double tickPeriod ;
@@ -164,13 +159,8 @@ public class Brain  {
 			this.neurons[this.neurons.length-i-1] = this.outputNeurons[i] ;
 		}
 
-		// Temporary work areas
-        // don't need to keep recreating
-        A = new DMatrixSparseCSC(neurons.length,neurons.length,0) ;
-        res = new DMatrixRMaj( neurons.length , 1 ) ;
-        neu = new DMatrixRMaj( neurons.length, 1 ) ;
 
-        this.synapses = new DMatrixSparseCSC(neurons.length,neurons.length,0) ;
+        this.synapses = new CCSMatrix(neurons.length,neurons.length,0) ;
 
 		connectLayers( CONNECTION_PROBABILITY ) ;
 		this.train = false ;
@@ -189,7 +179,7 @@ public class Brain  {
 		int n = 0 ;
 		int r = 0 ;
 		int c = 0 ;
-		for( int i=0 ; i<synapses.getNumRows() * synapses.getNumCols() ; i++ ) {
+		for( int i=0 ; i<synapses.rows() * synapses.columns() ; i++ ) {
 			if( r > c /*!= c */) {
 				double p = connectionProbability / Math.sqrt( (r-c) * (r-c) ) ;
 				if( rng.nextDouble() < p ) {
@@ -275,13 +265,14 @@ public class Brain  {
 
         log.debug( "Starting transfer" ) ;
 
-        A.zero() ;
+        CCSMatrix A  = new CCSMatrix( neurons.length, neurons.length,0) ;
+        Vector neu = new BasicVector( neurons.length ) ;
 
 		int r = 0 ;
 		int c = 0 ;
 		int n = 0 ;
-		for( int i=0 ; i<synapses.getNumRows() * synapses.getNumCols() ; i++ ) {
-			if( neurons[c].isSpiking() && synapses.isAssigned(r,c) ) {
+		for( int i=0 ; i<synapses.rows() * synapses.columns() ; i++ ) {
+			if( neurons[c].isSpiking() && synapses.nonZeroAt(r,c) ) {
 				A.set( r, c, synapses.get(r,c) ) ;
 				n++ ;
 			}
@@ -294,16 +285,20 @@ public class Brain  {
         log.debug( "Sparse matrix size: {}", n ) ;
 
 		for( int i=0 ; i<neurons.length ; i++ ) {
-			neu.set( i, 0, neurons[i].isSpiking() ? 0.35 : 0 ) ;
+			neu.set( i, neurons[i].isSpiking() ? 0.35 : 0 ) ;
 		}
 
         log.debug( "Neuron outputs created" ) ;
 
-		CommonOps_DSCC.mult( A, neu, res ) ;
+        Vector res = A.multiply( neu ) ;
 
         log.debug( "Transfered gemm done" ) ;
 
-		double rc[] = res.getData() ;
+
+		double rc[] = new double[ res.length() ] ;
+		for( int i=0 ; i<rc.length ; i++ ) {
+		    rc[i] = res.get(i) ;
+        }
 
 		return rc ;
 	}
@@ -491,7 +486,7 @@ public class Brain  {
                 return true ;
             }
             for( int i=0 ; i<neurons.length ; i++ ) {
-                if( synapses.isAssigned( n, i ) && !visited.contains(i) ) {
+                if( synapses.nonZeroAt( n, i ) && !visited.contains(i) ) {
                     queue.add( i ) ;
                     visited.add( i ) ;
                 }
