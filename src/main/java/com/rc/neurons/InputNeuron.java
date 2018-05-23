@@ -29,6 +29,7 @@ public class InputNeuron extends NeuronRS {
 		nextSpikeTime = 0 ;
 	}
 	
+	final static private double MAX_FREQUENCY = 200 ;
 	@Override
 	public void step( double potential, double clock ) {
 		isSpiking = false ;
@@ -37,14 +38,14 @@ public class InputNeuron extends NeuronRS {
 			this.currentPotential = threshold ;
 			double clockDrift = clock - nextSpikeTime ;
 					
-			// 	  1.0 potential => 100Hz
-			// 	  0.5 potential => 50Hz etc.
+			// 	  1.0 potential => MAX_FREQUENCY Hz
+			// 	  0.5 potential => MAX_FREQUENCY / 2 Hz etc.
 			// 	+ clock starting from now
 			// 	+ ( clock - nextSpikeTime ) to keep track of fractions
-			nextSpikeTime = 1.0 / ( potential * 100 ) + clock ; 
+			nextSpikeTime = 1.0 / ( potential * MAX_FREQUENCY ) + clock ; 
 			nextSpikeTime -= clockDrift ;			
 		} else {
-			this.currentPotential = c ;
+			this.currentPotential = c / 1000 ;
 		}
 	}
 

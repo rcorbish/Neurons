@@ -51,6 +51,8 @@ abstract public class Neuron  {
 	private final double 	lastSpikes[] ;
 	private 	  int 		lastSpikeIndex ;
 
+
+
 	protected Neuron( int id, double A, double B, double C, double D, boolean inhibitor  ) {
 		this.id = id ;
 
@@ -146,11 +148,29 @@ abstract public class Neuron  {
 	}
 
 	public void train( Brain brain, double clock ) {
-		
-		
+
 		// NB this relies on step() being called
 		double dt = ( clock - lastStepClock ) * 1000.0 ;
-		
+
+		Neuron sources[] = brain.getInputsTo( id ) ;
+
+		if( isSpiking() ) {
+			for (Neuron src : sources) {
+				double srcFiredAgo = clock - src.lastSpikeTime;
+				if (srcFiredAgo < 0.030) {
+					brain.addWeight(src.id, id, 0.01);
+				} else {
+					brain.addWeight(src.id, id, -0.01);
+				}
+			}
+		} else {
+			for (Neuron src : sources) {
+				double srcFiredAgo = clock - src.lastSpikeTime;
+				if (srcFiredAgo < 0.030) {
+					brain.addWeight(src.id, id, -0.01);
+				}
+			}
+		}
 	}
 	
 

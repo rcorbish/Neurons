@@ -5,7 +5,7 @@ import java.util.*;
 import org.jtransforms.fft.DoubleFFT_1D;
 import org.la4j.Vector;
 import org.la4j.matrix.sparse.CCSMatrix;
-import org.la4j.vector.DenseVector;
+
 import org.la4j.vector.dense.BasicVector;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,7 +22,7 @@ public class Brain  {
 	private static final Random rng = new Random(24) ;	// utility random number generator
 
     private final static int HISTORY_LENGTH = 1024 ;
-    private final static double CONNECTION_PROBABILITY = .30 ;
+    private final static double CONNECTION_PROBABILITY = .4 ;
 	
 	// Used to calc rands with the following stats
 	private final static double WEIGHT_MEAN = 0.7 ;
@@ -145,20 +145,27 @@ public class Brain  {
 		this.neurons = new Neuron[rows*cols] ;
 		this.inputNeurons = new Neuron[numInputs] ;
 		this.outputNeurons = new Neuron[numOutputs] ;
-		
+
+		// fill with liquid neurons
+        for( int i=0 ; i<this.neurons.length ; i++ ) {
+            this.neurons[i] = NeuronFactory.getNeuron( i ) ;
+        }
+
+        // overwrite the inputs in the liquid
+        int dy = rows / numInputs ;
 		int ix = 0 ;
-		for( int i=0 ; i<this.inputNeurons.length ; i++, ix++ ) {
+		for( int i=0 ; i<this.inputNeurons.length ; i++, ix+=dy ) {
 			this.inputNeurons[i] = new InputNeuron( ix ) ;
-			this.neurons[i] = this.inputNeurons[i] ;
-		}
-		for( int i=this.inputNeurons.length ; i<this.neurons.length-this.outputNeurons.length ; i++, ix++ ) {
-			this.neurons[i] = NeuronFactory.getNeuron( ix ) ; // new NeuronRS( i ) ;
-		}
-		for( int i=0 ; i<this.outputNeurons.length ; i++, ix++ ) {
-			this.outputNeurons[i] = new NeuronRS( ix ) ;
-			this.neurons[this.neurons.length-i-1] = this.outputNeurons[i] ;
+			this.neurons[ix] = this.inputNeurons[i] ;
 		}
 
+		// overwrite the outputs in the liquid
+        dy = rows / numOutputs ;
+        ix = cols * rows - dy ;
+		for( int i=0 ; i<this.outputNeurons.length ; i++, ix-=dy ) {
+			this.outputNeurons[i] = new NeuronRS( ix ) ;
+			this.neurons[ix] = this.outputNeurons[i] ;
+		}
 
         this.synapses = new CCSMatrix(neurons.length,neurons.length,0) ;
 
@@ -181,7 +188,7 @@ public class Brain  {
 		int c = 0 ;
 		for( int i=0 ; i<synapses.rows() * synapses.columns() ; i++ ) {
 			if( r > c /*!= c */) {
-				double p = connectionProbability / Math.sqrt( (r-c) * (r-c) ) ;
+				double p = connectionProbability * Math.exp( -Math.abs( r-c ) / 8 ) ;
 				if( rng.nextDouble() < p ) {
 					synapses.set( r,c, getRandomWeight() ) ;
 					n++ ;
@@ -222,16 +229,15 @@ public class Brain  {
 	public void step( double[] inputs ) {
 		clock += tickPeriod ;
 
- 		// Set inputs immediately - no dependencies
-		for( int i=0 ; i<inputNeurons.length ; i++ ) {
-			this.inputNeurons[i].step( inputs[i], clock ) ;
-		}
-
 		// Will build up all outputs - before changing any of them
 		double newPotentials[] = calculateNewPotentials() ;
 
+		// Set inputs immediately - no dependencies
+		 for( int i=0 ; i<inputNeurons.length ; i++ ) {
+			newPotentials[i] = inputs[i] ;
+		}
+
 		// Then write the output as an atomic op
-		// do NOT write inputs (start from layer 1)
 		for( int i=0 ; i<neurons.length; i++ ) {
 			neurons[i].step( newPotentials[i], clock ) ;
 		}
@@ -246,35 +252,29 @@ public class Brain  {
      * Calculate the potential of each output neuron. This is
      * going to be 0.35 for each spiking neuron scaled by each
      * weight.
+	 * 	
+	 * Weight Matrix is an adjacency matrix A
+	 * Neuron vector n is the neuron potentials
+	 *	
+	 *	in A
+	 *		columns represent the source ( i.e. from )
+	 *		rows represent the target ( i.e. to )
+	 *	
+	 *	transfer across the grid =
+	 *		A * n   ( adjacency x neuron outputs )
      *
      * @return return an array of output potentials (1 per neuron )
      */
 	protected double[] calculateNewPotentials() {
-
-		//
-		// Weight Matrix is an adjacency matrix  A
-		// Neuron vector n is the neuron potentials
-		//
-		// in A
-		// 	columns represent the source ( i.e. from )
-		// 	rows represent the target ( i.e. to )
-		//
-		// transfer across the grid =
-		// 	A * n   ( adjacency x neuron outputs )
-		//
-
-        log.debug( "Starting transfer" ) ;
 
         CCSMatrix A  = new CCSMatrix( neurons.length, neurons.length,0) ;
         Vector neu = new BasicVector( neurons.length ) ;
 
 		int r = 0 ;
 		int c = 0 ;
-		int n = 0 ;
 		for( int i=0 ; i<synapses.rows() * synapses.columns() ; i++ ) {
 			if( neurons[c].isSpiking() && synapses.nonZeroAt(r,c) ) {
 				A.set( r, c, synapses.get(r,c) ) ;
-				n++ ;
 			}
 			r++ ;
 			if( r >= neurons.length ) {
@@ -282,21 +282,14 @@ public class Brain  {
 				r = 0 ;
 			}
 		}
-        log.debug( "Sparse matrix size: {}", n ) ;
-
 		for( int i=0 ; i<neurons.length ; i++ ) {
 			neu.set( i, neurons[i].isSpiking() ? 0.35 : 0 ) ;
 		}
 
-        log.debug( "Neuron outputs created" ) ;
-
         Vector res = A.multiply( neu ) ;
-
-        log.debug( "Transfered gemm done" ) ;
-
-
+		
 		double rc[] = new double[ res.length() ] ;
-		for( int i=0 ; i<rc.length ; i++ ) {
+		for( int i=inputNeurons.length ; i<rc.length ; i++ ) {
 		    rc[i] = res.get(i) ;
         }
 
@@ -314,6 +307,31 @@ public class Brain  {
 			}
 		}
 	}
+
+	public Neuron[] getInputsTo( int id ) {
+	    Neuron rc[] = new Neuron[ numNeurons() ] ;
+
+	    int n = 0 ;
+	    for( int c=0 ; c<numNeurons() ; c++ ) {
+	        if( synapses.nonZeroAt( id, c ) ) {
+	            rc[n] = neurons[c] ;
+            }
+        }
+
+	    return Arrays.copyOf( rc, n ) ;
+    }
+
+
+    public void addWeight( int from, int to, double addition ) {
+	    if( !synapses.nonZeroAt( from, to ) ) {
+	        log.warn( "Warning editing non existant weight {} -> {}", from, to ) ;
+        } else {
+	        double v = synapses.get( from, to ) + addition ;
+            if( v < 0.00 ) v = 0.00 ;
+            if( v > 0.99 ) v = 0.99 ;
+	        synapses.set( from, to, v );
+        }
+    }
 
 	/**
 	 * If we are following - maintain a history of output
@@ -360,7 +378,7 @@ public class Brain  {
 			double tmp[] = new double[ outputHistory.length ] ;
 			if( this.fftSpike ) {
 				for( int i=0 ; i<tmp.length ; i++ ) {
-					tmp[i] = outputSpikeHistory[i] ? 3 : 0 ;
+					tmp[i] = outputSpikeHistory[i] ? 1 : 0 ;
 				}
 			} else {	
 				System.arraycopy( outputHistory, 0, tmp, 0, tmp.length ) ;
@@ -373,7 +391,7 @@ public class Brain  {
 					offset += tmp.length ;
 				}
 				int ix = outputHistory.length-offset-1 ;
-				rc.history[i] = ( tmp[i] + 20 ) / 40.0 ;
+				rc.history[i] = ( tmp[i] + 10 ) / 20.0 ;
 				rc.spikeHistory[ix] = outputSpikeHistory[i] ;
 			}			
 		} else {
@@ -419,7 +437,8 @@ public class Brain  {
             rc[i] = new Node() ;
             rc[i].id = neurons[i].getId() ;
             rc[i].potential = neurons[i].getPotential() ;
-            rc[i].type = neurons[i].getType() ;
+            rc[i].inhibitor = neurons[i].isInhibitor() ;
+            rc[i].alive = true ; //routeToAnyInput( i ) ;
             rc[i].fx =  x * layerWidth ;
             rc[i].fy =  y * layerHeight + 30 /* *30+30 */ ;
 			y++ ;
@@ -475,24 +494,38 @@ public class Brain  {
     public boolean routeToAnyInput( final int id ) {
         Queue<Integer> queue = new LinkedList<>() ;
         Set<Integer> visited = new HashSet<>() ;
+		int route[] = new int[ numNeurons() ] ;
+        Arrays.fill( route, -1 ) ;
 
         queue.add( id ) ;
         visited.add( id ) ;
 
+        Set<Integer> inputIds = new HashSet<>() ;
+        for( int i=0 ; i<inputNeurons.length ; i++ ) {
+            inputIds.add( inputNeurons[i].getId() ) ;
+        }
+
         while( !queue.isEmpty() ) {
             int n = queue.poll() ;
-            if( n<getNumInputs() ) {
-                log.info( "Found route to an input from {}", id ) ;
+            if( inputIds.contains(n) ) {
+				int ix = n ;
+				while( route[ix] != -1 ) {
+					int ix2 = route[ix] ;
+					log.info( "{} -> {}", ix, ix2 ) ;
+					ix = ix2 ;
+				}
+//				log.info( "{} -> {}", ix, n ) ;
                 return true ;
             }
             for( int i=0 ; i<neurons.length ; i++ ) {
                 if( synapses.nonZeroAt( n, i ) && !visited.contains(i) ) {
                     queue.add( i ) ;
-                    visited.add( i ) ;
+					visited.add( i ) ;
+					route[i] = n ;
                 }
             }
         }
-        log.info( "No route to any input from {}", id ) ;
+//        log.info( "No route to any input from {}", id ) ;
         return false ;
     }
 
@@ -577,7 +610,8 @@ class NeuronState {
 class Node {
     int id;
     double potential;
-    String type ;
+    boolean inhibitor ;
+    boolean alive ;
     double fx;
     double fy;
 }

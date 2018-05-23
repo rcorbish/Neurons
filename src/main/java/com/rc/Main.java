@@ -84,12 +84,15 @@ public class Main {
 			int dims[] ;
 			List<?> dimArgs = options.nonOptionArguments() ;
 			if( dimArgs.size() > 0 ) {
-				dims = new int[ dimArgs.size() ] ;
-				for( int i=0 ; i<dims.length ; i++ ) {
-					dims[i] =  Integer.parseInt( dimArgs.get(i).toString() ) ;
+				dims = new int[ 2 ] ;
+				dims[0] = Integer.parseInt( dimArgs.get(0).toString() ) ;
+				if( dimArgs.size() > 1 ) {
+					dims[1] = Integer.parseInt( dimArgs.get(1).toString() ) ;
+				} else {
+					dims[1] = dims[0] ;
 				}
 			} else {
-				dims = new int[]{ 5, 5 } ;	// default if no size given
+				dims = new int[]{ 60, 60 } ;	// default if no size given
 			}
 			FIXED_PARAMS = new int[ dims.length + 1 ] ;
 			FIXED_PARAMS[0] = 0 ;
@@ -109,7 +112,7 @@ public class Main {
 			}
 			
 			Brain brain ;
-			brain = new Brain( TICK_PERIOD, 6, 10, 60, 100 ) ;
+			brain = new Brain( TICK_PERIOD, 6, 10, dims[0], dims[1] ) ;
 			/*
 			if( fileExists && !clearFile ) {
 				brain = Brain.load( TICK_PERIOD, parameterFile ) ;
