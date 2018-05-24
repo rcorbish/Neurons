@@ -3,7 +3,9 @@ package com.rc ;
 import java.util.*;
 
 import org.jtransforms.fft.DoubleFFT_1D;
+import org.la4j.Matrix;
 import org.la4j.Vector;
+import org.la4j.decomposition.EigenDecompositor;
 import org.la4j.matrix.sparse.CCSMatrix;
 
 import org.la4j.vector.dense.BasicVector;
@@ -577,6 +579,10 @@ public class Brain  {
 			Arrays.fill( outputSpikeHistory, false ) ;
             routeToAnyInput(following);
  		}
+
+// 		EigenDecompositor ed = new EigenDecompositor( synapses ) ;
+//        Matrix vd[] = ed.decompose() ;
+
 		this.followingId = following ;
 	}	
 	

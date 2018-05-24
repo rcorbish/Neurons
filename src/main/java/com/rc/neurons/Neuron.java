@@ -16,7 +16,9 @@ abstract public class Neuron  {
 	final static Logger log = LoggerFactory.getLogger( Neuron.class ) ;
 
 	private final static int NUM_SPIKES_TO_RECORD = 25 ;
-	
+
+	private final static double LEARNING_WINDOW = 0.015 ;
+
 	private final static Random rng = new Random()  ;
 	private final static int GENOME_INDEX_THRESHOLD = 0 ;
 	private final static int GENOME_INDEX_RESTING = 1 ;
@@ -44,7 +46,10 @@ abstract public class Neuron  {
 
 	// The following items are held in the genome
 	private final int 		id ;
-	private final double 	learningRate ;
+    private final double 	learningRate ;
+    private final double 	learningRateTau ;
+    private final double 	learningWindowLTP ;     // pre->post = long term potentiation
+    private final double 	learningWindowLTD ;     // post->pre = long term depression
 	protected	  double 	threshold  ;
 	private 	  double 	lastStepClock ;
 	private 	  double	frequency ;
@@ -66,8 +71,11 @@ abstract public class Neuron  {
 		
 		this.threshold = .030 ; 				// spike triggered when internal potential hit this value
 
-		this.learningRate = 0.01 ;			// how fast to adjust weights
-		
+		this.learningRate = 0.1 ;			// how fast to adjust weights
+        this.learningRateTau = 0.02 ;       // exp decay of learning wrt time between spikes
+        this.learningWindowLTP = 0.015 ;    // 0 .. 15ms  for LTP
+        this.learningWindowLTD = 0.100 ;    // 15 .. 100 for LTD
+
 		this.currentPotential = -.07 ; //rng.nextDouble() ;
 		this.lastSpikeTime = 0 ;
 		this.lastSpikes = new double[NUM_SPIKES_TO_RECORD] ;
@@ -79,6 +87,10 @@ abstract public class Neuron  {
 		
 		this.threshold = genome.getDouble( GENOME_INDEX_THRESHOLD ) + 0.5 ;
 		this.learningRate = genome.getDouble( GENOME_INDEX_LEARNING_RATE ) ;
+
+        this.learningRateTau = 0.02 ;
+        this.learningWindowLTP = 0.015 ;    // 0 .. 15ms  for LTP
+        this.learningWindowLTD = 0.100 ;    // 15 .. 100 for LTD
 
 		this.currentPotential = rng.nextDouble() ;
 		this.lastSpikeTime = -1.0 ;
@@ -153,21 +165,18 @@ abstract public class Neuron  {
 
 		if( isSpiking() ) {
 			for( Neuron src : sources ) {
-				double srcFiredAgo = clock - src.lastSpikeTime ;
-				if( srcFiredAgo==0 ) {
-					brain.addWeight(src.id, id, -learningRate ) ;
-				} else if( srcFiredAgo < 0.030 ) {
-					brain.addWeight(src.id, id, learningRate * Math.exp( -srcFiredAgo / 10 ) ) ;
-				} else {
-					brain.addWeight(src.id, id, -learningRate * Math.exp( -srcFiredAgo / 10 ) ) ;
-				}
-			}
-		} else {
-			for( Neuron src : sources ) {
-				double srcFiredAgo = clock - src.lastSpikeTime ;
-				if (srcFiredAgo < -0.030) {
-					brain.addWeight(src.id, id, -learningRate * (srcFiredAgo-0.030) ) ;
-				}
+			    if( !src.isInhibitor() || 1==1 ) {
+                    double srcFiredAgo = src.lastSpikeTime;
+                    if ( srcFiredAgo==0 ) {
+                        brain.addWeight(src.id, id, -learningRate );
+                    } else if (srcFiredAgo < learningWindowLTP ) {
+                        double dw = learningRate * Math.exp( (learningWindowLTP-srcFiredAgo) / learningRateTau ) ;
+                        brain.addWeight(src.id, id, dw );
+                    } else if (srcFiredAgo < learningWindowLTD) {
+                        double dw = learningRate * Math.exp( (learningWindowLTP-srcFiredAgo) / learningRateTau ) ;
+                        brain.addWeight(src.id, id, -dw );
+                    }
+                }
 			}
 		}
 	}
