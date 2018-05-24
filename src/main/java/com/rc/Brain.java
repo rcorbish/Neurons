@@ -193,23 +193,20 @@ public class Brain  {
             int toRow = 0 ;
 
             for( int to=0 ; to<numNeurons() ; to++ ) {
-
                 double dist = Math.sqrt((fromColumn - toColumn) * (fromColumn - toColumn) + (fromRow - toRow) * (fromRow - toRow));
                 if( dist > 0 ) { // no self connections
-                    if (!src.isInhibitor()) {   // regular neurons fire forward
-                        if (fromColumn <= toColumn) {
+                    if( !src.isInhibitor()) {   // regular neurons fire forward
+                        if( fromColumn < toColumn ) {
                             double p = Math.exp(-dist * (1 - connectionProbability));
-                            if (rng.nextDouble() < p) {
+                            if( rng.nextDouble()< p ) {
                                 synapses.set(to, from, getRandomWeight());
                             }
                         }
                     } else {
-                        if (fromColumn == toColumn || 1==0 ) {
-                            double p = Math.exp(-dist * (1 - connectionProbability));
-                            if (rng.nextDouble() < p) {
-                                synapses.set(to, from, getRandomWeight());
-                            }
-                        }
+						double p = Math.exp(-dist * (1 - connectionProbability));
+						if( rng.nextDouble() < p ) {
+							synapses.set(to, from, getRandomWeight());
+						}
                     }
                 }
                 toRow++ ;
@@ -224,7 +221,6 @@ public class Brain  {
                 fromColumn++ ;
                 fromRow = 0 ;
             }
-
         }
 		log.info( "Created {} synapses", synapses.cardinality() ) ;
 	}
@@ -340,7 +336,8 @@ public class Brain  {
 	    int n = 0 ;
 	    for( int c=0 ; c<numNeurons() ; c++ ) {
 	        if( synapses.nonZeroAt( id, c ) ) {
-	            rc[n] = neurons[c] ;
+				rc[n] = neurons[c] ;
+				n++ ;
             }
         }
 
@@ -349,16 +346,16 @@ public class Brain  {
 
 
     public void addWeight( int from, int to, double addition ) {
-	    if( !synapses.nonZeroAt( from, to ) ) {
+	    if( !synapses.nonZeroAt( to, from ) ) {
 	        log.warn( "Warning editing non existant weight {} -> {}", from, to ) ;
         } else {
-	        double v = synapses.get( from, to ) + addition ;
+	        double v = synapses.get( to, from ) + addition ;
             if( v < 0.00 ) {
                 v = 0.00 ;
-                log.info( "Weight at 0 {} -> {}", from, to ) ;
+                log.debug( "Weight is 0: {} -> {}", from, to ) ;
             }
-            if( v > 0.99 ) v = 0.99 ;
-	        synapses.set( from, to, v );
+            if( v > 1.00 ) v = 1.00 ;
+	        synapses.set( to, from, v );
         }
     }
 
@@ -571,6 +568,10 @@ public class Brain  {
 			Neuron n = getNeuron( following ) ;
 			if( n != null ) {
 				log.info( "Following: {}", n ) ;
+				Neuron sources[] = getInputsTo( following ) ;
+				for( Neuron src : sources ) {
+					log.info( "Weight from {} is {}", src.getId(), synapses.get(following, src.getId() ) ) ;
+				}
 			}
 			Arrays.fill( outputHistory, 0 ) ;
 			Arrays.fill( outputSpikeHistory, false ) ;

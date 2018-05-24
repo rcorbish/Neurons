@@ -66,7 +66,7 @@ abstract public class Neuron  {
 		
 		this.threshold = .030 ; 				// spike triggered when internal potential hit this value
 
-		this.learningRate = 0.03 ;				// how fast to adjust weights
+		this.learningRate = 0.01 ;			// how fast to adjust weights
 		
 		this.currentPotential = -.07 ; //rng.nextDouble() ;
 		this.lastSpikeTime = 0 ;
@@ -149,25 +149,24 @@ abstract public class Neuron  {
 
 	public void train( Brain brain, double clock ) {
 
-		// NB this relies on step() being called
-		double dt = ( clock - lastStepClock ) * 1000.0 ;
-
 		Neuron sources[] = brain.getInputsTo( id ) ;
 
 		if( isSpiking() ) {
-			for (Neuron src : sources) {
-				double srcFiredAgo = clock - src.lastSpikeTime;
-				if (srcFiredAgo < 0.030) {
-					brain.addWeight(src.id, id, 0.01);
+			for( Neuron src : sources ) {
+				double srcFiredAgo = clock - src.lastSpikeTime ;
+				if( srcFiredAgo==0 ) {
+					brain.addWeight(src.id, id, -learningRate ) ;
+				} else if( srcFiredAgo < 0.030 ) {
+					brain.addWeight(src.id, id, learningRate * Math.exp( -srcFiredAgo / 10 ) ) ;
 				} else {
-					brain.addWeight(src.id, id, -0.01);
+					brain.addWeight(src.id, id, -learningRate * Math.exp( -srcFiredAgo / 10 ) ) ;
 				}
 			}
 		} else {
-			for (Neuron src : sources) {
-				double srcFiredAgo = clock - src.lastSpikeTime;
-				if (srcFiredAgo < 0.030) {
-					brain.addWeight(src.id, id, -0.01);
+			for( Neuron src : sources ) {
+				double srcFiredAgo = clock - src.lastSpikeTime ;
+				if (srcFiredAgo < -0.030) {
+					brain.addWeight(src.id, id, -learningRate * (srcFiredAgo-0.030) ) ;
 				}
 			}
 		}
