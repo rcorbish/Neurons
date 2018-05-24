@@ -241,8 +241,8 @@ d3.json("data", function(error, graph) {
 			scoreDiv.innerHTML = data.clock.toFixed(5) + " S" ;
 			
 			const neuronFrequency = d3.scaleLinear()
-			.domain( [ 50, 2000 ] )
-			.range([ "#008000", " #ff00ff"]);
+			.domain( [ 20, 150, 1000 ] )
+			.range([ "#008000", "#00a0a0", "#ff00ff"]);
 
 			for( var i=0 ; i<data.neurons.length ; i++ ) {			
 				var n = document.getElementById( data.neurons[i].id )
