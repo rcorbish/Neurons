@@ -22,7 +22,7 @@ public class Brain  {
 	private static final Random rng = new Random(24) ;	// utility random number generator
 
     private final static int HISTORY_LENGTH = 1024 ;
-    private final static double CONNECTION_PROBABILITY = .4 ;
+    private final static double CONNECTION_PROBABILITY = .01 ;
 	
 	// Used to calc rands with the following stats
 	private final static double WEIGHT_MEAN = 0.7 ;
@@ -183,24 +183,50 @@ public class Brain  {
 	 */
 	private void connectLayers( double connectionProbability ) {
 
-		int n = 0 ;
-		int r = 0 ;
-		int c = 0 ;
-		for( int i=0 ; i<synapses.rows() * synapses.columns() ; i++ ) {
-			if( r > c /*!= c */) {
-				double p = connectionProbability * Math.exp( -Math.abs( r-c ) / 8 ) ;
-				if( rng.nextDouble() < p ) {
-					synapses.set( r,c, getRandomWeight() ) ;
-					n++ ;
-				}
+        int fromColumn = 0 ;
+        int fromRow = 0 ;
+
+        for( int from=0 ; from<numNeurons() ; from++ ) {
+            Neuron src = getNeuron( from ) ;
+
+            int toColumn = 0 ;
+            int toRow = 0 ;
+
+            for( int to=0 ; to<numNeurons() ; to++ ) {
+
+                double dist = Math.sqrt((fromColumn - toColumn) * (fromColumn - toColumn) + (fromRow - toRow) * (fromRow - toRow));
+                if( dist > 0 ) { // no self connections
+                    if (!src.isInhibitor()) {   // regular neurons fire forward
+                        if (fromColumn <= toColumn) {
+                            double p = Math.exp(-dist * (1 - connectionProbability));
+                            if (rng.nextDouble() < p) {
+                                synapses.set(to, from, getRandomWeight());
+                            }
+                        }
+                    } else {
+                        if (fromColumn == toColumn || 1==0 ) {
+                            double p = Math.exp(-dist * (1 - connectionProbability));
+                            if (rng.nextDouble() < p) {
+                                synapses.set(to, from, getRandomWeight());
+                            }
+                        }
+                    }
+                }
+                toRow++ ;
+                if( toRow>=numRows ) {
+                    toColumn++ ;
+                    toRow = 0 ;
+                }
 			}
-			r++ ;
-			if( r>=neurons.length ) {
-				c++ ;
-				r = 0 ;
-			}
-		}
-		log.info( "Created {} synapses", n ) ;
+
+            fromRow++ ;
+            if( fromRow>=numRows ) {
+                fromColumn++ ;
+                fromRow = 0 ;
+            }
+
+        }
+		log.info( "Created {} synapses", synapses.cardinality() ) ;
 	}
 
 	/**
@@ -234,7 +260,7 @@ public class Brain  {
 
 		// Set inputs immediately - no dependencies
 		 for( int i=0 ; i<inputNeurons.length ; i++ ) {
-			newPotentials[i] = inputs[i] ;
+			newPotentials[ inputNeurons[i].getId() ] = inputs[i] ;
 		}
 
 		// Then write the output as an atomic op
@@ -327,7 +353,10 @@ public class Brain  {
 	        log.warn( "Warning editing non existant weight {} -> {}", from, to ) ;
         } else {
 	        double v = synapses.get( from, to ) + addition ;
-            if( v < 0.00 ) v = 0.00 ;
+            if( v < 0.00 ) {
+                v = 0.00 ;
+                log.info( "Weight at 0 {} -> {}", from, to ) ;
+            }
             if( v > 0.99 ) v = 0.99 ;
 	        synapses.set( from, to, v );
         }
@@ -509,12 +538,12 @@ public class Brain  {
             int n = queue.poll() ;
             if( inputIds.contains(n) ) {
 				int ix = n ;
-				while( route[ix] != -1 ) {
-					int ix2 = route[ix] ;
-					log.info( "{} -> {}", ix, ix2 ) ;
-					ix = ix2 ;
+				List<Integer> path = new ArrayList<>() ;
+				while( ix != -1 ) {
+					path.add( ix ) ;
+					ix = route[ix] ;
 				}
-//				log.info( "{} -> {}", ix, n ) ;
+				log.info( "Path: {}", path ) ;
                 return true ;
             }
             for( int i=0 ; i<neurons.length ; i++ ) {
@@ -545,10 +574,8 @@ public class Brain  {
 			}
 			Arrays.fill( outputHistory, 0 ) ;
 			Arrays.fill( outputSpikeHistory, false ) ;
-			if( following > getNumInputs() ) {
-                routeToAnyInput(following);
-            }
-		}
+            routeToAnyInput(following);
+ 		}
 		this.followingId = following ;
 	}	
 	
@@ -557,16 +584,33 @@ public class Brain  {
 		return clock ;
 	}
 
-	public int numNeurons() {
-		return neurons.length ;
-	}
+    public int numNeurons() {
+        return neurons.length ;
+    }
+    public CCSMatrix getSynapses() {
+        return synapses ;
+    }
 
 	public boolean isTrain() {
 		return train;
 	}
 
 	public void setTrain(boolean train) {
-		this.train = train;
+		this.train = train ;
+		/*
+		if( train == false ) {
+			CCSMatrix newSynapses = new CCSMatrix( synapses.rows(), synapses.columns() ) ;
+			for( int r=0 ; r<newSynapses.rows() ; r++ ) {
+				for( int c=0 ; c<newSynapses.columns() ; c++ ) {
+					if( synapses.get(r,c) != 0.0 ) {
+						newSynapses.set(r, c, synapses.get(r,c) ) ;
+					}
+				}
+			}
+			synapses = newSynapses ;
+		}
+		*/
+		log.info( "Cardinality {}", synapses.cardinality() ) ;
 	}
 
 	public boolean isFourier() {

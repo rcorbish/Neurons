@@ -1,9 +1,13 @@
 package com.rc;
 
+import java.awt.*;
+import java.awt.image.BufferedImage;
 import java.io.File;
+import java.io.IOException;
 import java.net.URL;
 import java.util.Random;
 
+import org.la4j.matrix.sparse.CCSMatrix;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -12,6 +16,8 @@ import com.google.gson.GsonBuilder;
 
 import spark.Request;
 import spark.Response;
+
+import javax.imageio.ImageIO;
 
 /**
  * This handles the web pages. 
@@ -48,8 +54,9 @@ public class Monitor implements AutoCloseable {
 			} else {
 				spark.Spark.staticFiles.externalLocation( "src/main/resources" ) ;	
 			}
-			spark.Spark.webSocket("/live", wss ) ;			
-			spark.Spark.get( "/data", this::getData, gson::toJson ) ;
+			spark.Spark.webSocket("/live", wss ) ;
+            spark.Spark.get( "/data", this::getData, gson::toJson ) ;
+            spark.Spark.get( "/synapse-map", this::getSynapses ) ;
 			spark.Spark.awaitInitialization() ;
 		} catch( Exception ohohChongo ) {
 			logger.error( "Server start failure.", ohohChongo );
@@ -79,7 +86,36 @@ public class Monitor implements AutoCloseable {
 		return rc ;
 	}
 
-	
+
+	public Object getSynapses( Request req, Response rsp ) throws IOException {
+
+	    logger.info( "Requesting synapse image" ) ;
+		int imageType = BufferedImage.TYPE_BYTE_GRAY ;
+
+        CCSMatrix synapses = brain.getSynapses() ;
+
+        final BufferedImage img = new BufferedImage(synapses.columns(),synapses.rows(),imageType);
+		Graphics2D graphics = img.createGraphics();
+		graphics.setBackground( Color.BLACK ) ;
+		try {
+            synapses.eachNonZero((r, c, v) -> {
+                        int p = ( (int) (v * 0x7f ) + 0x80 )  ;
+                        img.setRGB(r, c, new Color(p, p, p).getRGB());
+                    }
+            );
+        } catch( Throwable t ) {
+            logger.error( "Failed to print", t ) ;
+        }
+		rsp.type( "image/png" );
+		rsp.header("expires", "0" ) ;
+		rsp.header("cache-control", "no-cache" ) ;
+
+		ImageIO.write( img, "png", rsp.raw().getOutputStream() );
+
+		return rsp ;
+	}
+
+
 	public int getPatternId() {
 		return wss.getPattern() ;
 	}

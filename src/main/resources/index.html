@@ -39,7 +39,7 @@ body {
 	margin: 5px ;
 	color: #80a0c0 ;
 }
-.pattern>input {
+.pattern>input , a {
 	width: 40px ;
 	background-color: transparent ;
 	border: none ;
@@ -67,7 +67,6 @@ body {
 	background-color: #050225 ;
 	overflow: hidden ;
 }
-
 </style>
 <title>SNN</title>
 <script src="/d3.min.js"></script>
@@ -80,6 +79,7 @@ body {
 	<input type="radio" name='ft-type' id='fourier-off' value="off" >No FT 
 	<input type="radio" name='ft-type' id='fourier' value="on" >FT 
 	<input type="radio" name='ft-type' id='fourier-spike' value="on" >FT (Spike)
+	<a href="synapse-map" target="synapse-map">synapses</a>
 </div>
 
 <canvas id="chart"  width='1200' height='150'></canvas>

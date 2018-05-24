@@ -92,7 +92,7 @@ public class Main {
 					dims[1] = dims[0] ;
 				}
 			} else {
-				dims = new int[]{ 60, 60 } ;	// default if no size given
+				dims = new int[]{ 30, 80 } ;	// default if no size given
 			}
 			FIXED_PARAMS = new int[ dims.length + 1 ] ;
 			FIXED_PARAMS[0] = 0 ;
