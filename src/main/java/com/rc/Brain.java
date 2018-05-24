@@ -22,7 +22,7 @@ public class Brain  {
 	private static final Random rng = new Random(24) ;	// utility random number generator
 
     private final static int HISTORY_LENGTH = 1024 ;
-    private final static double CONNECTION_PROBABILITY = .01 ;
+    private final static double CONNECTION_PROBABILITY = .001 ;
 	
 	// Used to calc rands with the following stats
 	private final static double WEIGHT_MEAN = 0.7 ;

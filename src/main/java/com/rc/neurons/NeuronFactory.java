@@ -10,6 +10,7 @@ public class NeuronFactory {
 	final static private double rsProb  = .60 ;
 	final static private double fsProb  = .10 ;
 	final static private double ibProb  = .10 ;
+
 	final static private double rzProb  = .05 ;
 	final static private double ltsProb = .05 ;
 	@SuppressWarnings("unused")
