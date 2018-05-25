@@ -27,4 +27,9 @@ public class NeuronFactory {
 		r -= ltsProb ; if( r<0 ) return new NeuronLTS(id) ;
 		return new NeuronTC(id) ;
 	}
+
+	static public Neuron getNeuron( NeuronType type, int id ) throws Exception {
+		return type.create(id) ;
+	}
+
 }

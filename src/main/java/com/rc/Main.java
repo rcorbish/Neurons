@@ -19,6 +19,7 @@ public class Main {
 
 	final static Random rng = new Random( 660 );
 	
+	static double CONNECTION_DENSITY = 0.01 ;
 	static int POPULATION = 40 ;
 	static int EPOCHS = 10 ;
 	static double LIFESPAN = 1.0 ;
@@ -48,6 +49,7 @@ public class Main {
 			parser.acceptsAll( asList("f", "file") , "The parameters in json format" ).withRequiredArg().ofType( String.class ) ;
 			parser.acceptsAll( asList("e", "evolve") , "Whether to run the evolution step" ) ;
 			parser.acceptsAll( asList("p", "period") , "Each clock step is this long (uS)" ).withRequiredArg().ofType( Integer.class ) ;
+			parser.acceptsAll( asList("d", "density") , "Synapse connection density 0-1" ).withRequiredArg().ofType( Double.class ) ;
 			parser.acceptsAll( asList("u", "update-delay" ) , "Interval between updates 0-200 mS" ).withRequiredArg().ofType( Long.class ) ; 
 			parser.accepts( "epochs" , "Number of epochs to run" ).withRequiredArg().ofType( Integer.class ) ; 
 			parser.accepts( "clear" , "Delete existing parameters" ) ; 
@@ -75,6 +77,7 @@ public class Main {
 	        if( options.has( "mutation" ) ) 	{ MUTATION = (double) options.valueOf("mutation") ; }
 	        if( options.has( "update-delay" ) ) { DELAY_INTERVAL = (long) options.valueOf("update-delay") ; }
 	        if( options.has( "period" ) ) 		{ TICK_PERIOD = (int) options.valueOf("period") ; }
+	        if( options.has( "density" ) ) 		{ CONNECTION_DENSITY = (double) options.valueOf("density") ; }
 	        boolean clearFile = options.has("clear") ;
 	        boolean evolve    = options.has("evolve") ;
 	        boolean train	  = options.has("train") ;
@@ -112,7 +115,7 @@ public class Main {
 			}
 			
 			Brain brain ;
-			brain = new Brain( TICK_PERIOD, 6, 10, dims[0], dims[1] ) ;
+			brain = new Brain( TICK_PERIOD, CONNECTION_DENSITY, 6, 10, dims[0], dims[1] ) ;
 			/*
 			if( fileExists && !clearFile ) {
 				brain = Brain.load( TICK_PERIOD, parameterFile ) ;

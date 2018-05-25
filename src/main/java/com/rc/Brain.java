@@ -3,9 +3,7 @@ package com.rc ;
 import java.util.*;
 
 import org.jtransforms.fft.DoubleFFT_1D;
-import org.la4j.Matrix;
 import org.la4j.Vector;
-import org.la4j.decomposition.EigenDecompositor;
 import org.la4j.matrix.sparse.CCSMatrix;
 
 import org.la4j.vector.dense.BasicVector;
@@ -24,7 +22,6 @@ public class Brain  {
 	private static final Random rng = new Random(24) ;	// utility random number generator
 
     private final static int HISTORY_LENGTH = 1024 ;
-    private final static double CONNECTION_PROBABILITY = .001 ;
 	
 	// Used to calc rands with the following stats
 	private final static double WEIGHT_MEAN = 0.7 ;
@@ -45,6 +42,8 @@ public class Brain  {
 
     private double clock ;
 	private final double tickPeriod ;
+	private final double connectionProbability ;
+
 	
 	private boolean train ;
 	private boolean fftSpike ;
@@ -127,16 +126,21 @@ public class Brain  {
 
 	/**
 	 * Create a new instance of a brain.
+	 * 
 	 * @param tickPeriod the period of a clock tick
+	 * @param connectionProbability describes synapse density 0.0 .. 1.0
      * @param numInputs the number of input neurons
      * @param numOutputs the number of output neurons
      * @param rows the number of rows in the liquid
      * @param cols the number of cols in the liquid
 	 */
-	public Brain( double tickPeriod, int numInputs, int numOutputs, int rows, int cols ) {
+	public Brain( double tickPeriod, double connectionProbability, int numInputs, int numOutputs, int rows, int cols ) {
 
 		this.tickPeriod = tickPeriod ;
+		this.connectionProbability = connectionProbability ;
+		
 		this.clock = 0 ;
+
 		this.outputHistory = new double[HISTORY_LENGTH] ; 
 		this.outputSpikeHistory = new boolean[HISTORY_LENGTH] ;
 		this.historyIndex = 0 ;
@@ -171,7 +175,7 @@ public class Brain  {
 
         this.synapses = new CCSMatrix(neurons.length,neurons.length,0) ;
 
-		connectLayers( CONNECTION_PROBABILITY ) ;
+		connectLayers() ;
 		this.train = false ;
 		this.fftSpike = false ;
 		this.fft = null ;
@@ -181,9 +185,8 @@ public class Brain  {
 	/**
 	 * Connects neurons in each layer, to the previous layer
 	 * 
-	 * @param connectionProbability chance of connecting a pair of neurons ( 1 is fully connected )
 	 */
-	private void connectLayers( double connectionProbability ) {
+	private void connectLayers() {
 
         int fromColumn = 0 ;
         int fromRow = 0 ;
@@ -199,7 +202,7 @@ public class Brain  {
                 if( dist > 0 ) { // no self connections
                     if( !src.isInhibitor()) {   // regular neurons fire forward
                         if( fromColumn < toColumn ) {
-                            double p = Math.exp(-dist * (1 - connectionProbability));
+                            double p = Math.exp( -dist * (1 - connectionProbability) ) ;
                             if( rng.nextDouble()< p ) {
                                 synapses.set(to, from, getRandomWeight());
                             }

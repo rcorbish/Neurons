@@ -11,9 +11,6 @@ import com.rc.Genome;
 
 public class InputNeuron extends NeuronRS {
 
-	final static Logger log = LoggerFactory.getLogger( InputNeuron.class ) ;
-	final static Random rng = new Random() ;
-	
 	final double clockOffset ;
 	double nextSpikeTime ;
 	
@@ -35,7 +32,7 @@ public class InputNeuron extends NeuronRS {
 		isSpiking = false ;
 		if( nextSpikeTime <= clock && potential > 1e-6 ) {
 			spike( clock ) ;
-			this.currentPotential = threshold ;
+			this.currentPotential = getThreshold() ;
 			double clockDrift = clock - nextSpikeTime ;
 					
 			// 	  1.0 potential => MAX_FREQUENCY Hz
@@ -54,6 +51,12 @@ public class InputNeuron extends NeuronRS {
 	public void train( Brain brain, double clock ) {
 	// don't train inputs
 	}
+
+	@Override
+	public NeuronType getType() {
+		return NeuronType.IN ;
+	}
+
 }
 
 

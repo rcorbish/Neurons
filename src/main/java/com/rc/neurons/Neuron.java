@@ -6,62 +6,63 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.rc.Brain;
-import com.rc.Edge;
-import com.rc.EdgeList;
 import com.rc.Genome;
 
 
 abstract public class Neuron  {
 
-	final static Logger log = LoggerFactory.getLogger( Neuron.class ) ;
+    //-------------------------------------------
+    // constants
+    private final static int NUM_SPIKES_TO_RECORD = 25 ;
 
-	private final static int NUM_SPIKES_TO_RECORD = 25 ;
+	private final static int GENOME_INDEX_TYPE = 0 ;
+	private final static int GENOME_INDEX_A = 1 ;
+	private final static int GENOME_INDEX_B = 2 ;
+	private final static int GENOME_INDEX_C = 3 ;
+	private final static int GENOME_INDEX_D = 4 ;
+	private final static int GENOME_INDEX_LEARNING_RATE = 5 ;
+	public  final static int GENOME_SIZE = 6 ;
 
-	private final static double LEARNING_WINDOW = 0.015 ;
+    //-------------------------------------------
+    // shared utils
+    final static protected Logger log = LoggerFactory.getLogger( Neuron.class ) ;
+    final static protected Random rng = new Random() ;
 
-	private final static Random rng = new Random()  ;
-	private final static int GENOME_INDEX_THRESHOLD = 0 ;
-	private final static int GENOME_INDEX_RESTING = 1 ;
-	private final static int GENOME_INDEX_DECAY = 2 ;
-	private final static int GENOME_INDEX_LEARNING_RATE = 3 ;
-	private final static int GENOME_INDEX_SPIKE_VALUE = 4 ;
-	private final static int GENOME_INDEX_LEARNING_WINDOW = 5 ;
-	private final static int GENOME_INDEX_REFRACTORY_DELAY = 6 ;
-	private final static int GENOME_INDEX_THRESHOLD_LEARNING_RATE = 7 ;
-	public  final static int GENOME_SIZE = 8 ;
-
-	// These are transient state data
+    //-------------------------------------------
+    // transient state data
 	protected 		double 		currentPotential ;
 	protected 		boolean		isSpiking ;
-	private  		double 		lastSpikeTime ;				// when did we spike last
 
-	protected final boolean isInhibitor ;
+	private final double 	lastSpikes[] ;
+	private 	  int 		lastSpikeIndex ;
+
+	protected double	u ;
+
+    private       double 	threshold  ;
+    private 	  double 	lastStepClock ;
+    private 	  double	frequency ;
+
+    //-------------------------------------------
+	// genome static data
+	private final int 		id ;
+
 	protected final double	a ;
 	protected final double	b ;
 	protected final double	c ;		// resting potential
 	protected final double	d ;		
 
-	protected double	u ;
-
-
-	// The following items are held in the genome
-	private final int 		id ;
     private final double 	learningRate ;
     private final double 	learningRateTau ;
     private final double 	learningWindowLTP ;     // pre->post = long term potentiation
     private final double 	learningWindowLTD ;     // post->pre = long term depression
-	protected	  double 	threshold  ;
-	private 	  double 	lastStepClock ;
-	private 	  double	frequency ;
-	private final double 	lastSpikes[] ;
-	private 	  int 		lastSpikeIndex ;
+
+    //-------------------------------------------
 
 
 
-	protected Neuron( int id, double A, double B, double C, double D, boolean inhibitor  ) {
+	protected Neuron( int id, double A, double B, double C, double D ) {
 		this.id = id ;
 
-		this.isInhibitor = inhibitor ;
 		this.a = A ;
 		this.b = B ;
 		this.c = C ;
@@ -69,15 +70,15 @@ abstract public class Neuron  {
 		
 		this.u = 0 ;
 		
-		this.threshold = .030 ; 				// spike triggered when internal potential hit this value
+		this.threshold = .030 ; 			// spike triggered when internal potential hit this value
 
 		this.learningRate = 0.1 ;			// how fast to adjust weights
         this.learningRateTau = 0.02 ;       // exp decay of learning wrt time between spikes
         this.learningWindowLTP = 0.015 ;    // 0 .. 15ms  for LTP
         this.learningWindowLTD = 0.100 ;    // 15 .. 100 for LTD
 
-		this.currentPotential = -.07 ; //rng.nextDouble() ;
-		this.lastSpikeTime = 0 ;
+		this.currentPotential = -.07 ; 		//rng.nextDouble() ;
+		this.lastSpikeIndex = 0 ;
 		this.lastSpikes = new double[NUM_SPIKES_TO_RECORD] ;
 	}
 
@@ -85,29 +86,30 @@ abstract public class Neuron  {
 	public Neuron( Genome genome, int id ) {
 		this.id = id ;
 		
-		this.threshold = genome.getDouble( GENOME_INDEX_THRESHOLD ) + 0.5 ;
 		this.learningRate = genome.getDouble( GENOME_INDEX_LEARNING_RATE ) ;
+		this.a = genome.getDouble( GENOME_INDEX_A ) ;
+		this.b = genome.getDouble( GENOME_INDEX_B ) ;
+		this.c = genome.getDouble( GENOME_INDEX_C ) ;
+		this.d = genome.getDouble( GENOME_INDEX_D ) ;
 
         this.learningRateTau = 0.02 ;
         this.learningWindowLTP = 0.015 ;    // 0 .. 15ms  for LTP
         this.learningWindowLTD = 0.100 ;    // 15 .. 100 for LTD
 
-		this.currentPotential = rng.nextDouble() ;
-		this.lastSpikeTime = -1.0 ;
+		this.currentPotential = -0.070 ;
+		this.lastSpikeIndex = 0 ;
 		this.lastSpikes = new double[NUM_SPIKES_TO_RECORD] ;
-
-		this.a = 0.02 ;
-		this.b = 0.2 ;
-		this.c = -65 ;
-		this.d = 8 ;
-		this.isInhibitor = false ;
 	}
 
 
 	public Genome toGenome() {
 		Genome rc = new Genome() ;
-		rc.set( threshold - 0.5, GENOME_INDEX_THRESHOLD ) ;
+
 		rc.set( learningRate, GENOME_INDEX_LEARNING_RATE ) ;
+		rc.set( a, GENOME_INDEX_A ) ;
+		rc.set( b, GENOME_INDEX_B ) ;
+		rc.set( c, GENOME_INDEX_C ) ;
+		rc.set( d, GENOME_INDEX_D ) ;
 
 		return rc ;
 	}
@@ -149,14 +151,13 @@ abstract public class Neuron  {
 
 	
 	public void spike( double clock ) {
-		isSpiking = true ;
-		lastSpikeTime = clock ;		
-		currentPotential = threshold ;
-		lastSpikes[ lastSpikeIndex ] = clock ;
 		lastSpikeIndex++ ;
 		if( lastSpikeIndex >= lastSpikes.length ) {
 			lastSpikeIndex = 0 ;
 		}			
+		isSpiking = true ;
+		currentPotential = threshold ;
+		lastSpikes[ lastSpikeIndex ] = clock ;
 	}
 
 	public void train( Brain brain, double clock ) {
@@ -165,8 +166,8 @@ abstract public class Neuron  {
 
 		if( isSpiking() ) {
 			for( Neuron src : sources ) {
-			    if( !src.isInhibitor() || 1==1 ) {
-                    double srcFiredAgo = src.lastSpikeTime;
+			    if( !src.isInhibitor() ) {
+                    double srcFiredAgo = src.timeSinceFired(clock);
                     if ( srcFiredAgo==0 ) {
                         brain.addWeight(src.id, id, -learningRate );
                     } else if (srcFiredAgo < learningWindowLTP ) {
@@ -176,7 +177,18 @@ abstract public class Neuron  {
                         double dw = learningRate * Math.exp( (learningWindowLTP-srcFiredAgo) / learningRateTau ) ;
                         brain.addWeight(src.id, id, -dw );
                     }
-                }
+                } else {
+					double srcFiredAgo = src.timeSinceFired(clock);
+                    if ( srcFiredAgo==0 ) {
+                        brain.addWeight(src.id, id, -learningRate );
+                    } else if (srcFiredAgo < learningWindowLTP ) {
+                        double dw = learningRate * Math.exp( (learningWindowLTP-srcFiredAgo) / learningRateTau ) ;
+                        brain.addWeight(src.id, id, dw );
+                    } else if (srcFiredAgo < learningWindowLTD) {
+                        double dw = learningRate * Math.exp( (learningWindowLTP-srcFiredAgo) / learningRateTau ) ;
+                        brain.addWeight(src.id, id, -dw );
+                    }
+				}
 			}
 		}
 	}
@@ -215,19 +227,20 @@ abstract public class Neuron  {
 	}
 	
 	
-	public double timeSinceFired( double clock ) { return clock - lastSpikeTime ; }
+	public double timeSinceFired( double clock ) { 
+		double lastSpikeTime = lastSpikes[ lastSpikeIndex ] ;
+		return clock - lastSpikeTime ; 
+	}
+
 	public int getId() { return id ; }
 	public double getPotential() { return currentPotential ; }
 	public double getRestingPotential() { return c ; }
 	public double getThreshold() { return threshold ; }
 	public double getLearningRate() { return learningRate ; }
 	public boolean isSpiking() { return isSpiking ; }
-	public boolean isInhibitor() { return isInhibitor ; }
-	
-	public String getType() { 
-		String className = getClass().getName() ; 
-		return className.substring( className.lastIndexOf('.')+1 ) ; 
-	}
+    abstract public boolean isInhibitor() ;
+    abstract public NeuronType getType() ;
+
 
 	@Override
 	public String toString() {
@@ -236,10 +249,8 @@ abstract public class Neuron  {
 		.append( "type        ").append( getType() ).append( System.lineSeparator() )
 		.append( "id          ").append( id ).append( System.lineSeparator() )
 		.append( "potential   ").append( currentPotential ).append( System.lineSeparator() ) 
-		.append( "threshold   ").append( threshold ).append( System.lineSeparator() ) 
 		.append( "frequency   ").append( frequency() ).append( System.lineSeparator() ) 
-		.append( "last spike  ").append( lastSpikeTime ).append( System.lineSeparator() ) 
-		.append( "spiking     ").append( isSpiking ).append( System.lineSeparator() ) 
+		.append( "spiking     ").append( isSpiking() ).append( System.lineSeparator() ) 
 		;
 		return sb.toString() ;
 	}
