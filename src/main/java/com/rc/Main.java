@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Random;
 import java.util.StringJoiner;
 
+import com.rc.web.Monitor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -15,11 +16,11 @@ import joptsimple.OptionSet;
 
 
 public class Main {
-	final static Logger log = LoggerFactory.getLogger( Monitor.class ) ;
+	final static Logger log = LoggerFactory.getLogger( Main.class ) ;
 
 	final static Random rng = new Random( 660 );
 	
-	static double CONNECTION_DENSITY = 0.01 ;
+	static double CONNECTION_DENSITY = 0.2 ;
 	static int POPULATION = 40 ;
 	static int EPOCHS = 10 ;
 	static double LIFESPAN = 1.0 ;

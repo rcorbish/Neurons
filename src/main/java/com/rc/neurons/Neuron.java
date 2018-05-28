@@ -117,32 +117,38 @@ abstract public class Neuron  {
 
 	public void step( double potential, double clock ) {
 		if( isSpiking() ) {
-			isSpiking = false ;
+			reset() ;
 			lastStepClock = clock ;
+		} else {
+			//--------------------------------------------
+			// ODE params are in millivolts & milliseconds
+			// for now do this ...
+			//
+			double dt = (clock - lastStepClock) * 1000.0;
+			lastStepClock = clock;
+
+			double cp = currentPotential * 1000.0;
+			double p = potential * 1000.0;
+
+			double v = (0.04 * cp + 5) * cp + 140 - u + p;
+			this.u += dt * this.a * (this.b * cp - this.u);
+			this.currentPotential += dt * v / 1000.0;
+		}
+	}
+
+
+	public void reset( ) {
+//		if( isSpiking() ) {
+			isSpiking = false ;
 
 			//----------------------------
 			// Reset ODE params on a spike
 			this.currentPotential = c / 1000.0  ;
 			this.u += this.d ;
-			
-			return ;
-		}
-		//--------------------------------------------
-		// ODE params are in millivolts & milliseconds
-		// for now do this ...
-		//
-		double dt = ( clock - lastStepClock ) * 1000.0 ;
-		lastStepClock = clock ;
-		
-		double cp = currentPotential * 1000.0 ;
-		double p  = potential * 1000.0 ;
-		
-		double v =  ( 0.04 * cp + 5 ) * cp + 140 - u + p ;
-		this.u += dt * this.a * ( this.b * cp - this.u ) ;
-		this.currentPotential += dt * v / 1000.0 ;
+//		}
 	}
 
-	
+
 	public void checkForSpike( double clock ) {
 		if( this.currentPotential>threshold ) {
 			spike( clock ) ;

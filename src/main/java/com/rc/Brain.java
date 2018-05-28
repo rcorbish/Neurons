@@ -22,7 +22,8 @@ public class Brain  {
 	private static final Random rng = new Random(24) ;	// utility random number generator
 
     private final static int HISTORY_LENGTH = 1024 ;
-	
+    private final static int WINNER_TAKE_ALL_WIDTH = 7 ;
+
 	// Used to calc rands with the following stats
 	private final static double WEIGHT_MEAN = 0.7 ;
     private final static double WEIGHT_SIGMA = 0.15 ;
@@ -39,12 +40,12 @@ public class Brain  {
 	private final Neuron neurons[] ;			// neurons in each layer
 	private final Neuron inputNeurons[] ;			// neurons in each layer
 	private final Neuron outputNeurons[] ;			// neurons in each layer
+    private final int winnerTakeAllLayers[] ;       // which layers in the network are winner take all
 
     private double clock ;
 	private final double tickPeriod ;
 	private final double connectionProbability ;
 
-	
 	private boolean train ;
 	private boolean fftSpike ;
 	private DoubleFFT_1D fft ;
@@ -152,6 +153,11 @@ public class Brain  {
 		this.inputNeurons = new Neuron[numInputs] ;
 		this.outputNeurons = new Neuron[numOutputs] ;
 
+		this.winnerTakeAllLayers = new int[ (cols-WINNER_TAKE_ALL_WIDTH-1) / WINNER_TAKE_ALL_WIDTH ] ;
+		for( int i=0 ; i<winnerTakeAllLayers.length ; i++ ) {
+		    winnerTakeAllLayers[i] = (i+1) * WINNER_TAKE_ALL_WIDTH ;
+        }
+
 		// fill with liquid neurons
         for( int i=0 ; i<this.neurons.length ; i++ ) {
             this.neurons[i] = NeuronFactory.getNeuron( i ) ;
@@ -198,21 +204,15 @@ public class Brain  {
             int toRow = 0 ;
 
             for( int to=0 ; to<numNeurons() ; to++ ) {
-                double dist = Math.sqrt((fromColumn - toColumn) * (fromColumn - toColumn) + (fromRow - toRow) * (fromRow - toRow));
-                if( dist > 0 ) { // no self connections
-                    if( !src.isInhibitor()) {   // regular neurons fire forward
-                        if( fromColumn < toColumn ) {
-                            double p = Math.exp( -dist * (1 - connectionProbability) ) ;
-                            if( rng.nextDouble()< p ) {
-                                synapses.set(to, from, getRandomWeight());
-                            }
-                        }
-                    } else {
-						double p = Math.exp(-dist * (1 - connectionProbability));
-						if( rng.nextDouble() < p ) {
-							synapses.set(to, from, getRandomWeight());
-						}
-                    }
+                double dist = Math.sqrt(
+                                    (fromColumn - toColumn) * (fromColumn - toColumn) +
+                                    (fromRow - toRow) * (fromRow - toRow)
+                                ) ;
+                if( dist > 0 && fromColumn <= toColumn ) {   // no self connections
+					double p = connectionProbability * gammaPDF( dist ) ;
+					if( rng.nextDouble() < p ) {
+						synapses.set( to, from, getRandomWeight() ) ;
+					}
                 }
                 toRow++ ;
                 if( toRow>=numRows ) {
@@ -229,6 +229,40 @@ public class Brain  {
         }
 		log.info( "Created {} synapses", synapses.cardinality() ) ;
 	}
+
+//    private static final int ALPHA = 4 ;
+//    private static final double BETA = .2 ;
+    private static final int K = 3 ;
+    private static final double THETA= .7 ;
+
+	//
+	//	https://en.wikipedia.org/wiki/Gamma_distribution
+	//
+	private double gammaPDF( double x ) {
+//        double rc =
+//                ( Math.pow( BETA, ALPHA ) / gamma( ALPHA ) ) *
+//                  Math.pow( x, ALPHA-1 ) * Math.exp( -BETA * x )
+//                ;
+        double rc =
+                ( Math.pow( x, K-1 ) * Math.exp( -x / THETA ) )
+                        /
+                ( gamma( K ) * Math.pow( THETA, K ) )
+                ;
+		return rc ;
+	}
+
+
+	//
+	// Gamma function is (n-1)! if n is an integer
+	private int gamma( int x ) {
+		int rc = 1 ;
+		// NB factorial would be i<=x
+		for( int i=1 ; i<x ; i++  ) {
+			rc *= i ;
+		}
+		return rc ;
+	}
+
 
 	/**
 	 * Choose a random weight. Weights may be positive or negative, 
@@ -271,8 +305,38 @@ public class Brain  {
 		
 		for( int i=0 ; i<neurons.length; i++ ) {
 			neurons[i].checkForSpike(clock) ;
-		}		
+		}
+
+
+		for( int i=0 ; i<winnerTakeAllLayers.length ; i++ ) {
+            winnerTakeAll( winnerTakeAllLayers[i] ) ;
+        }
+
 	}
+
+
+    protected void winnerTakeAll( int layer ) {
+
+        int ix = layer * getRows() ;
+        int maxIndex = ix ;
+        double maxPotential = getNeuron(ix).getPotential() ;
+        for( int j=0 ; j<getRows() ; j++, ix++ ) {
+            if( getNeuron(ix).getPotential() > maxPotential ) {
+                maxPotential = getNeuron(ix).getPotential() ;
+                maxIndex = ix ;
+            }
+        }
+
+        if( getNeuron(maxIndex).isSpiking() ) {
+            ix = layer * getRows();
+            for (int j = 0; j < getRows(); j++, ix++) {
+                if (ix != maxIndex) {
+                    getNeuron(ix).reset();
+                }
+            }
+        }
+    }
+
 
 
     /**
@@ -566,8 +630,10 @@ public class Brain  {
 	}
 	
 	public int getNumInputs() { return inputNeurons.length ; } 
-	public int getNumOutputs() { return outputNeurons.length ; } 
-	
+	public int getNumOutputs() { return outputNeurons.length ; }
+	public int getRows() { return numRows ; }
+	public int getColumns() { return numColumns ; }
+
 	public void setFollowing(int following) {
 		if( this.followingId != following ) {
 			Neuron n = getNeuron( following ) ;

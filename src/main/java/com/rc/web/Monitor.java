@@ -1,4 +1,4 @@
-package com.rc;
+package com.rc.web;
 
 import java.awt.*;
 import java.awt.image.BufferedImage;
@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.net.URL;
 import java.util.Random;
 
+import com.rc.Brain;
 import org.la4j.matrix.sparse.CCSMatrix;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -56,7 +57,8 @@ public class Monitor implements AutoCloseable {
 			}
 			spark.Spark.webSocket("/live", wss ) ;
             spark.Spark.get( "/data", this::getData, gson::toJson ) ;
-            spark.Spark.get( "/synapse-map", this::getSynapses ) ;
+			spark.Spark.get( "/synapse-map", this::getSynapses ) ;
+			spark.Spark.get( "/synapse-graph", this::getGraph ) ;
 			spark.Spark.awaitInitialization() ;
 		} catch( Exception ohohChongo ) {
 			logger.error( "Server start failure.", ohohChongo );
@@ -98,14 +100,49 @@ public class Monitor implements AutoCloseable {
 		Graphics2D graphics = img.createGraphics();
 		graphics.setBackground( Color.BLACK ) ;
 		try {
-            synapses.eachNonZero((r, c, v) -> {
+            synapses.eachNonZero( (r, c, v) -> {
                         int p = ( (int) (v * 0x7f ) + 0x80 )  ;
-                        img.setRGB(r, c, new Color(p, p, p).getRGB());
+                        img.setRGB(r, c, new Color(0, p, p).getRGB());
                     }
-            );
+            ) ;
         } catch( Throwable t ) {
             logger.error( "Failed to print", t ) ;
         }
+		rsp.type( "image/png" );
+		rsp.header("expires", "0" ) ;
+		rsp.header("cache-control", "no-cache" ) ;
+
+		ImageIO.write( img, "png", rsp.raw().getOutputStream() );
+
+		return rsp ;
+	}
+
+
+
+	public Object getGraph( Request req, Response rsp ) throws IOException {
+
+		logger.info( "Requesting graph image" ) ;
+		int imageType = BufferedImage.TYPE_BYTE_GRAY ;
+
+		CCSMatrix synapses = brain.getSynapses() ;
+		int rows = brain.getRows()  ;
+		int columns = brain.getColumns()  ;
+        int scale = 15 ;
+		final BufferedImage img = new BufferedImage( columns*scale, rows*scale, imageType ) ;
+		Graphics2D graphics = img.createGraphics() ;
+		graphics.setBackground( Color.BLACK ) ;
+		try {
+			synapses.eachNonZero( (r, c, v) -> {
+				int x0 = r / rows ;
+				int y0 = r - ( x0 * rows ) ;
+				int x1 = c / rows ;
+				int y1 = c - ( x1 * rows ) ;
+
+				graphics.drawLine(x0*scale, y0*scale, x1*scale, y1*scale);
+			} ) ;
+		} catch( Throwable t ) {
+			logger.error( "Failed to print", t ) ;
+		}
 		rsp.type( "image/png" );
 		rsp.header("expires", "0" ) ;
 		rsp.header("cache-control", "no-cache" ) ;
