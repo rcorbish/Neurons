@@ -348,8 +348,8 @@ public class Brain  {
 	 * Neuron vector n is the neuron potentials
 	 *	
 	 *	in A
-	 *		columns represent the source ( i.e. from )
-	 *		rows represent the target ( i.e. to )
+	 *		rows represent the source ( i.e. from )
+	 *		columns represent the target ( i.e. to )
 	 *	
 	 *	transfer across the grid =
 	 *		A * n   ( adjacency x neuron outputs )
@@ -358,27 +358,14 @@ public class Brain  {
      */
 	protected double[] calculateNewPotentials() {
 
-        CCSMatrix A  = new CCSMatrix( neurons.length, neurons.length,0) ;
         Vector neu = new BasicVector( neurons.length ) ;
 
-		int r = 0 ;
-		int c = 0 ;
-		for( int i=0 ; i<synapses.rows() * synapses.columns() ; i++ ) {
-			if( neurons[c].isSpiking() && synapses.nonZeroAt(r,c) ) {
-				A.set( r, c, synapses.get(r,c) ) ;
-			}
-			r++ ;
-			if( r >= neurons.length ) {
-				c++ ;
-				r = 0 ;
-			}
-		}
 		for( int i=0 ; i<neurons.length ; i++ ) {
 			neu.set( i, neurons[i].isSpiking() ? 0.35 : 0 ) ;
 		}
 
-        Vector res = A.multiply( neu ) ;
-		
+		Vector res = synapses.multiply( neu ) ;
+
 		double rc[] = new double[ res.length() ] ;
 		for( int i=inputNeurons.length ; i<rc.length ; i++ ) {
 		    rc[i] = res.get(i) ;
