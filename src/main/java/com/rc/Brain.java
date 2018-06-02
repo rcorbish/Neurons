@@ -21,12 +21,14 @@ public class Brain  {
 
 	private static final Random rng = new Random(24) ;	// utility random number generator
 
-    private final static int HISTORY_LENGTH = 1024 ;
-    private final static int WINNER_TAKE_ALL_WIDTH = 7 ;
+	private final static int HISTORY_LENGTH = 1024 ;
+
+	private final static int EPOCH_LENGTH = 1000 ;
+    private final static double WINNER_TAKE_ALL_RADIUS = 3.5 ;
 
 	// Used to calc rands with the following stats
 	private final static double WEIGHT_MEAN = 0.7 ;
-    private final static double WEIGHT_SIGMA = 0.15 ;
+    private final static double WEIGHT_SIGMA = 0.25 ;
 	
 	private final double outputHistory[] ;
 	private final boolean outputSpikeHistory[] ;
@@ -34,15 +36,16 @@ public class Brain  {
 	private int followingId ;
 	
 	private final CCSMatrix synapses ;		// adjacency matrix
+	private final CCSMatrix training ;		// training weight changes per epoch
 
 	private final int numColumns ;
 	private final int numRows ;
 	private final Neuron neurons[] ;			// neurons in each layer
 	private final Neuron inputNeurons[] ;			// neurons in each layer
 	private final Neuron outputNeurons[] ;			// neurons in each layer
-    private final int winnerTakeAllLayers[] ;       // which layers in the network are winner take all
 
-    private double clock ;
+	private double clock ;
+	private int epoch ;
 	private final double tickPeriod ;
 	private final double connectionProbability ;
 
@@ -153,11 +156,6 @@ public class Brain  {
 		this.inputNeurons = new Neuron[numInputs] ;
 		this.outputNeurons = new Neuron[numOutputs] ;
 
-		this.winnerTakeAllLayers = new int[ (cols-WINNER_TAKE_ALL_WIDTH-1) / WINNER_TAKE_ALL_WIDTH ] ;
-		for( int i=0 ; i<winnerTakeAllLayers.length ; i++ ) {
-		    winnerTakeAllLayers[i] = (i+1) * WINNER_TAKE_ALL_WIDTH ;
-        }
-
 		// fill with liquid neurons
         for( int i=0 ; i<this.neurons.length ; i++ ) {
             this.neurons[i] = NeuronFactory.getNeuron( i ) ;
@@ -180,6 +178,7 @@ public class Brain  {
 		}
 
         this.synapses = new CCSMatrix(neurons.length,neurons.length,0) ;
+		this.training = new CCSMatrix(neurons.length,neurons.length,0) ;
 
 		connectLayers() ;
 		this.train = false ;
@@ -198,7 +197,6 @@ public class Brain  {
         int fromRow = 0 ;
 
         for( int from=0 ; from<numNeurons() ; from++ ) {
-            Neuron src = getNeuron( from ) ;
 
             int toColumn = 0 ;
             int toRow = 0 ;
@@ -209,7 +207,7 @@ public class Brain  {
                                     (fromRow - toRow) * (fromRow - toRow)
                                 ) ;
                 if( dist > 0 && fromColumn <= toColumn ) {   // no self connections
-					double p = connectionProbability * gammaPDF( dist ) ;
+					double p = gammaPDF( dist / connectionProbability ) ;
 					if( rng.nextDouble() < p ) {
 						synapses.set( to, from, getRandomWeight() ) ;
 					}
@@ -233,7 +231,7 @@ public class Brain  {
 //    private static final int ALPHA = 4 ;
 //    private static final double BETA = .2 ;
     private static final int K = 3 ;
-    private static final double THETA= .7 ;
+    private static final double THETA= .3 ;
 
 	//
 	//	https://en.wikipedia.org/wiki/Gamma_distribution
@@ -243,12 +241,11 @@ public class Brain  {
 //                ( Math.pow( BETA, ALPHA ) / gamma( ALPHA ) ) *
 //                  Math.pow( x, ALPHA-1 ) * Math.exp( -BETA * x )
 //                ;
-        double rc =
+        return
                 ( Math.pow( x, K-1 ) * Math.exp( -x / THETA ) )
                         /
                 ( gamma( K ) * Math.pow( THETA, K ) )
                 ;
-		return rc ;
 	}
 
 
@@ -304,37 +301,57 @@ public class Brain  {
 		}
 		
 		for( int i=0 ; i<neurons.length; i++ ) {
-			neurons[i].checkForSpike(clock) ;
+			if( neurons[i].checkForSpike(clock) ) {
+			    List<Neuron> closeToSpiker = neuronsCloseTo( neurons[i], WINNER_TAKE_ALL_RADIUS ) ;
+			    for( Neuron n : closeToSpiker ) {
+			        double d = distanceBetween( neurons[i], n ) ;
+			        if( rng.nextDouble() < (1.0/d) ) {
+                        n.reset();
+                    }
+                }
+            }
 		}
-
-
-		for( int i=0 ; i<winnerTakeAllLayers.length ; i++ ) {
-            winnerTakeAll( winnerTakeAllLayers[i] ) ;
-        }
-
 	}
 
 
-    protected void winnerTakeAll( int layer ) {
 
-        int ix = layer * getRows() ;
-        int maxIndex = ix ;
-        double maxPotential = getNeuron(ix).getPotential() ;
-        for( int j=0 ; j<getRows() ; j++, ix++ ) {
-            if( getNeuron(ix).getPotential() > maxPotential ) {
-                maxPotential = getNeuron(ix).getPotential() ;
-                maxIndex = ix ;
-            }
-        }
+    public double distanceBetween( Neuron n1, Neuron n2 ) {
+        int x1 = n1.getId() % getRows() ;
+        int y1 = n1.getId() / getRows() ;
+        int x2 = n2.getId() % getRows() ;
+        int y2 = n2.getId() / getRows() ;
 
-        if( getNeuron(maxIndex).isSpiking() ) {
-            ix = layer * getRows();
-            for (int j = 0; j < getRows(); j++, ix++) {
-                if (ix != maxIndex) {
-                    getNeuron(ix).reset();
+        return Math.sqrt( (x1-x2)*(x1-x2) + (y1-y2)*(y1-y2) ) ;
+    }
+
+
+
+
+    public List<Neuron> neuronsCloseTo( Neuron n1, double distance ) {
+	    List<Neuron> rc = new ArrayList<>() ;
+
+        int x1 = n1.getId() / getRows() ;
+        int y1 = n1.getId() % getRows() ;
+
+        int minx = (int)Math.max( x1 - distance, 0 ) ;
+        int maxx = (int)Math.min( x1 + distance, getColumns()-1 ) ;
+        int miny = (int)Math.max( y1 - distance, 0 ) ;
+        int maxy = (int)Math.min( y1 + distance, getRows()-1 ) ;
+
+        //
+        // Assume that the x distance is 3x greater than y distance
+        //
+        for( int x=minx ; x<=maxx ; x++ ) {
+            int dx2 = 9 * ( x - x1 ) * ( x - x1 ) ;
+            int ix = x * getRows() + miny ;
+            for( int y=miny ; y<=maxy ; y++ , ix++) {
+                int dy2 = ( y - y1 ) * ( y - y1 ) ;
+                if( ix != n1.getId() && Math.sqrt( dx2 + dy2 ) <= distance ) {
+                    rc.add( neurons[ix] ) ;
                 }
             }
         }
+        return rc ;
     }
 
 
@@ -356,12 +373,12 @@ public class Brain  {
      *
      * @return return an array of output potentials (1 per neuron )
      */
-	protected double[] calculateNewPotentials() {
+    protected double[] calculateNewPotentials() {
 
         Vector neu = new BasicVector( neurons.length ) ;
 
 		for( int i=0 ; i<neurons.length ; i++ ) {
-			neu.set( i, neurons[i].isSpiking() ? 0.35 : 0 ) ;
+			neu.set( i, neurons[i].isSpiking() ? neurons[i].getSpikeValue() : 0 ) ;
 		}
 
 		Vector res = synapses.multiply( neu ) ;
@@ -379,9 +396,34 @@ public class Brain  {
 	 * Train all neurons
 	 */
 	public void train() {
+
 		if( isTrain() ) {
 			for( int i=0 ; i<neurons.length; i++ ) {
-				neurons[i].train( this, clock ) ;
+				neurons[i].train( this, clock, training ) ;
+			}
+		
+			epoch++ ;
+			if( epoch == EPOCH_LENGTH ) {
+				epoch = 0 ;
+				log.debug( "Train sum         {}", training.sum() ) ;
+				log.debug( "Train cardinality {}", training.cardinality() ) ;
+				log.debug( "Train density     {}", training.density() ) ;
+				synapses.add( training ) ;
+				synapses.eachNonZero( (i,j,v) -> {
+					if( v>1.0 ) synapses.set(i, j, 1.0);
+					if( v<=0.0 ) synapses.set(i, j, 0.0);
+				});
+				training.eachNonZero( (i,j,v) -> {
+					double w = v + synapses.get(i,j) ;
+					training.set(i,j,0) ;
+					if( w>1.0 ) {
+						synapses.set(i, j, 1.0);
+					} else if( w<=0.0 ) {
+						synapses.set(i, j, 0.0);
+					} else {
+						synapses.set(i,j,w ) ;
+					}
+				});
 			}
 		}
 	}
@@ -393,6 +435,20 @@ public class Brain  {
 	    for( int c=0 ; c<numNeurons() ; c++ ) {
 	        if( synapses.nonZeroAt( id, c ) ) {
 				rc[n] = neurons[c] ;
+				n++ ;
+            }
+        }
+
+	    return Arrays.copyOf( rc, n ) ;
+    }
+
+	public Neuron[] getOutputsFrom( int id ) {
+	    Neuron rc[] = new Neuron[ numNeurons() ] ;
+
+	    int n = 0 ;
+	    for( int r=0 ; r<numNeurons() ; r++ ) {
+	        if( synapses.nonZeroAt( r, id ) ) {
+				rc[n] = neurons[r] ;
 				n++ ;
             }
         }
@@ -659,21 +715,16 @@ public class Brain  {
 	}
 
 	public void setTrain(boolean train) {
-		this.train = train ;
-		/*
-		if( train == false ) {
-			CCSMatrix newSynapses = new CCSMatrix( synapses.rows(), synapses.columns() ) ;
-			for( int r=0 ; r<newSynapses.rows() ; r++ ) {
-				for( int c=0 ; c<newSynapses.columns() ; c++ ) {
-					if( synapses.get(r,c) != 0.0 ) {
-						newSynapses.set(r, c, synapses.get(r,c) ) ;
-					}
-				}
-			}
-			synapses = newSynapses ;
+
+		log.info( "Cardinality     {}", synapses.cardinality() ) ;
+		log.info( "Density         {}", synapses.density() ) ;
+		log.info( "Sum             {}", synapses.sum() ) ;
+		log.info( "Spectral radius {}", Double.NaN ) ;
+
+		if( train ) {
+			epoch = 0  ;
 		}
-		*/
-		log.info( "Cardinality {}", synapses.cardinality() ) ;
+		this.train = train ;
 	}
 
 	public boolean isFourier() {

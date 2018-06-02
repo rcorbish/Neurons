@@ -145,16 +145,19 @@ d3.json("data", function(error, graph) {
 				.attr( "stroke", "none" ) 
 				.attr( "stroke-width", "2" )
 				.attr( "fill", function(d) { 
-					return "white" 
+					return "silver" ;
 				}) 
+				.attr( "cx", function(d) { return d.fx } ) 
+				.attr( "cy", function(d) { return d.fy } )  
 				.on( "click", function(d) { 
 					neuronClicked( d.id ) 
 				})
+				;
 //				.call(d3.drag()
 //					.on("start", dragstarted)
 //					.on("drag", dragged)
 //					.on("end", dragended)) 
-  		;
+  		
 
 //		const texts = svg
 //    	.selectAll("text.potential")
@@ -186,7 +189,7 @@ d3.json("data", function(error, graph) {
         // .attr("y2", function(d) { return d.target.y; })
     	// ;
 	}
-
+/*
   const simulation = d3.forceSimulation()
 	.nodes( graph.nodes )
 	.force( "link", d3.forceLink()
@@ -215,7 +218,7 @@ d3.json("data", function(error, graph) {
 	.on("tick", tick ) 
 	.on("end", tick ) 
 	;
-
+*/
 	neuronClicked( 0 ) ;
 });
 

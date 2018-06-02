@@ -2,6 +2,8 @@ package com.rc.neurons ;
 
 import java.util.Random;
 
+import org.eclipse.jetty.server.handler.ContextHandler.ContextScopeListener;
+import org.la4j.matrix.sparse.CCSMatrix;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -14,14 +16,6 @@ abstract public class Neuron  {
     //-------------------------------------------
     // constants
     private final static int NUM_SPIKES_TO_RECORD = 25 ;
-
-	private final static int GENOME_INDEX_TYPE = 0 ;
-	private final static int GENOME_INDEX_A = 1 ;
-	private final static int GENOME_INDEX_B = 2 ;
-	private final static int GENOME_INDEX_C = 3 ;
-	private final static int GENOME_INDEX_D = 4 ;
-	private final static int GENOME_INDEX_LEARNING_RATE = 5 ;
-	public  final static int GENOME_SIZE = 6 ;
 
     //-------------------------------------------
     // shared utils
@@ -38,7 +32,6 @@ abstract public class Neuron  {
 
 	protected double	u ;
 
-    private       double 	threshold  ;
     private 	  double 	lastStepClock ;
     private 	  double	frequency ;
 
@@ -51,6 +44,10 @@ abstract public class Neuron  {
 	protected final double	c ;		// resting potential
 	protected final double	d ;		
 
+	private final double 	threshold  ;
+	private final double 	spikeValue  ;
+	private final double 	spikeDuration  ;
+	
     private final double 	learningRate ;
     private final double 	learningRateTau ;
     private final double 	learningWindowLTP ;     // pre->post = long term potentiation
@@ -71,53 +68,25 @@ abstract public class Neuron  {
 		this.u = 0 ;
 		
 		this.threshold = .030 ; 			// spike triggered when internal potential hit this value
+		this.spikeValue = .030 ; 			// height of spike pulse
+		this.spikeDuration = 0.001 ;		// length of spike pulse
 
-		this.learningRate = 0.1 ;			// how fast to adjust weights
+		this.learningRate = 0.003 ;			// how fast to adjust weights
         this.learningRateTau = 0.02 ;       // exp decay of learning wrt time between spikes
-        this.learningWindowLTP = 0.015 ;    // 0 .. 15ms  for LTP
-        this.learningWindowLTD = 0.100 ;    // 15 .. 100 for LTD
+        this.learningWindowLTP = 0.020 ;    // 0 .. 15ms  for LTP
+        this.learningWindowLTD = 0.025 ;    // 15 .. 100 for LTD
 
-		this.currentPotential = -.07 ; 		//rng.nextDouble() ;
+		this.currentPotential = -.07 ;
 		this.lastSpikeIndex = 0 ;
 		this.lastSpikes = new double[NUM_SPIKES_TO_RECORD] ;
-	}
-
-
-	public Neuron( Genome genome, int id ) {
-		this.id = id ;
-		
-		this.learningRate = genome.getDouble( GENOME_INDEX_LEARNING_RATE ) ;
-		this.a = genome.getDouble( GENOME_INDEX_A ) ;
-		this.b = genome.getDouble( GENOME_INDEX_B ) ;
-		this.c = genome.getDouble( GENOME_INDEX_C ) ;
-		this.d = genome.getDouble( GENOME_INDEX_D ) ;
-
-        this.learningRateTau = 0.02 ;
-        this.learningWindowLTP = 0.015 ;    // 0 .. 15ms  for LTP
-        this.learningWindowLTD = 0.100 ;    // 15 .. 100 for LTD
-
-		this.currentPotential = -0.070 ;
-		this.lastSpikeIndex = 0 ;
-		this.lastSpikes = new double[NUM_SPIKES_TO_RECORD] ;
-	}
-
-
-	public Genome toGenome() {
-		Genome rc = new Genome() ;
-
-		rc.set( learningRate, GENOME_INDEX_LEARNING_RATE ) ;
-		rc.set( a, GENOME_INDEX_A ) ;
-		rc.set( b, GENOME_INDEX_B ) ;
-		rc.set( c, GENOME_INDEX_C ) ;
-		rc.set( d, GENOME_INDEX_D ) ;
-
-		return rc ;
 	}
 
 
 	public void step( double potential, double clock ) {
 		if( isSpiking() ) {
-			reset() ;
+			if( timeSinceFired(clock)>=spikeDuration ) {
+				reset() ;
+			}
 			lastStepClock = clock ;
 		} else {
 			//--------------------------------------------
@@ -138,21 +107,22 @@ abstract public class Neuron  {
 
 
 	public void reset( ) {
-//		if( isSpiking() ) {
-			isSpiking = false ;
+		isSpiking = false ;
 
-			//----------------------------
-			// Reset ODE params on a spike
-			this.currentPotential = c / 1000.0  ;
-			this.u += this.d ;
-//		}
+		//----------------------------
+		// Reset ODE params on a spike
+		this.currentPotential = c / 1000.0  ;
+		this.u += this.d ;
 	}
 
 
-	public void checkForSpike( double clock ) {
+	public boolean checkForSpike( double clock ) {
+	    boolean rc = false ;
 		if( this.currentPotential>threshold ) {
 			spike( clock ) ;
-		} 			
+			rc = true ;
+		}
+		return rc ;
 	}	
 
 	
@@ -162,44 +132,38 @@ abstract public class Neuron  {
 			lastSpikeIndex = 0 ;
 		}			
 		isSpiking = true ;
-		currentPotential = threshold ;
+		currentPotential = spikeValue ;
 		lastSpikes[ lastSpikeIndex ] = clock ;
 	}
 
-	public void train( Brain brain, double clock ) {
 
-		Neuron sources[] = brain.getInputsTo( id ) ;
-
+	public void train( Brain brain, double clock, CCSMatrix training ) {
 		if( isSpiking() ) {
+			Neuron sources[] = brain.getInputsTo( id ) ;
 			for( Neuron src : sources ) {
-			    if( !src.isInhibitor() ) {
-                    double srcFiredAgo = src.timeSinceFired(clock);
-                    if ( srcFiredAgo==0 ) {
-                        brain.addWeight(src.id, id, -learningRate );
-                    } else if (srcFiredAgo < learningWindowLTP ) {
-                        double dw = learningRate * Math.exp( (learningWindowLTP-srcFiredAgo) / learningRateTau ) ;
-                        brain.addWeight(src.id, id, dw );
-                    } else if (srcFiredAgo < learningWindowLTD) {
-                        double dw = learningRate * Math.exp( (learningWindowLTP-srcFiredAgo) / learningRateTau ) ;
-                        brain.addWeight(src.id, id, -dw );
-                    }
-                } else {
-					double srcFiredAgo = src.timeSinceFired(clock);
-                    if ( srcFiredAgo==0 ) {
-                        brain.addWeight(src.id, id, -learningRate );
-                    } else if (srcFiredAgo < learningWindowLTP ) {
-                        double dw = learningRate * Math.exp( (learningWindowLTP-srcFiredAgo) / learningRateTau ) ;
-                        brain.addWeight(src.id, id, dw );
-                    } else if (srcFiredAgo < learningWindowLTD) {
-                        double dw = learningRate * Math.exp( (learningWindowLTP-srcFiredAgo) / learningRateTau ) ;
-                        brain.addWeight(src.id, id, -dw );
-                    }
+				double srcFiredAgo = src.timeSinceFired(clock);
+				double dw = 0 ;
+                if ( srcFiredAgo==0 ) {
+                    dw = -learningRate / 10.0 ;
+                } else if (srcFiredAgo < learningWindowLTP ) {
+                    dw = learningRate * Math.exp( (learningWindowLTP-srcFiredAgo) / learningRateTau ) ;
+				}
+				if( dw != 0 ) {
+					training.set( id, src.id, training.get( id, src.id ) + dw ) ;
+				}
+			}
+
+			Neuron targets[] = brain.getOutputsFrom( id ) ;
+			for( Neuron tgt : targets ) {
+				double tgtFiredAgo = tgt.timeSinceFired(clock);
+                if( tgtFiredAgo < learningWindowLTD && tgtFiredAgo>0 ) {
+                    double dw = -learningRate * Math.exp( (learningWindowLTD-tgtFiredAgo) / learningRateTau ) ;
+					training.set( tgt.id, id, training.get( tgt.id, id ) + dw ) ;
 				}
 			}
 		}
 	}
 	
-
 
 	public void updateFrequency( double clock ) {
 
@@ -242,6 +206,7 @@ abstract public class Neuron  {
 	public double getPotential() { return currentPotential ; }
 	public double getRestingPotential() { return c ; }
 	public double getThreshold() { return threshold ; }
+	public double getSpikeValue() { return spikeValue ; }
 	public double getLearningRate() { return learningRate ; }
 	public boolean isSpiking() { return isSpiking ; }
     abstract public boolean isInhibitor() ;
@@ -253,8 +218,8 @@ abstract public class Neuron  {
 		StringBuilder sb = new StringBuilder( System.lineSeparator() ) ;
 		sb
 		.append( "type        ").append( getType() ).append( System.lineSeparator() )
-		.append( "id          ").append( id ).append( System.lineSeparator() )
-		.append( "potential   ").append( currentPotential ).append( System.lineSeparator() ) 
+		.append( "id          ").append( getId() ).append( System.lineSeparator() )
+		.append( "potential   ").append( getPotential() ).append( System.lineSeparator() ) 
 		.append( "frequency   ").append( frequency() ).append( System.lineSeparator() ) 
 		.append( "spiking     ").append( isSpiking() ).append( System.lineSeparator() ) 
 		;

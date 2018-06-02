@@ -1,8 +1,5 @@
 package com.rc.neurons ;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.rc.Genome;
 
 
@@ -15,10 +12,6 @@ public class NeuronRZ extends Neuron {
 	
 	public NeuronRZ( int id ) {
 		super( id, A, B, C, D ) ;
-	}
-
-	public NeuronRZ( Genome genome, int id ) {
-		super( genome, id ) ;
 	}
 
     @Override

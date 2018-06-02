@@ -73,7 +73,7 @@ public class Monitor implements AutoCloseable {
 	 * get 1 slice of compressed data, with random shear
 	 * 
 	 */
-	public Object getData(Request req, Response rsp) {
+	private Object getData(Request req, Response rsp) {
 		Object rc = null ;
 		try {
 			rsp.type( "application/json" );	
@@ -89,7 +89,7 @@ public class Monitor implements AutoCloseable {
 	}
 
 
-	public Object getSynapses( Request req, Response rsp ) throws IOException {
+	private Object getSynapses( Request req, Response rsp ) throws IOException {
 
 	    logger.info( "Requesting synapse image" ) ;
 		int imageType = BufferedImage.TYPE_BYTE_GRAY ;
@@ -99,15 +99,11 @@ public class Monitor implements AutoCloseable {
         final BufferedImage img = new BufferedImage(synapses.columns(),synapses.rows(),imageType);
 		Graphics2D graphics = img.createGraphics();
 		graphics.setBackground( Color.BLACK ) ;
-		try {
-            synapses.eachNonZero( (r, c, v) -> {
-                        int p = ( (int) (v * 0x7f ) + 0x80 )  ;
-                        img.setRGB(r, c, new Color(0, p, p).getRGB());
-                    }
-            ) ;
-        } catch( Throwable t ) {
-            logger.error( "Failed to print", t ) ;
-        }
+		synapses.eachNonZero( (r, c, v) -> {
+					int p = ( (int) (v * 0x7f ) + 0x80 )  ;
+					img.setRGB(r, c, new Color(0, p, p).getRGB());
+				}
+		) ;
 		rsp.type( "image/png" );
 		rsp.header("expires", "0" ) ;
 		rsp.header("cache-control", "no-cache" ) ;
@@ -119,7 +115,7 @@ public class Monitor implements AutoCloseable {
 
 
 
-	public Object getGraph( Request req, Response rsp ) throws IOException {
+	private Object getGraph( Request req, Response rsp ) throws IOException {
 
 		logger.info( "Requesting graph image" ) ;
 		int imageType = BufferedImage.TYPE_BYTE_GRAY ;
@@ -138,7 +134,7 @@ public class Monitor implements AutoCloseable {
 				int x1 = c / rows ;
 				int y1 = c - ( x1 * rows ) ;
 
-				graphics.drawLine(x0*scale, y0*scale, x1*scale, y1*scale);
+				graphics.drawLine(x0*scale + (scale / 2), y0*scale+ (scale / 2), x1*scale+ (scale / 2), y1*scale+ (scale / 2));
 			} ) ;
 		} catch( Throwable t ) {
 			logger.error( "Failed to print", t ) ;

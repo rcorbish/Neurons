@@ -20,7 +20,7 @@ public class Main {
 
 	final static Random rng = new Random( 660 );
 	
-	static double CONNECTION_DENSITY = 0.2 ;
+	static double CONNECTION_DENSITY = 0.70 ;
 	static int POPULATION = 40 ;
 	static int EPOCHS = 10 ;
 	static double LIFESPAN = 1.0 ;
@@ -116,7 +116,7 @@ public class Main {
 			}
 			
 			Brain brain ;
-			brain = new Brain( TICK_PERIOD, CONNECTION_DENSITY, 6, 10, dims[0], dims[1] ) ;
+			brain = new Brain( TICK_PERIOD, 1.0+CONNECTION_DENSITY, 6, 10, dims[0], dims[1] ) ;
 			/*
 			if( fileExists && !clearFile ) {
 				brain = Brain.load( TICK_PERIOD, parameterFile ) ;

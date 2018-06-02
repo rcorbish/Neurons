@@ -71,28 +71,11 @@ public class TestNeuron {
 	
 	@Test
 	public void testGenomeSubsequence() {
-		Genome g = new Genome() ;
-//		double accuracy = g.accuracy() ;
-		for( int i=0 ;i<30 ; i++ ) {
-			g.set( i, i ) ;
-		}
-		for( int i=0 ; i<20 ; i++ ) {
-			Genome g2 = g.subSequence(i, 3) ;
-			int v = g2.getInt( 1 ) ;
-			assertEquals( "Bitset - invalid subsequence", i+1, v ) ;
-			int v2 = g2.getInt( 2 ) ;
-			assertEquals( "Bitset - invalid subsequence", i+2, v2 ) ;
-		}
 	}
 
 	@Test
 	public void testNeuron() {
 		Neuron n = new NeuronRS( 1 ) ;
-		Genome g = n.toGenome() ;
-		Neuron n2 = new NeuronRS( g, n.getId() ) ;
-		double accuracy = g.accuracy() ;
-		assertEquals( "Bitset copy - bad threshold", n.getThreshold(), n2.getThreshold(), accuracy ) ;
-		assertEquals( "Bitset copy - bad resting potential", n.getRestingPotential(), n2.getRestingPotential(), accuracy ) ;
 	}
 	
 	

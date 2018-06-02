@@ -2,6 +2,7 @@ package com.rc.neurons ;
 
 import java.util.Random;
 
+import org.la4j.matrix.sparse.CCSMatrix;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -20,12 +21,7 @@ public class InputNeuron extends NeuronRS {
 		nextSpikeTime = 0 ;
 	}
 
-	public InputNeuron( Genome genome, int id ) {
-		super( genome, id ) ;
-		clockOffset = rng.nextDouble() ;
-		nextSpikeTime = 0 ;
-	}
-	
+
 	final static private double MAX_FREQUENCY = 200 ;
 	@Override
 	public void step( double potential, double clock ) {
@@ -48,8 +44,8 @@ public class InputNeuron extends NeuronRS {
 
 	
 	@Override
-	public void train( Brain brain, double clock ) {
-	// don't train inputs
+	public void train( Brain brain, double clock, CCSMatrix training  ) {
+		// don't train inputs
 	}
 
 	@Override

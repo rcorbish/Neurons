@@ -1,8 +1,5 @@
 package com.rc.neurons ;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.rc.Genome;
 
 
@@ -17,9 +14,6 @@ public class NeuronTC extends Neuron {
 		super( id, A, B, C, D ) ;
 	}
 
-	public NeuronTC( Genome genome, int id ) {
-		super( genome, id ) ;
-	}
 
 	@Override
 	public boolean isInhibitor() { return false ; }
