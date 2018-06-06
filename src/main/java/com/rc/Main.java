@@ -20,12 +20,12 @@ public class Main {
 
 	final static Random rng = new Random( 660 );
 	
-	static double CONNECTION_DENSITY = 0.70 ;
-	static int POPULATION = 40 ;
-	static int EPOCHS = 10 ;
-	static double LIFESPAN = 1.0 ;
-	static double TICK_PERIOD = 2e-4 ;   // each clock tick in seconds
-	static double MUTATION = 0.01 ;
+
+	static int POPULATION       = 40 ;
+	static int EPOCHS           = 10 ;
+	static double LIFESPAN      = 1.0 ;
+	static double TICK_PERIOD   = 2e-4 ;   // each clock tick in seconds
+	static double MUTATION      = 0.01 ;
 	static long DELAY_INTERVAL  = 25 ;
 	
 	public static int FIXED_PARAMS[]  ;
@@ -78,7 +78,6 @@ public class Main {
 	        if( options.has( "mutation" ) ) 	{ MUTATION = (double) options.valueOf("mutation") ; }
 	        if( options.has( "update-delay" ) ) { DELAY_INTERVAL = (long) options.valueOf("update-delay") ; }
 	        if( options.has( "period" ) ) 		{ TICK_PERIOD = (int) options.valueOf("period") ; }
-	        if( options.has( "density" ) ) 		{ CONNECTION_DENSITY = (double) options.valueOf("density") ; }
 	        boolean clearFile = options.has("clear") ;
 	        boolean evolve    = options.has("evolve") ;
 	        boolean train	  = options.has("train") ;
@@ -116,30 +115,32 @@ public class Main {
 			}
 			
 			Brain brain ;
-			brain = new Brain( TICK_PERIOD, 1.0+CONNECTION_DENSITY, 6, 10, dims[0], dims[1] ) ;
-			/*
+			
 			if( fileExists && !clearFile ) {
 				brain = Brain.load( TICK_PERIOD, parameterFile ) ;
+				if( brain.getRows() != dims[0] || brain.getColumns() != dims[1] ) {
+					log.warn( "Incompatible size loaded: {} x {}", brain.getColumns(), brain.getRows() ) ;
+				}
 			} else {
-				brain = new Brain( TICK_PERIOD, 8, 10, 5, 5 ) ;
+				brain = new Brain( TICK_PERIOD, 6, 10, dims[0], dims[1] ) ;
 				if( parameterFile != null ) {
 					brain.save( parameterFile ) ;
 				}
 			}
-			
+
 			if( evolve ) {
 				log.info("Epochs        : {}", EPOCHS );
 				log.info("Population    : {}", POPULATION );
 				log.info("Lifespan      : {}", LIFESPAN );
 				log.info("Mutation Rate : {}", MUTATION );
-				final Evolution evolution = new Evolution(TICK_PERIOD, LIFESPAN, MUTATION, EPOCHS, POPULATION ) ;
+				final Evolution evolution = new Evolution( TICK_PERIOD, LIFESPAN, MUTATION, EPOCHS, POPULATION ) ;
 				brain = evolution.evolve( TestPatterns, TICK_PERIOD, dims ) ;
 				
 				if( parameterFile != null ) {
 					brain.save( parameterFile ) ;
 				}
 			}
-			*/
+
 			brain.setTrain( train ) ;
 			
 			@SuppressWarnings("resource")

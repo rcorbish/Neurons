@@ -173,7 +173,9 @@ public class Genome  implements Serializable {
 	public double accuracy() {
 		return (1.0/BITS_PER_NUMBER) ;
 	}
-	
+	public int capacity() {
+		return capacity ;
+	}
 	public String toString() {
 
 		StringJoiner rc = new StringJoiner( ", " ) ;

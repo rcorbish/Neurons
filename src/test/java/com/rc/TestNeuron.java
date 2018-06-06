@@ -10,7 +10,6 @@ import org.junit.Test;
 import com.rc.neurons.Neuron;
 import com.rc.neurons.NeuronRS;
 
-@Ignore
 public class TestNeuron {
 
 	@Before

@@ -8,7 +8,7 @@ import java.net.URL;
 import java.util.Random;
 
 import com.rc.Brain;
-import org.la4j.matrix.sparse.CCSMatrix;
+import org.ejml.data.DMatrixSparseCSC;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -94,12 +94,12 @@ public class Monitor implements AutoCloseable {
 	    logger.info( "Requesting synapse image" ) ;
 		int imageType = BufferedImage.TYPE_BYTE_GRAY ;
 
-        CCSMatrix synapses = brain.getSynapses() ;
+        DMatrixSparseCSC synapses = brain.getSynapses() ;
 
-        final BufferedImage img = new BufferedImage(synapses.columns(),synapses.rows(),imageType);
+        final BufferedImage img = new BufferedImage( synapses.numCols, synapses.numRows, imageType);
 		Graphics2D graphics = img.createGraphics();
 		graphics.setBackground( Color.BLACK ) ;
-		synapses.eachNonZero( (r, c, v) -> {
+		brain.eachNonZero( (r, c, v) -> {
 					int p = ( (int) (v * 0x7f ) + 0x80 )  ;
 					img.setRGB(r, c, new Color(0, p, p).getRGB());
 				}
@@ -120,7 +120,7 @@ public class Monitor implements AutoCloseable {
 		logger.info( "Requesting graph image" ) ;
 		int imageType = BufferedImage.TYPE_BYTE_GRAY ;
 
-		CCSMatrix synapses = brain.getSynapses() ;
+		DMatrixSparseCSC synapses = brain.getSynapses() ;
 		int rows = brain.getRows()  ;
 		int columns = brain.getColumns()  ;
         int scale = 15 ;
@@ -128,7 +128,15 @@ public class Monitor implements AutoCloseable {
 		Graphics2D graphics = img.createGraphics() ;
 		graphics.setBackground( Color.BLACK ) ;
 		try {
-			synapses.eachNonZero( (r, c, v) -> {
+			brain.eachNonZero( (r, c, v) -> {
+				int p = (int) (v * 0x7f ) ;
+				if( v<0x60 ){
+					graphics.setColor( new Color(0, 0, 0x80 + p) );
+				} else if( v <0xa0 ) {
+					graphics.setColor( new Color(0, p+0x50, 0 ) );
+				} else {
+					graphics.setColor( new Color(p,0,0) );
+				}
 				int x0 = r / rows ;
 				int y0 = r - ( x0 * rows ) ;
 				int x1 = c / rows ;

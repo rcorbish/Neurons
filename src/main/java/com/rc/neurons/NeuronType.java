@@ -17,6 +17,10 @@ public enum NeuronType {
     private final String friendlyName ;
     private final Constructor<? extends Neuron> constructor ;
 
+    public final static NeuronType fromOrdinal( int o ) {
+        return NeuronType.values()[ o ] ;
+    }
+
     private NeuronType( String friendlyName, Class<? extends Neuron> clazz ) {
         this.friendlyName = friendlyName ;
         this.clazz = clazz ;

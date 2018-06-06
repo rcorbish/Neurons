@@ -1,13 +1,8 @@
 package com.rc.neurons ;
 
-import java.util.Random;
-
-import org.la4j.matrix.sparse.CCSMatrix;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.ejml.data.DMatrixSparseCSC;
 
 import com.rc.Brain;
-import com.rc.Genome;
 
 
 public class InputNeuron extends NeuronRS {
@@ -44,7 +39,7 @@ public class InputNeuron extends NeuronRS {
 
 	
 	@Override
-	public void train( Brain brain, double clock, CCSMatrix training  ) {
+	public void train( Brain brain, double clock, DMatrixSparseCSC training  ) {
 		// don't train inputs
 	}
 

@@ -2,13 +2,12 @@ package com.rc.neurons ;
 
 import java.util.Random;
 
-import org.eclipse.jetty.server.handler.ContextHandler.ContextScopeListener;
-import org.la4j.matrix.sparse.CCSMatrix;
+import org.ejml.data.DMatrixSparseCSC;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.rc.Brain;
-import com.rc.Genome;
 
 
 abstract public class Neuron  {
@@ -27,13 +26,13 @@ abstract public class Neuron  {
 	protected 		double 		currentPotential ;
 	protected 		boolean		isSpiking ;
 
-	private final double 	lastSpikes[] ;
-	private 	  int 		lastSpikeIndex ;
+	private final 	double 		lastSpikes[] ;
+	private 	  	int 		lastSpikeIndex ;
 
-	protected double	u ;
+	protected 		double		u ;
 
-    private 	  double 	lastStepClock ;
-    private 	  double	frequency ;
+    private 	  	double 		lastStepClock ;
+    private 	  	double		frequency ;
 
     //-------------------------------------------
 	// genome static data
@@ -68,13 +67,13 @@ abstract public class Neuron  {
 		this.u = 0 ;
 		
 		this.threshold = .030 ; 			// spike triggered when internal potential hit this value
-		this.spikeValue = .030 ; 			// height of spike pulse
-		this.spikeDuration = 0.001 ;		// length of spike pulse
+		this.spikeValue = .450 ; 			// height of spike pulse
+		this.spikeDuration = 0.0001 ;		// length of spike pulse
 
-		this.learningRate = 0.003 ;			// how fast to adjust weights
-        this.learningRateTau = 0.02 ;       // exp decay of learning wrt time between spikes
-        this.learningWindowLTP = 0.020 ;    // 0 .. 15ms  for LTP
-        this.learningWindowLTD = 0.025 ;    // 15 .. 100 for LTD
+		this.learningRate = 0.001 ;			// how fast to adjust weights
+        this.learningRateTau = 0.04 ;       // exp decay of learning wrt time between spikes
+        this.learningWindowLTP = 0.020 ;    // ms for LTP
+        this.learningWindowLTD = 0.025 ;    // mS for LTD
 
 		this.currentPotential = -.07 ;
 		this.lastSpikeIndex = 0 ;
@@ -99,8 +98,8 @@ abstract public class Neuron  {
 			double cp = currentPotential * 1000.0;
 			double p = potential * 1000.0;
 
-			double v = (0.04 * cp + 5) * cp + 140 - u + p;
-			this.u += dt * this.a * (this.b * cp - this.u);
+			double v = (0.04 * cp + 5) * cp + 140 - u + p ;
+			this.u += dt * this.a * ( this.b * cp - this.u ) ;
 			this.currentPotential += dt * v / 1000.0;
 		}
 	}
@@ -132,12 +131,12 @@ abstract public class Neuron  {
 			lastSpikeIndex = 0 ;
 		}			
 		isSpiking = true ;
-		currentPotential = spikeValue ;
+		//currentPotential = spikeValue ;
 		lastSpikes[ lastSpikeIndex ] = clock ;
 	}
 
 
-	public void train( Brain brain, double clock, CCSMatrix training ) {
+	public void train( Brain brain, double clock, DMatrixSparseCSC training ) {
 		if( isSpiking() ) {
 			Neuron sources[] = brain.getInputsTo( id ) ;
 			for( Neuron src : sources ) {
@@ -187,7 +186,7 @@ abstract public class Neuron  {
 		
 		// freq = spikes / second
 		double dt = clock - earliestSpike ;
-		if( dt < 1e-9 ) dt = 1e-9 ;  // zero would be bad ( i.e 0/0 ) 
+		if( dt < 1e-9 ) dt = 1e-9 ;  // zero would be bad ( i.e x/0 )
 		frequency = numSpikes / dt ;
 	}
 	
@@ -204,7 +203,6 @@ abstract public class Neuron  {
 
 	public int getId() { return id ; }
 	public double getPotential() { return currentPotential ; }
-	public double getRestingPotential() { return c ; }
 	public double getThreshold() { return threshold ; }
 	public double getSpikeValue() { return spikeValue ; }
 	public double getLearningRate() { return learningRate ; }
