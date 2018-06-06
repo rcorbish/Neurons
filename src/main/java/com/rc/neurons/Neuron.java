@@ -48,7 +48,8 @@ abstract public class Neuron  {
 	private final double 	spikeDuration  ;
 	
     private final double 	learningRate ;
-    private final double 	learningRateTau ;
+    private final double 	learningRateTauLTP ;
+    private final double 	learningRateTauLTD ;
     private final double 	learningWindowLTP ;     // pre->post = long term potentiation
     private final double 	learningWindowLTD ;     // post->pre = long term depression
 
@@ -71,9 +72,10 @@ abstract public class Neuron  {
 		this.spikeDuration = 0.0001 ;		// length of spike pulse
 
 		this.learningRate = 0.001 ;			// how fast to adjust weights
-        this.learningRateTau = 0.04 ;       // exp decay of learning wrt time between spikes
-        this.learningWindowLTP = 0.020 ;    // ms for LTP
-        this.learningWindowLTD = 0.025 ;    // mS for LTD
+        this.learningRateTauLTP = 0.2 ;     // exp decay of learning wrt time between spikes
+        this.learningRateTauLTD = 0.4 ;     // ... for depression
+        this.learningWindowLTP = 0.025 ;    // ms for LTP window
+        this.learningWindowLTD = 0.050 ;    // mS for LTD window
 
 		this.currentPotential = -.07 ;
 		this.lastSpikeIndex = 0 ;
@@ -145,7 +147,7 @@ abstract public class Neuron  {
                 if ( srcFiredAgo==0 ) {
                     dw = -learningRate / 10.0 ;
                 } else if (srcFiredAgo < learningWindowLTP ) {
-                    dw = learningRate * Math.exp( (learningWindowLTP-srcFiredAgo) / learningRateTau ) ;
+                    dw = learningRate * Math.exp( (learningWindowLTP-srcFiredAgo) / learningRateTauLTP ) ;
 				}
 				if( dw != 0 ) {
 					training.set( id, src.id, training.get( id, src.id ) + dw ) ;
@@ -156,7 +158,7 @@ abstract public class Neuron  {
 			for( Neuron tgt : targets ) {
 				double tgtFiredAgo = tgt.timeSinceFired(clock);
                 if( tgtFiredAgo < learningWindowLTD && tgtFiredAgo>0 ) {
-                    double dw = -learningRate * Math.exp( (learningWindowLTD-tgtFiredAgo) / learningRateTau ) ;
+                    double dw = -learningRate * Math.exp( (learningWindowLTD-tgtFiredAgo) / learningRateTauLTD ) ;
 					training.set( tgt.id, id, training.get( tgt.id, id ) + dw ) ;
 				}
 			}

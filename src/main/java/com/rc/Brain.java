@@ -32,7 +32,7 @@ public class Brain  {
 
 	private final static int EPOCH_LENGTH = 1000 ;
     private final static double WINNER_TAKE_ALL_RADIUS = 2 ;
-    private final static double CONNECTION_DENSITY = 0.70 ;
+    private final static double CONNECTION_DENSITY = 0.75 ;
 
     // Used to calc rands with the following stats
 	private final static double WEIGHT_MEAN = 0.7 ;
@@ -450,10 +450,14 @@ public class Brain  {
                 IGrowArray ig = new IGrowArray() ;
                 DGrowArray dg = new DGrowArray() ;
 
-//                DMatrixSparseCSC A = training.createLike() ;
-//                CommonOps_DSCC.add( 0, synapses, 1.0, training, A, ig, dg ) ;
+				// DMatrixSparseCSC A = training.createLike() ;
+               	// CommonOps_DSCC.add( 1.0, synapses, 1.0, training, A, ig, dg ) ;
 
-                CommonOps_DSCC.add( 0, synapses, 1.0, training, synapses, ig, dg ) ;
+				// log.info( "Train sum         {}", CommonOps_DSCC.elementSum(training) ) ;
+				// log.info( "Synapse sum       {}", CommonOps_DSCC.elementSum(synapses) ) ;
+				// log.info( "A sum             {}", CommonOps_DSCC.elementSum(A) ) ;
+	
+				CommonOps_DSCC.add( 1.0, synapses, 1.0, training, synapses, ig, dg ) ;
 
 				eachNonZero( (i,j,v) -> {
 					if( v>1.0 ) synapses.set(i, j, 1.0);
