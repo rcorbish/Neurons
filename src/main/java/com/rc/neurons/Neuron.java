@@ -9,7 +9,12 @@ import org.slf4j.LoggerFactory;
 
 import com.rc.Brain;
 
-
+/**
+ * This is the base code for a Neuron. Each real neuron type will define the ODE
+ * params A,B,C & D .
+ *
+ * @see http://www.izhikevich.org/human_brain_simulation/Blue_Brain.htm
+ */
 abstract public class Neuron  {
 
     //-------------------------------------------
@@ -143,14 +148,11 @@ abstract public class Neuron  {
 			Neuron sources[] = brain.getInputsTo( id ) ;
 			for( Neuron src : sources ) {
 				double srcFiredAgo = src.timeSinceFired(clock);
-				double dw = 0 ;
                 if ( srcFiredAgo==0 ) {
-                    dw = -learningRate / 10.0 ;
+					brain.addTraining( src.id, id, -learningRate / 10.0 ) ;
                 } else if (srcFiredAgo < learningWindowLTP ) {
-                    dw = learningRate * Math.exp( (learningWindowLTP-srcFiredAgo) / learningRateTauLTP ) ;
-				}
-				if( dw != 0 ) {
-					training.set( id, src.id, training.get( id, src.id ) + dw ) ;
+                    double dw = learningRate * Math.exp( (learningWindowLTP-srcFiredAgo) / learningRateTauLTP ) ;
+					brain.addTraining( src.id, id, dw ) ;
 				}
 			}
 
@@ -159,7 +161,7 @@ abstract public class Neuron  {
 				double tgtFiredAgo = tgt.timeSinceFired(clock);
                 if( tgtFiredAgo < learningWindowLTD && tgtFiredAgo>0 ) {
                     double dw = -learningRate * Math.exp( (learningWindowLTD-tgtFiredAgo) / learningRateTauLTD ) ;
-					training.set( tgt.id, id, training.get( tgt.id, id ) + dw ) ;
+					brain.addTraining( id, tgt.id, dw ) ;
 				}
 			}
 		}
@@ -207,7 +209,6 @@ abstract public class Neuron  {
 	public double getPotential() { return currentPotential ; }
 	public double getThreshold() { return threshold ; }
 	public double getSpikeValue() { return spikeValue ; }
-	public double getLearningRate() { return learningRate ; }
 	public boolean isSpiking() { return isSpiking ; }
     abstract public boolean isInhibitor() ;
     abstract public NeuronType getType() ;

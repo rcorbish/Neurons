@@ -134,7 +134,7 @@ public class Main {
 				log.info("Lifespan      : {}", LIFESPAN );
 				log.info("Mutation Rate : {}", MUTATION );
 				final Evolution evolution = new Evolution( TICK_PERIOD, LIFESPAN, MUTATION, EPOCHS, POPULATION ) ;
-				brain = evolution.evolve( TestPatterns, TICK_PERIOD, dims ) ;
+				brain = evolution.evolve( TestPatterns, TICK_PERIOD, 6, 10, dims[0], dims[1] ) ;
 				
 				if( parameterFile != null ) {
 					brain.save( parameterFile ) ;
@@ -179,7 +179,7 @@ public class Main {
 				// If necessary - update history for GUI
 				brain.follow() ;
 				
-				brain.train() ;
+				brain.train( patternIndex ) ;
 
 				// -------------------------------------------------
 				// If we're training, 

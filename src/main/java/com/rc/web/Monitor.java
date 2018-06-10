@@ -118,9 +118,8 @@ public class Monitor implements AutoCloseable {
 	private Object getGraph( Request req, Response rsp ) throws IOException {
 
 		logger.info( "Requesting graph image" ) ;
-		int imageType = BufferedImage.TYPE_BYTE_GRAY ;
+		int imageType = BufferedImage.TYPE_USHORT_555_RGB ;
 
-		DMatrixSparseCSC synapses = brain.getSynapses() ;
 		int rows = brain.getRows()  ;
 		int columns = brain.getColumns()  ;
         int scale = 15 ;
@@ -129,14 +128,15 @@ public class Monitor implements AutoCloseable {
 		graphics.setBackground( Color.BLACK ) ;
 		try {
 			brain.eachNonZero( (r, c, v) -> {
-				int p = (int) (v * 0x7f ) ;
-				if( v<0x60 ){
-					graphics.setColor( new Color(0, 0, 0x80 + p) );
-				} else if( v <0xa0 ) {
-					graphics.setColor( new Color(0, p+0x50, 0 ) );
+				int p = (int) ( v * 0xff ) ;
+				if( p<0x5f ){
+					graphics.setColor( new Color(0, 0, 0x90 + p) );
+				} else if( p <0x7f ) {
+					graphics.setColor( new Color(0, p+0x80, 0 ) );
 				} else {
 					graphics.setColor( new Color(p,0,0) );
 				}
+
 				int x0 = r / rows ;
 				int y0 = r - ( x0 * rows ) ;
 				int x1 = c / rows ;

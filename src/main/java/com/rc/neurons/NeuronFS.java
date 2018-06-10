@@ -1,8 +1,9 @@
 package com.rc.neurons ;
 
-import com.rc.Genome;
 
-
+/**
+ * A fast spiking neuron
+ */
 public class NeuronFS extends Neuron {
 
 	private static final double A = 0.1 ;
@@ -22,6 +23,8 @@ public class NeuronFS extends Neuron {
 		return NeuronType.FS ;
 	}
 
+	@Override
+	public double getSpikeValue() { return -super.getSpikeValue() ; }
 }
 
 

@@ -1,8 +1,8 @@
 package com.rc.neurons ;
 
-import com.rc.Genome;
-
-
+/**
+ * An inhibitor neuron
+ */
 public class NeuronIB extends Neuron {
 
 	private static final double A = 0.02 ;
@@ -21,6 +21,9 @@ public class NeuronIB extends Neuron {
 	public NeuronType getType() {
 		return NeuronType.IB ;
 	}
+
+    @Override
+    public double getSpikeValue() { return -super.getSpikeValue() ; }
 
 }
 

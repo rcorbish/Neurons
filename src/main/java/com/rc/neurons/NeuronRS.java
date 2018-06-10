@@ -1,7 +1,5 @@
 package com.rc.neurons ;
 
-import com.rc.Genome;
-
 
 public class NeuronRS extends Neuron {
 

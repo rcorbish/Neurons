@@ -37,18 +37,18 @@ public class Evolution {
 	}	
 
 
-	public Brain evolve( double patterns[][], double tick, final int ... layers ) throws Exception {
+	public Brain evolve( double patterns[][], double tickPeriod, int numInputs, int numOutputs, int rows, int cols ) throws Exception {
 		logger.info( "Evolution starts..." ) ;
 
 		BrainData brainData[] = new BrainData[ population ] ;
 
 		for( int i=0 ; i<brainData.length ; i++ ) {
-			// brainData[i] = new BrainData( new Brain( tick, layers ) ) ;
+			 brainData[i] = new BrainData( new Brain( tickPeriod, numInputs, numOutputs, rows, cols ) ) ;
 		}
 
 		logger.info( "Population created." ) ;
 
-		double inputs[] = new double[ layers[0] ] ;
+		double inputs[] = new double[ numInputs ] ;
 
 		ExecutorService tpool = Executors.newFixedThreadPool(7) ;
 
@@ -75,18 +75,19 @@ public class Evolution {
 				final CountDownLatch cdl = new CountDownLatch( brainData.length ) ;
 				for( int i=0 ; i<brainData.length ; i++ ) {
 					final Brain brain = brainData[i].brain ;
-					tpool.submit( new Thread() {
-						public void run() {
-							try {
-								brain.step( inputs ) ;
-								brain.train() ;
-							} catch( Throwable t ) {
-								logger.error( "Failed to step", t ) ;
-							} finally {
-								cdl.countDown();
-							}
-						}
-					} ) ;
+					final int pat = p ;
+					tpool.submit( () -> {
+                        for( int e=0 ; e<1000 ; e++ ) {
+                            try {
+                                brain.step(inputs);
+                                brain.train(pat);
+                            } catch (Throwable t) {
+                                logger.error("Failed to step", t);
+                            } finally {
+                                cdl.countDown();
+                            }
+                        }
+					}) ;
 				}
 				cdl.await();  // wait for all brains to complete one step and scoring
 				// A2
@@ -157,7 +158,7 @@ public class Evolution {
 		}
 
 		public Genome genome() {
-			return null ; //brain.toGenome() ;
+			return brain.toGenome() ;
 		}
 
 		public void resetScore() {
@@ -165,7 +166,8 @@ public class Evolution {
 		}
 		
 		public void updateScore( int p ) {
-			score += brain.getScore(p) ;
+			score += brain.getSummaryScore() ;
+			brain.resetSummaryScore() ;
 			logger.debug( "Scored {}", score ) ;
 		}
 
