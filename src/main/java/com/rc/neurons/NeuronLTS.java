@@ -22,6 +22,9 @@ public class NeuronLTS extends Neuron {
 		return NeuronType.LTS ;
 	}
 
+	@Override
+	public double getSpikeValue() { return -super.getSpikeValue() ; }
 }
+
 
 

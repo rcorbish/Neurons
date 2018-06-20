@@ -22,6 +22,7 @@ import org.jtransforms.fft.DoubleFFT_1D;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+
 public class Brain  {
 
 	private final static Logger log = LoggerFactory.getLogger( Brain.class ) ;
@@ -30,12 +31,12 @@ public class Brain  {
 
 	private final static int HISTORY_LENGTH = 1024 ;
 
-	private final static int EPOCH_LENGTH = 1000 ;
+	private final static int EPOCH_LENGTH = 100 ;
     private final static double WINNER_TAKE_ALL_RADIUS = 2 ;
     private final static double CONNECTION_DENSITY = 0.75 ;
 
     // Used to calc rands with the following stats
-	private final static double WEIGHT_MEAN = 0.7 ;
+	private final static double WEIGHT_MEAN = 0.4 ;
     private final static double WEIGHT_SIGMA = 0.25 ;
 	
 	private final double outputHistory[] ;
@@ -43,9 +44,6 @@ public class Brain  {
 	private int historyIndex ;
 	private int followingId ;
 	
-//	private final CCSMatrix synapses ;		// adjacency matrix
-//	private final CCSMatrix training ;		// training weight changes per epoch
-
     private final DMatrixSparseCSC synapses ;
     private final DMatrixSparseCSC training ;
 
@@ -60,7 +58,8 @@ public class Brain  {
 	private final double tickPeriod ;
 	private final double connectionProbability ;
 
-	private boolean train ;
+	private double runningScore ;
+
 	private boolean fftSpike ;
 	private DoubleFFT_1D fft ;
 
@@ -86,8 +85,8 @@ public class Brain  {
 
         int ix = 4 ;
 
-        for( int i=0 ; i<neurons.length ; i++,ix++ ) {
-            int t = g.getInt( ix ) ;
+        for( int i=0 ; i<neurons.length ; i++ ) {
+            int t = g.getInt( ix++ ) ;
             NeuronType type = NeuronType.fromOrdinal( t ) ;
             try {
                 neurons[i] = NeuronFactory.getNeuron(type, i);
@@ -99,27 +98,33 @@ public class Brain  {
 
         // overwrite the inputs in the liquid
         int dy = getRows() / getNumInputs() ;
-        ix = 0 ;
-        for( int i=0 ; i<this.inputNeurons.length ; i++, ix+=dy ) {
-            this.inputNeurons[i] = this.neurons[ix] ;
+        int inputIndex = 0 ;
+        for( int i=0 ; i<this.inputNeurons.length ; i++, inputIndex+=dy ) {
+            this.inputNeurons[i] = this.neurons[inputIndex] ;
         }
 
         // overwrite the outputs in the liquid
         dy = getRows() / getNumOutputs() ;
-        ix = neurons.length - dy ;
+        int outputIndex = neurons.length - dy ;
 
-        for( int i=0 ; i<this.outputNeurons.length ; i++, ix-=dy ) {
-            this.outputNeurons[i] = this.neurons[ix] ;
+        for( int i=0 ; i<this.outputNeurons.length ; i++, outputIndex-=dy ) {
+            this.outputNeurons[i] = this.neurons[outputIndex] ;
         }
 
-//        this.synapses = new CCSMatrix(neurons.length,neurons.length,0) ;
-//        this.training = new CCSMatrix(neurons.length,neurons.length,0) ;
         this.synapses = new DMatrixSparseCSC( neurons.length, neurons.length,0) ;
         this.training = new DMatrixSparseCSC( neurons.length, neurons.length,0) ;
 
-        connectLayers() ;
+        // connectLayers() ;
 
-        this.train = false ;
+		int numConnections = g.getInt( ix++ ) ;
+		for( int i=0 ; i<numConnections ; i++ ) {
+			int r = g.getInt( ix++ ) ;
+			int c = g.getInt( ix++ ) ;
+			double w = g.getDouble( ix++ ) ;
+			log.debug("{}, Setting {}, {} to {}", ix, r,c,w ) ;
+			synapses.set(r, c, w) ;
+		}
+
         this.fftSpike = false ;
         this.fft = null ;
 
@@ -136,28 +141,25 @@ public class Brain  {
 	public Genome toGenome() {
 		Genome rc = new Genome() ;
 
-        rc.set( getRows(), 0 ) ;
-        rc.set( getColumns(), 1 ) ;
-        rc.set( inputNeurons.length, 2 ) ;
-        rc.set( outputNeurons.length, 3 ) ;
+        rc.set( getRows() ) ;
+        rc.set( getColumns() ) ;
+        rc.set( inputNeurons.length ) ;
+        rc.set( outputNeurons.length ) ;
 
-        int ix = 4 ;
-
-        for( int i=0 ; i<neurons.length ; i++,ix++ ) {
-			rc.set( neurons[i].getType().ordinal(), ix ) ;
+        for( int i=0 ; i<neurons.length ; i++) {
+			rc.set( neurons[i].getType().ordinal() ) ;
 		}
 
-		rc.set( connectionProbability - 1.0 , ix++ ) ;
+		rc.set( connectionProbability - 1.0  ) ;
 
-//		rc.set( synapses.cardinality(), ix++ ) ;
-//
-//		synapses.eachNonZero( (i,j,v) -> {
-//            Genome tmp = new Genome() ;
-//            tmp.set( i, 0 ) ;
-//            tmp.set( j, 1 ) ;
-//            tmp.set( v, 2 ) ;
-//            rc.append( tmp ) ;
-//		}) ;
+		rc.set( synapses.nz_length ) ;
+
+		eachNonZero( (i,j,v) -> {
+           rc.set( i ) ;
+           rc.set( j ) ;
+		   rc.set( v ) ;
+		   log.debug( "{} Saving {}, {} = {}", rc.capacity(), i,j,v) ;
+ 		}) ;
 		
 		log.info( "Genome length: {} ", rc.capacity() ) ;
 		return rc ;
@@ -192,7 +194,7 @@ public class Brain  {
 		this.inputNeurons = new Neuron[numInputs] ;
 		this.outputNeurons = new Neuron[numOutputs] ;
 
-		// fill with liquid neurons
+		// fill liquid with neurons
         for( int i=0 ; i<this.neurons.length ; i++ ) {
             this.neurons[i] = NeuronFactory.getNeuron( i ) ;
         }
@@ -201,7 +203,6 @@ public class Brain  {
         int dy = rows / numInputs ;
 		int ix = 0 ;
 		for( int i=0 ; i<this.inputNeurons.length ; i++, ix+=dy ) {
-//            this.inputNeurons[i] = new InputNeuron( ix ) ;
             this.inputNeurons[i] = new NeuronRZ( ix ) ;
 			this.neurons[ix] = this.inputNeurons[i] ;
 		}
@@ -215,13 +216,10 @@ public class Brain  {
 			this.neurons[ix] = this.outputNeurons[i] ;
 		}
 
-//        this.synapses = new CCSMatrix(neurons.length,neurons.length,0) ;
-//        this.training = new CCSMatrix(neurons.length,neurons.length,0) ;
         this.synapses = new DMatrixSparseCSC( neurons.length, neurons.length,0) ;
         this.training = new DMatrixSparseCSC( neurons.length, neurons.length,0) ;
 
 		connectLayers() ;
-		this.train = false ;
 		this.fftSpike = false ;
 		this.fft = null ;
 	}
@@ -368,23 +366,31 @@ public class Brain  {
     }
 
 
-
-
+    /**
+     * Get neurons that are within the given distance from a centre.
+     * The distance metric is not cartesian, the x ( inter layer)
+     * distance is 3x greater than the distance within the same
+     * layer.
+     *
+     * @param n1 The centre neuron
+     * @param distance the metric distance to use as a max.
+     * @return a List of @see Neuron
+     */
     public List<Neuron> neuronsCloseTo( Neuron n1, double distance ) {
 	    List<Neuron> rc = new ArrayList<>() ;
 
         int x1 = n1.getId() / getRows() ;
         int y1 = n1.getId() % getRows() ;
 
+        // Find the AABB
         int minx = (int)Math.max( x1 - distance, 0 ) ;
         int maxx = (int)Math.min( x1 + distance, getColumns()-1 ) ;
         int miny = (int)Math.max( y1 - distance, 0 ) ;
         int maxy = (int)Math.min( y1 + distance, getRows()-1 ) ;
 
-        //
-        // Assume that the x distance is 3x greater than y distance
-        //
+        // Scan the AABB for all elements - then refine the check
         for( int x=minx ; x<=maxx ; x++ ) {
+            // Assume that the x distance is 3x greater than y distance
             int dx2 = 9 * ( x - x1 ) * ( x - x1 ) ;
             int ix = x * getRows() + miny ;
             for( int y=miny ; y<=maxy ; y++ , ix++) {
@@ -418,16 +424,18 @@ public class Brain  {
      */
     protected double[] calculateNewPotentials() {
 
-//        Vector neu = new BasicVector( neurons.length ) ;
         DMatrixRMaj neu = new DMatrixRMaj(  neurons.length, 1 ) ;
 
 		for( int i=0 ; i<neurons.length ; i++ ) {
-			neu.set( i, neurons[i].isSpiking() ? neurons[i].getSpikeValue() : 0 ) ;
+			double v = 0.0 ;
+			if( neurons[i].isSpiking() ) {
+			    // spike value is -ve for inhibitors
+				v = neurons[i].getSpikeValue() ;
+			}
+			neu.set( i, v ) ;
 		}
 
-//		Vector res = synapses.multiply( neu ) ;
         DMatrixRMaj res = new DMatrixRMaj( neurons.length, 1 ) ;
-
         CommonOps_DSCC.mult( synapses, neu, res ) ;
 
         return res.getData() ;
@@ -436,45 +444,36 @@ public class Brain  {
 	
 	/**
 	 * Train all neurons
+     *
 	 */
-	public void train() {
-
-		if( isTrain() ) {
-			for( int i=0 ; i<neurons.length; i++ ) {
-				neurons[i].train( this, clock, training ) ;
-			}
-		
-			epoch++ ;
-			if( epoch == EPOCH_LENGTH ) {
-				epoch = 0 ;
-                IGrowArray ig = new IGrowArray() ;
-                DGrowArray dg = new DGrowArray() ;
-
-				// DMatrixSparseCSC A = training.createLike() ;
-               	// CommonOps_DSCC.add( 1.0, synapses, 1.0, training, A, ig, dg ) ;
-
-				// log.info( "Train sum         {}", CommonOps_DSCC.elementSum(training) ) ;
-				// log.info( "Synapse sum       {}", CommonOps_DSCC.elementSum(synapses) ) ;
-				// log.info( "A sum             {}", CommonOps_DSCC.elementSum(A) ) ;
-	
-				CommonOps_DSCC.add( 1.0, synapses, 1.0, training, synapses, ig, dg ) ;
-
-				eachNonZero( (i,j,v) -> {
-					if( v>1.0 ) synapses.set(i, j, 1.0);
-					if( v<=0.0 ) synapses.set(i, j, 0.0);
-				});
-
-                log.info( "Train sum         {}", CommonOps_DSCC.elementSum(training) ) ;
-                log.info( "Synapse sum       {}", CommonOps_DSCC.elementSum(synapses) ) ;
-//				log.debug( "Train cardinality {}", training.cardinality() ) ;
-//				log.debug( "Train density     {}", training.density() ) ;
-
-                training.zero();
-                synapses.sortIndices( new SortCoupledArray_F64() ) ;
-                synapses.shrinkArrays();
-			}
+	public void train( int y ) {
+		for( int i=0 ; i<neurons.length; i++ ) {
+			neurons[i].train( this, clock, training ) ;
 		}
+	
+		epoch++ ;
+		if( epoch == EPOCH_LENGTH ) {
+			epoch = 0 ;
+			IGrowArray ig = new IGrowArray() ;
+			DGrowArray dg = new DGrowArray() ;
+
+			CommonOps_DSCC.add( 1.0, synapses, 1.0, training, synapses, ig, dg ) ;
+
+			eachNonZero( (i,j,v) -> {
+				if( v>1.0 ) synapses.set(i, j, 1.0);
+				if( v<=0.0 ) synapses.set(i, j, 0.0);
+			});
+
+			log.debug( "Train sum,max     {}, {}", CommonOps_DSCC.elementSum(training), CommonOps_DSCC.elementMax(training) ) ;
+			log.debug( "Synapse sum       {}", CommonOps_DSCC.elementSum(synapses) ) ;
+
+			training.zero();
+			synapses.sortIndices( new SortCoupledArray_F64() ) ;
+			synapses.shrinkArrays();
+		}
+		runningScore += getScore( y ) ;
 	}
+
 
 	public Neuron[] getInputsTo( int id ) {
 	    Neuron rc[] = new Neuron[ numNeurons() ] ;
@@ -486,7 +485,6 @@ public class Brain  {
 				n++ ;
             }
         }
-
 	    return Arrays.copyOf( rc, n ) ;
     }
 
@@ -519,6 +517,16 @@ public class Brain  {
         }
     }
 
+
+    public void addTraining( int from, int to, double addition ) {
+		double v = training.get( to, from ) + addition ;
+		// if( v < 0.00 ) {
+		// 	v = 0.00 ;
+		// }
+		// if( v > 1.00 ) v = 1.00 ;
+		training.set( to, from, v );
+    }
+
 	/**
 	 * If we are following - maintain a history of output
 	 * and spiking activity
@@ -546,15 +554,42 @@ public class Brain  {
 	 * 
 	 * @param y the expected pattern index 
 	 */
-	public double getScore( int y ) {
-		return 0 ;
+	private double getScore( int y ) {
+	    double rc = outputNeurons.length  ;
+
+		for( int i=0 ; i<outputNeurons.length ; i++ ) {
+			outputNeurons[i].updateFrequency( clock ) ;
+			log.debug( "O/P[{}] => {} Hz", i, outputNeurons[i].frequency() ) ; 
+		    if( i==y ) {
+                rc += outputNeurons[i].frequency() * 100.0 ;
+            } else {
+                rc -= outputNeurons[i].frequency() ;
+            }
+        }
+	    return rc ;
 	}
 
+
+    public double getSummaryScore() {
+        return runningScore ;
+    }
+
+    public void resetSummaryScore() {
+        runningScore = 0.0 ;
+    }
+
+	public void resetNeurons() {
+		for( int i=0 ; i<neurons.length ; i++ ) {
+			neurons[i].reset() ;
+		}
+	}
 
 
 	public Potentials getNeuronPotentials( double clock ) {
 		Potentials rc = new Potentials() ;
 		rc.clock = clock ;
+
+		rc.frequency = followingId >0 ? neurons[followingId].frequency() : 0 ;
 		rc.history = new double[outputHistory.length] ;
 		rc.spikeHistory = new boolean[outputHistory.length] ;
 
@@ -758,23 +793,6 @@ public class Brain  {
         return synapses ;
     }
 
-	public boolean isTrain() {
-		return train;
-	}
-
-	public void setTrain(boolean train) {
-
-//		log.info( "Cardinality     {}", synapses.cardinality() ) ;
-//		log.info( "Density         {}", synapses.density() ) ;
-//		log.info( "Sum             {}", synapses.sum() ) ;
-//		log.info( "Spectral radius {}", Double.NaN ) ;
-
-		if( train ) {
-			epoch = 0  ;
-		}
-		this.train = train ;
-	}
-
 	public boolean isFourier() {
 		return fft != null ;
 	}
@@ -819,6 +837,7 @@ public class Brain  {
 class Potentials {
 	public double clock ;
 	public List<NeuronState> neurons ;
+	public double frequency ;
 	public double history[] ;
 	public boolean spikeHistory[] ;
 }

@@ -135,14 +135,37 @@ public class Genome  implements Serializable {
 
 
 	/**
-	 * Set one of the values in the genome to a given value
+	 * Append value to the genome
 	 * @param value The value to store - range is 0.0 .. 1.0
+	 * @param index the zero based index in the genome
+	 */
+	public void  set( int value ) {
+		int index = capacity ;
+		set( value, index ) ;
+	}
+
+
+	/**
+	 * Set one of the values in the genome to a given value
+	 * @param value The value to store
 	 * @param index the zero based index in the genome
 	 */
 	public void  set( double value, int index ) {
 		int bits = (int)Math.floor( NUMBER_GRANULARITY * value ) ;
 		set( bits, index ) ;
 	}
+
+	/**
+	 * Append value to the genome
+	 * @param value The value to store - range is 0.0 .. 1.0
+	 * @param index the zero based index in the genome
+	 */
+	public void  set( double value ) {
+		int index = capacity ;
+		set( value, index ) ;
+	}
+
+
 
 	/**
 	 * Append one genome to the end of this

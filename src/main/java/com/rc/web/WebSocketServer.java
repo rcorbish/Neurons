@@ -6,6 +6,8 @@ import java.util.Iterator;
 import java.util.List;
 
 import com.rc.Brain;
+import com.rc.Options;
+
 import org.eclipse.jetty.websocket.api.Session;
 import org.eclipse.jetty.websocket.api.annotations.OnWebSocketClose;
 import org.eclipse.jetty.websocket.api.annotations.OnWebSocketConnect;
@@ -111,7 +113,7 @@ public class WebSocketServer  {
 	
 	public void setTrainingMode(boolean training) {
 		logger.info( "Training {}", training ? "enabled" : "disabled" ) ;
-		brain.setTrain( training ) ;
+		Options.train = training ;
 	}	
 
 	public void setFourierMode(boolean fourier) {

@@ -242,7 +242,8 @@ d3.json("data", function(error, graph) {
 		ws.onmessage = function (evt) {
 			var data = JSON.parse( evt.data )
 			
-			scoreDiv.innerHTML = data.clock.toFixed(5) + " S" ;
+			scoreDiv.innerHTML = data.clock.toFixed(5) + " Sec. " + 
+								 (data.frequency/1000.0).toFixed(2) + " kHz" ;
 			
 			const neuronFrequency = d3.scaleLinear()
 			.domain( [ 20, 150, 1000 ] )

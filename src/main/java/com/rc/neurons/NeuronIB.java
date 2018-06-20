@@ -1,7 +1,5 @@
 package com.rc.neurons ;
 
-import com.rc.Genome;
-
 
 public class NeuronIB extends Neuron {
 
@@ -21,6 +19,9 @@ public class NeuronIB extends Neuron {
 	public NeuronType getType() {
 		return NeuronType.IB ;
 	}
+
+    @Override
+    public double getSpikeValue() { return -super.getSpikeValue() ; }
 
 }
 

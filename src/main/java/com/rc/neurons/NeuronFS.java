@@ -22,6 +22,8 @@ public class NeuronFS extends Neuron {
 		return NeuronType.FS ;
 	}
 
+	@Override
+	public double getSpikeValue() { return -super.getSpikeValue() ; }
 }
 
 
