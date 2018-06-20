@@ -1,8 +1,9 @@
 package com.rc.neurons ;
 
-import com.rc.Genome;
 
-
+/**
+ * A long term spiking neuron
+ */
 public class NeuronLTS extends Neuron {
 
 	private static final double A = 0.02 ;

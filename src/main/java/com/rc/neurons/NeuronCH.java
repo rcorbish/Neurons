@@ -1,9 +1,9 @@
 package com.rc.neurons ;
 
 
-import com.rc.Genome;
-
-
+/**
+ * A Chattering neuron
+ */
 public class NeuronCH extends Neuron {
 
 	private static final double A = 0.02 ;

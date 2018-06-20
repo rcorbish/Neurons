@@ -9,7 +9,12 @@ import org.slf4j.LoggerFactory;
 
 import com.rc.Brain;
 
-
+/**
+ * This is the base code for a Neuron. Each real neuron type will define the ODE
+ * params A,B,C & D .
+ *
+ * @see http://www.izhikevich.org/human_brain_simulation/Blue_Brain.htm
+ */
 abstract public class Neuron  {
 
     //-------------------------------------------

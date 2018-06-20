@@ -14,11 +14,6 @@ do
 	CP=$CP:$l 
 done 
 
-for l in external-libs/jlapack-0.8/*
-do 
-	CP=$CP:$l 
-done 
-
 
 JAVA_ARGS="com.rc.Main"
 
