@@ -448,7 +448,7 @@ public class Brain  {
 	 */
 	public void train( int y ) {
 		for( int i=0 ; i<neurons.length; i++ ) {
-			neurons[i].train( this, clock, training ) ;
+			neurons[i].train( this, training ) ;
 		}
 	
 		epoch++ ;
@@ -510,7 +510,7 @@ public class Brain  {
 	        double v = synapses.get( to, from ) + addition ;
             if( v < 0.00 ) {
                 v = 0.00 ;
-                log.debug( "Weight is 0: {} -> {}", from, to ) ;
+//                log.debug( "Weight is 0: {} -> {}", from, to ) ;
             }
             if( v > 1.00 ) v = 1.00 ;
 	        synapses.set( to, from, v );
@@ -846,10 +846,12 @@ class NeuronState {
 	public double potential ;
 	public int id ;
 	public double frequency ;
+	public String type ;
 	public NeuronState( Neuron n, double clock ) {
 		this.potential = n.getPotential() ;
 		this.id = n.getId() ;
 		this.frequency = n.frequency() ;
+		this.type = n.getType().toString() ;
 	}
 }
 

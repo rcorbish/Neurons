@@ -30,6 +30,7 @@ body {
 	text-align: right ;
 	margin: 5px ;
 	color: #80a0c0 ;
+	background-color: #050225;
 }
 .pattern {
 	position: absolute ;
@@ -74,7 +75,7 @@ body {
 <body>
 <div class="status"></div>
 <div class="pattern">
-	<input type="number" id='pattern-id' min=0 max=8 value="0" >
+	<input type="number" id='pattern-id' min=0 max=9 value="0" >
 	<input type="checkbox" id='train' value="on" >Train
 	<input type="radio" name='ft-type' id='fourier-off' value="off" >No FT 
 	<input type="radio" name='ft-type' id='fourier' value="on" >FT 
@@ -243,7 +244,8 @@ d3.json("data", function(error, graph) {
 			var data = JSON.parse( evt.data )
 			
 			scoreDiv.innerHTML = data.clock.toFixed(5) + " Sec. " + 
-								 (data.frequency/1000.0).toFixed(2) + " kHz" ;
+								 (data.frequency/1000.0).toFixed(2) + " kHz " +
+								 data.neurons[following.id].type 
 			
 			const neuronFrequency = d3.scaleLinear()
 			.domain( [ 20, 150, 1000 ] )
@@ -281,10 +283,10 @@ d3.json("data", function(error, graph) {
 			
 			ctx.beginPath() ;
 			ctx.strokeStyle = "steelblue"  
-			ctx.moveTo( 0, 110-(100*history[i]) );
+			ctx.moveTo( 0, 125-(100*history[i]) );
 			for( var i=1 ; i<data.history.length ; i++ ) {
 				var v = data.history[i] 
-				ctx.lineTo( i*dx, 110-(100*v) ) ;
+				ctx.lineTo( i*dx, 125-(100*v) ) ;
 			}
 			ctx.stroke();
 			
@@ -293,8 +295,8 @@ d3.json("data", function(error, graph) {
 			// ctx.lineWidth = 0.75 
 			for( var i=1 ; i<data.spikeHistory.length ; i++ ) {
 				if( data.spikeHistory[i] ) {
-					ctx.moveTo( i*dx, 0 )
-					ctx.lineTo( i*dx, 10 ) 
+					ctx.moveTo( i*dx, 20 )
+					ctx.lineTo( i*dx, 25 ) 
 				}
 			}
 			ctx.stroke();

@@ -7,7 +7,7 @@ public class NeuronFactory {
 	final static private Random rng = new Random( 128 ) ;
 	
 	final static private double chProb  = .20 ;
-	final static private double rsProb  = .60 ;
+	final static private double rsProb  = .45 ;
 	final static private double fsProb  = .10 ;
 	final static private double ibProb  = .10 ;
 

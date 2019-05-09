@@ -20,7 +20,8 @@ public class Options {
 
 	public static int POPULATION       = 40 ;
 	public static int EPOCHS           = 10 ;
-	public static int SUMULATIONS   	= 100 ;
+	public static int BATCH_SIZE       = 300 ;
+	public static int SIMULATIONS      = 100 ;
 	public static double TICK_PERIOD   = 2e-4 ;   // each clock tick in seconds
 	public static double MUTATION      = 0.01 ;
 	public static long DELAY_INTERVAL  = 25 ; 
@@ -56,9 +57,10 @@ public class Options {
 		parser.acceptsAll( asList("u", "update-delay" ) , "Interval between updates 0-200 mS" ).withRequiredArg().ofType( Long.class ) ; 
 		parser.accepts( "epochs" , "Number of epochs to run" ).withRequiredArg().ofType( Integer.class ) ; 
 		parser.accepts( "clear" , "Delete existing parameters" ) ; 
-		parser.accepts( "train" , "Train the network" ) ; 
+		parser.accepts( "train" , "Train the network" ) ;
 		parser.accepts( "simulations" , "Number of simulations to run" ).withRequiredArg().ofType( Integer.class ) ;
-		parser.accepts( "population" , "Number of brains in the population" ).withRequiredArg().ofType( Integer.class ) ; 
+		parser.accepts( "batch" , "Batch size per simulation" ).withRequiredArg().ofType( Integer.class ) ;
+		parser.accepts( "population" , "Number of brains in the population" ).withRequiredArg().ofType( Integer.class ) ;
 		parser.accepts( "mutation" , "Mutation amount 0.0 - 1.0" ).withRequiredArg().ofType( Double.class ) ; 
 		parser.nonOptions( "Network dimensions ( up to 3 ) (e.g. 3 4, 2 2 2 )" ).ofType( Integer.class ) ; 
 		parser.accepts( "help", "This help" ).forHelp();
@@ -74,11 +76,12 @@ public class Options {
 			}
 		}
 
-		if( options.has( "simulations" ) ) 	{ SUMULATIONS= (int) options.valueOf("simulations") ; }
+		if( options.has( "simulations" ) ) 	{ SIMULATIONS= (int) options.valueOf("simulations") ; }
 		if( options.has( "population" ) ) 	{ POPULATION = (int) options.valueOf("population") ; }
 		if( options.has( "epochs" ) ) 		{ EPOCHS = (int) options.valueOf("epochs") ; }
-		if( options.has( "mutation" ) ) 	{ MUTATION = (double) options.valueOf("mutation") ; }
-		if( options.has( "update-delay" ) ) { DELAY_INTERVAL = (long) options.valueOf("update-delay") ; }
+		if( options.has( "batch" ) ) 			{ BATCH_SIZE = (int) options.valueOf("batch") ; }
+		if( options.has( "mutation" ) ) 		{ MUTATION = (double) options.valueOf("mutation") ; }
+		if( options.has( "update-delay" ) ) 	{ DELAY_INTERVAL = (long) options.valueOf("update-delay") ; }
 		if( options.has( "period" ) ) 		{ TICK_PERIOD = (int) options.valueOf("period") ; }
 
 		clearFile = options.has("clear") ;
@@ -114,7 +117,8 @@ public class Options {
 		if( evolve ) {
 			log.info("Epochs        : {}", EPOCHS );
 			log.info("Population    : {}", POPULATION );
-			log.info("Simulations   : {}", SUMULATIONS );
+			log.info("Batch Size    : {}", BATCH_SIZE );
+			log.info("Simulations   : {}", SIMULATIONS );
 			log.info("Mutation Rate : {}", MUTATION );				
 		}
 	}

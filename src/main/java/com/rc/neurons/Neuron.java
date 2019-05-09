@@ -73,7 +73,7 @@ abstract public class Neuron  {
 		this.u = 0 ;
 		
 		this.threshold = .030 ; 			// spike triggered when internal potential hit this value
-		this.spikeValue = .450 ; 			// height of spike pulse
+		this.spikeValue = .250 ; 			// height of spike pulse
 		this.spikeDuration = 0.0001 ;		// length of spike pulse
 
 		this.learningRate = 0.001 ;			// how fast to adjust weights
@@ -143,27 +143,31 @@ abstract public class Neuron  {
 	}
 
 
-	public void train( Brain brain, double clock, DMatrixSparseCSC training ) {
+	public void train( Brain brain, DMatrixSparseCSC training ) {
 		if( isSpiking() ) {
+			double lst = lastSpikeTime() ;
 			Neuron sources[] = brain.getInputsTo( id ) ;
 			for( Neuron src : sources ) {
-				double srcFiredAgo = src.timeSinceFired(clock);
-                if ( srcFiredAgo==0 ) {
+				double dt = src.lastSpikeTime() - lst ;
+				if( dt < 0 && dt > -learningWindowLTD ) {
+                    double dw = learningRate * Math.exp( -dt / learningRateTauLTD ) ;
+					brain.addTraining( src.id, id, -dw ) ;
+				} else if ( dt==0 ) {
 					brain.addTraining( src.id, id, -learningRate / 10.0 ) ;
-                } else if (srcFiredAgo < learningWindowLTP ) {
-                    double dw = learningRate * Math.exp( (learningWindowLTP-srcFiredAgo) / learningRateTauLTP ) ;
+                } else if (dt < learningWindowLTP ) {
+                    double dw = learningRate * Math.exp( (learningWindowLTP-dt) / learningRateTauLTP ) ;
 					brain.addTraining( src.id, id, dw ) ;
 				}
 			}
 
-			Neuron targets[] = brain.getOutputsFrom( id ) ;
-			for( Neuron tgt : targets ) {
-				double tgtFiredAgo = tgt.timeSinceFired(clock);
-                if( tgtFiredAgo < learningWindowLTD && tgtFiredAgo>0 ) {
-                    double dw = -learningRate * Math.exp( (learningWindowLTD-tgtFiredAgo) / learningRateTauLTD ) ;
-					brain.addTraining( id, tgt.id, dw ) ;
-				}
-			}
+			// Neuron targets[] = brain.getOutputsFrom( id ) ;
+			// for( Neuron tgt : targets ) {
+			// 	double dt = lst - tgt.lastSpikeTime() ;
+            //     if( dt < learningWindowLTD && dt>0 ) {
+            //         double dw = -learningRate * Math.exp( (learningWindowLTD-dt) / learningRateTauLTD ) ;
+			// 		brain.addTraining( id, tgt.id, dw ) ;
+			// 	}
+			// }
 		}
 	}
 	
@@ -203,6 +207,10 @@ abstract public class Neuron  {
 	public double timeSinceFired( double clock ) { 
 		double lastSpikeTime = lastSpikes[ lastSpikeIndex ] ;
 		return clock - lastSpikeTime ; 
+	}
+
+	public double lastSpikeTime() { 
+		return  lastSpikes[ lastSpikeIndex ] ;
 	}
 
 	public int getId() { return id ; }

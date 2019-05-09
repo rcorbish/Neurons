@@ -39,7 +39,7 @@ public class InputNeuron extends NeuronRS {
 
 	
 	@Override
-	public void train( Brain brain, double clock, DMatrixSparseCSC training  ) {
+	public void train( Brain brain, DMatrixSparseCSC training  ) {
 		// don't train inputs
 	}
 

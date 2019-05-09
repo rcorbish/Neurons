@@ -28,14 +28,15 @@ public class Evolution {
 			int     simulations ,
 			double  mutationRate ,
 			int 	epochs ,
-			int     population 
+			int     population,
+            int     batchSize
 			) {
 		this.clockTick = clockTick ;
 		this.mutationRate = mutationRate ;
 		this.epochs = epochs ;
 		this.simulations = simulations ;
 		this.population = population ;
-		this.batchSize = 30 ;
+		this.batchSize = batchSize ;
 	}	
 
 

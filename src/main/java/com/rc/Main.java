@@ -45,7 +45,7 @@ public class Main {
 			}
 
 			if( Options.evolve ) {
-				final Evolution evolution = new Evolution( Options.TICK_PERIOD, Options.SUMULATIONS, Options.MUTATION, Options.EPOCHS, Options.POPULATION ) ;
+				final Evolution evolution = new Evolution( Options.TICK_PERIOD, Options.SIMULATIONS, Options.MUTATION, Options.EPOCHS, Options.POPULATION, Options.BATCH_SIZE ) ;
 				brain = evolution.evolve( Options.TestPatterns, Options.TICK_PERIOD, 6, 10, Options.dims[0], Options.dims[1] ) ;
 				
 				if( Options.parameterFile != null ) {
