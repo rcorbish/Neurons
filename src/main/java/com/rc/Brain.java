@@ -200,15 +200,18 @@ public class Brain  {
         }
 
         // overwrite the inputs in the liquid
-        int dy = rows / numInputs ;
-		int ix = 0 ;
+		int dy = rows / numInputs ;
+		dy = 1 ;
+		int start = ( rows - numInputs ) >> 1 ;
+		int ix = start ;
 		for( int i=0 ; i<this.inputNeurons.length ; i++, ix+=dy ) {
-            this.inputNeurons[i] = new NeuronRZ( ix ) ;
+            this.inputNeurons[i] = new InputNeuron( ix ) ;
 			this.neurons[ix] = this.inputNeurons[i] ;
 		}
 
 		// overwrite the outputs in the liquid
         dy = rows / numOutputs ;
+		dy = 1 ;
 		ix = cols * rows - dy ;
 
 		for( int i=0 ; i<this.outputNeurons.length ; i++, ix-=dy ) {
@@ -236,10 +239,10 @@ public class Brain  {
 
         for( int from=0 ; from<numNeurons() ; from++ ) {
 
-            int toColumn = 0 ;
+            int toColumn = fromColumn+1 ;
             int toRow = 0 ;
 
-            for( int to=0 ; to<numNeurons() ; to++ ) {
+            for( int to=toColumn*numRows ; to<numNeurons() ; to++ ) {
                 double dist = Math.sqrt(
                                     (fromColumn - toColumn) * (fromColumn - toColumn) +
                                     (fromRow - toRow) * (fromRow - toRow)
@@ -329,7 +332,7 @@ public class Brain  {
 
 		// Set inputs immediately - no dependencies
 		 for( int i=0 ; i<inputNeurons.length ; i++ ) {
-			newPotentials[ inputNeurons[i].getId() ] = inputs[i] / 10.0 ;
+			newPotentials[ inputNeurons[i].getId() ] = inputs[i] / 3.0 ;
 		}
 
 		// Then write the output as an atomic op
@@ -337,8 +340,15 @@ public class Brain  {
 			neurons[i].step( newPotentials[i], clock ) ;
 		}
 
-        int ix = rng.nextInt( numNeurons() ) ;
+/*
+		for( int i=0 ; i<neurons.length; i++ ) {
+		    Neuron n = neurons[i] ;
+			if( n.checkForSpike(clock) ) {
+				// nothing yet
+			}
+		}
 
+		int ix = rng.nextInt( numNeurons() ) ;
 		for( int i=0 ; i<neurons.length; i++, ix++ ) {
 		    if( ix>=numNeurons() ) ix = 0 ;
 		    Neuron n = neurons[ix] ;
@@ -352,6 +362,7 @@ public class Brain  {
                 }
             }
 		}
+*/
 	}
 
 
@@ -424,7 +435,7 @@ public class Brain  {
      */
     protected double[] calculateNewPotentials() {
 
-        DMatrixRMaj neu = new DMatrixRMaj(  neurons.length, 1 ) ;
+        DMatrixRMaj neuronOutputs = new DMatrixRMaj(  neurons.length, 1 ) ;
 
 		for( int i=0 ; i<neurons.length ; i++ ) {
 			double v = 0.0 ;
@@ -432,13 +443,13 @@ public class Brain  {
 			    // spike value is -ve for inhibitors
 				v = neurons[i].getSpikeValue() ;
 			}
-			neu.set( i, v ) ;
+			neuronOutputs.set( i, v ) ;
 		}
 
-        DMatrixRMaj res = new DMatrixRMaj( neurons.length, 1 ) ;
-        CommonOps_DSCC.mult( synapses, neu, res ) ;
+        DMatrixRMaj rc = new DMatrixRMaj( neurons.length, 1 ) ;
+        CommonOps_DSCC.mult( synapses, neuronOutputs, rc ) ;
 
-        return res.getData() ;
+        return rc.getData() ;
 	}
 
 	
@@ -512,7 +523,7 @@ public class Brain  {
                 v = 0.00 ;
 //                log.debug( "Weight is 0: {} -> {}", from, to ) ;
             }
-            if( v > 1.00 ) v = 1.00 ;
+            if( v > 10.00 ) v = 10.00 ;
 	        synapses.set( to, from, v );
         }
     }
@@ -594,12 +605,15 @@ public class Brain  {
 		rc.spikeHistory = new boolean[outputHistory.length] ;
 
 		int offset = historyIndex ;
-		
+
+		double mx = -1e10 ;
+		double mn = 1e10 ;
+
 		if( isFourier() ) {
 			double tmp[] = new double[ outputHistory.length ] ;
 			if( this.fftSpike ) {
 				for( int i=0 ; i<tmp.length ; i++ ) {
-					tmp[i] = outputSpikeHistory[i] ? 1 : 0 ;
+					tmp[i] = outputSpikeHistory[i] ? 100 : 0 ;
 				}
 			} else {	
 				System.arraycopy( outputHistory, 0, tmp, 0, tmp.length ) ;
@@ -612,9 +626,11 @@ public class Brain  {
 					offset += tmp.length ;
 				}
 				int ix = outputHistory.length-offset-1 ;
-				rc.history[i] = ( tmp[i] + 10 ) / 20.0 ;
+				rc.history[i] =  tmp[i] ;
 				rc.spikeHistory[ix] = outputSpikeHistory[i] ;
-			}			
+                mn = Math.min( mn, tmp[i] ) ;
+                mx = Math.max( mx, tmp[i] ) ;
+			}
 		} else {
 			for( int i=0 ; i<outputHistory.length ; i++ ) {
 				offset-- ;
@@ -622,12 +638,15 @@ public class Brain  {
 					offset += outputHistory.length ;
 				}
 				int ix = outputHistory.length-offset-1 ;
-				rc.history[ix] = ( outputHistory[i] + .100 ) * 4.0 ;
+				rc.history[ix] = outputHistory[i]  ;
 				rc.spikeHistory[ix] = outputSpikeHistory[i] ;
+                mn = Math.min( mn, outputHistory[i] ) ;
+                mx = Math.max( mx, outputHistory[i] ) ;
 			}
 		}
-		
-		rc.neurons = new ArrayList<NeuronState>() ;
+        rc.min = mn ;
+        rc.max = mx ;
+		rc.neurons = new ArrayList<NeuronState>( neurons.length ) ;
 		for( int i=0 ; i<neurons.length; i++ ) {
 			rc.neurons.add( new NeuronState( neurons[i], clock ) ) ;
 		}
@@ -639,6 +658,8 @@ public class Brain  {
 	public Object toJson() {
 
 	    Nodes rc = new Nodes() ;
+        rc.cols = numColumns ;
+        rc.rows = numRows ;
 	    rc.nodes = 	getNodes() ;
 
 		return rc ;
@@ -646,13 +667,12 @@ public class Brain  {
 
 	private Node [] getNodes() {
 
-		int layerWidth = 800 / 80 ;  // cols ?
+		int layerWidth = 800 / 110 ;  // cols ?
 
         Node rc[] = new Node[ neurons.length ] ;
 
 		int x = 0 ;
 		int y = 0 ;
-        int layerHeight = (600-60) / numRows ;
 
 		for( int i=0 ; i<neurons.length ; i++ ) {
             rc[i] = new Node() ;
@@ -660,8 +680,8 @@ public class Brain  {
             rc[i].potential = neurons[i].getPotential() ;
             rc[i].inhibitor = neurons[i].isInhibitor() ;
             rc[i].alive = true ; //routeToAnyInput( i ) ;
-            rc[i].fx =  x * layerWidth ;
-            rc[i].fy =  y * layerHeight + 30 /* *30+30 */ ;
+            rc[i].fx =  x ;
+            rc[i].fy =  y ;
 			y++ ;
 			if( y >= numRows ) {
 				x++ ;
@@ -840,6 +860,8 @@ class Potentials {
 	public double frequency ;
 	public double history[] ;
 	public boolean spikeHistory[] ;
+    public double min ;
+    public double max ;
 }
 
 class NeuronState {
@@ -865,5 +887,7 @@ class Node {
 }
 
 class Nodes {
+	int rows ;
+	int cols ;
     Node [] nodes ;
 }

@@ -16,7 +16,7 @@ public class NeuronFS extends Neuron {
 	}
 
 	@Override
-	public boolean isInhibitor() { return true ; }
+	public boolean isInhibitor() { return false ; }
 
 	@Override
 	public NeuronType getType() {

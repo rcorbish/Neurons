@@ -13,7 +13,7 @@ import com.rc.Brain;
  * This is the base code for a Neuron. Each real neuron type will define the ODE
  * params A,B,C & D .
  *
- * @see http://www.izhikevich.org/human_brain_simulation/Blue_Brain.htm
+ * @link http://www.izhikevich.org/human_brain_simulation/Blue_Brain.htm
  */
 abstract public class Neuron  {
 
@@ -28,8 +28,8 @@ abstract public class Neuron  {
 
     //-------------------------------------------
     // transient state data
-	protected 		double 		currentPotential ;
-	protected 		boolean		isSpiking ;
+	private 		double 		currentPotential ;
+	private 		boolean		isSpiking ;
 
 	private final 	double 		lastSpikes[] ;
 	private 	  	int 		lastSpikeIndex ;
@@ -38,6 +38,7 @@ abstract public class Neuron  {
 
     private 	  	double 		lastStepClock ;
     private 	  	double		frequency ;
+    private         double 	    spikeValue  ;
 
     //-------------------------------------------
 	// genome static data
@@ -49,9 +50,7 @@ abstract public class Neuron  {
 	protected final double	d ;		
 
 	private final double 	threshold  ;
-	private final double 	spikeValue  ;
-	private final double 	spikeDuration  ;
-	
+
     private final double 	learningRate ;
     private final double 	learningRateTauLTP ;
     private final double 	learningRateTauLTD ;
@@ -72,17 +71,16 @@ abstract public class Neuron  {
 		
 		this.u = 0 ;
 		
-		this.threshold = .030 ; 			// spike triggered when internal potential hit this value
-		this.spikeValue = .250 ; 			// height of spike pulse
-		this.spikeDuration = 0.0001 ;		// length of spike pulse
+		this.threshold = -30 ;   			// spike triggered when internal potential hit this value
+		this.spikeValue = 30 ; 	    		// height of spike pulse
 
-		this.learningRate = 0.001 ;			// how fast to adjust weights
+		this.learningRate = 0.0001 ;		// how fast to adjust weights
         this.learningRateTauLTP = 0.2 ;     // exp decay of learning wrt time between spikes
         this.learningRateTauLTD = 0.4 ;     // ... for depression
         this.learningWindowLTP = 0.025 ;    // ms for LTP window
         this.learningWindowLTD = 0.050 ;    // mS for LTD window
 
-		this.currentPotential = -.07 ;
+		this.currentPotential = -50 ;
 		this.lastSpikeIndex = 0 ;
 		this.lastSpikes = new double[NUM_SPIKES_TO_RECORD] ;
 	}
@@ -90,25 +88,29 @@ abstract public class Neuron  {
 
 	public void step( double potential, double clock ) {
 		if( isSpiking() ) {
-			if( timeSinceFired(clock)>=spikeDuration ) {
-				reset() ;
-			}
-			lastStepClock = clock ;
+			reset() ;
 		} else {
+			// convert potential in mV to current 
+			double i = potential * 2.0 ;
 			//--------------------------------------------
 			// ODE params are in millivolts & milliseconds
 			// for now do this ...
 			//
 			double dt = (clock - lastStepClock) * 1000.0;
-			lastStepClock = clock;
 
-			double cp = currentPotential * 1000.0;
-			double p = potential * 1000.0;
+			double cp = currentPotential ;
 
-			double v = (0.04 * cp + 5) * cp + 140 - u + p ;
+			double v = (0.04 * cp + 5) * cp + 140 - u + i ;
 			this.u += dt * this.a * ( this.b * cp - this.u ) ;
-			this.currentPotential += dt * v / 1000.0;
+			this.currentPotential += dt * v ;
+
+//            if( !Double.isFinite( currentPotential ) ) {
+//                log.error( "Bad data " );
+//            }
+
+			checkForSpike(clock) ;
 		}
+		lastStepClock = clock ;
 	}
 
 
@@ -117,8 +119,11 @@ abstract public class Neuron  {
 
 		//----------------------------
 		// Reset ODE params on a spike
-		this.currentPotential = c / 1000.0  ;
+		this.currentPotential = c  ;
 		this.u += this.d ;
+//        if( !Double.isFinite( currentPotential ) ) {
+//            log.error( "Bad data " );
+//        }
 	}
 
 
@@ -133,12 +138,15 @@ abstract public class Neuron  {
 
 	
 	public void spike( double clock ) {
+//		if( !Double.isFinite( currentPotential ) ) {
+//			log.error( "Bad data " );
+//		}
+//		this.spikeValue = currentPotential ;
 		lastSpikeIndex++ ;
 		if( lastSpikeIndex >= lastSpikes.length ) {
 			lastSpikeIndex = 0 ;
 		}			
 		isSpiking = true ;
-		//currentPotential = spikeValue ;
 		lastSpikes[ lastSpikeIndex ] = clock ;
 	}
 
@@ -159,15 +167,6 @@ abstract public class Neuron  {
 					brain.addTraining( src.id, id, dw ) ;
 				}
 			}
-
-			// Neuron targets[] = brain.getOutputsFrom( id ) ;
-			// for( Neuron tgt : targets ) {
-			// 	double dt = lst - tgt.lastSpikeTime() ;
-            //     if( dt < learningWindowLTD && dt>0 ) {
-            //         double dw = -learningRate * Math.exp( (learningWindowLTD-dt) / learningRateTauLTD ) ;
-			// 		brain.addTraining( id, tgt.id, dw ) ;
-			// 	}
-			// }
 		}
 	}
 	

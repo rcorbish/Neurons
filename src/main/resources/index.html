@@ -107,34 +107,9 @@ body {
 	
 d3.json("data", function(error, graph) {
   if (error) return console.warn(error);
-
-	function dragstarted(d) {
-		if (!d3.event.active) simulation.alphaTarget(0.3).restart();
-		d.fx = d.x;
-		d.fy = d.y;
-	}
-
-	function dragged(d) {
-		d.fx = d3.event.x;
-		d.fy = d3.event.y;
-	}
-
-	function dragended(d) {
-		if (!d3.event.active) simulation.alphaTarget(0);
-		d.fx = null;
-		d.fy = null;
-	}
-
-	// const links = svg
-	//     .selectAll("line")
-    // 	.data(graph.links)
-    // 	.enter()
-	//     	.append("line") 
-	// 			.attr( 'id', function(l) { return l.id } )
-	// 			.attr( 'class', 'link' )
-	// 			.attr( "stroke", function(l) { return weightColor( l.weight ); })
-	// 	;
-
+		dx = width / ( graph.cols + 2 )
+		dy = height / ( graph.rows + 2 )
+        r = Math.min( dx,dy ) / 2
 		const nodes = svg
     	.selectAll("circle.node")
     	.data( graph.nodes )
@@ -142,84 +117,19 @@ d3.json("data", function(error, graph) {
 			.append("circle")
 				.attr( 'class', 'node' )
 				.attr( 'id', function(d) { return d.id } )
-				.attr( "r", function(d) { return d.inhibitor ? 3 : 5 } )
+				.attr( "r", function(d) { return d.inhibitor ? r/1.6 : r } )
 				.attr( "stroke", "none" ) 
 				.attr( "stroke-width", "2" )
 				.attr( "fill", function(d) { 
 					return "silver" ;
 				}) 
-				.attr( "cx", function(d) { return d.fx } ) 
-				.attr( "cy", function(d) { return d.fy } )  
+				.attr( "cx", function(d) { return (d.fx+1) * dx} )
+				.attr( "cy", function(d) { return (d.fy+1) * dy} )
 				.on( "click", function(d) { 
 					neuronClicked( d.id ) 
 				})
 				;
-//				.call(d3.drag()
-//					.on("start", dragstarted)
-//					.on("drag", dragged)
-//					.on("end", dragended)) 
-  		
 
-//		const texts = svg
-//    	.selectAll("text.potential")
-//    	.data( graph.nodes )
-//		.enter()
-//			.append( 'text' )
-//				.attr( 'class', 'potential' )
-//				.attr( 'font-size', '13pt')
-//				.attr( 'font-family', 'arial')
-//				.attr( 'id', function(d) { return 'txt-' + d.id } )
-//				.text( "" )
-//  		;
-
-
-  function tick() {
-		nodes
-		.attr("cx", function(d) { return d.x; })
-		.attr("cy", function(d) { return d.y; })
-		;
-		// texts
-    	// .attr("x", function(d) { return d.x+7; })
-        // .attr("y", function(d) { return d.y-3; })
-    	// ;
-
-    	// links
-        // .attr("x1", function(d) { return d.source.x; })
-        // .attr("y1", function(d) { return d.source.y; })
-        // .attr("x2", function(d) { return d.target.x; })
-        // .attr("y2", function(d) { return d.target.y; })
-    	// ;
-	}
-/*
-  const simulation = d3.forceSimulation()
-	.nodes( graph.nodes )
-	.force( "link", d3.forceLink()
-//	 		.strength( function(l) { return .6 ; }) 
-//	 		.distance( function(l) { return 15 ; } )
-	 		.id( function(n) { return n.id ; } ) 
-	 		// .links( graph.links ) 
-	 	)
-	// .force( "charge", d3.forceManyBody()
-	// 		.strength( -1 ) 
-	// 	)
-	//.force( "center", d3.forceCenter(width/2, height/2) )
-	.force( "collide", d3.forceCollide( 30 ) ) 
-	.force( "x", d3.forceX()
-			.x( function(d) { 
-				return d.fx ; 
-			})
-			.strength( function(d) { return 1 ; } ) 
-		)  
-	.force( "y", d3.forceY()
-			.y( function(d) { 
-				return d.fy  ; 
-			})
-			.strength( function(d) { return 1 ; } ) 
-		)  
-	.on("tick", tick ) 
-	.on("end", tick ) 
-	;
-*/
 	neuronClicked( 0 ) ;
 });
 
@@ -242,8 +152,8 @@ d3.json("data", function(error, graph) {
 		// called when a message received from server
 		ws.onmessage = function (evt) {
 			var data = JSON.parse( evt.data )
-			
-			scoreDiv.innerHTML = data.clock.toFixed(5) + " Sec. " + 
+
+			scoreDiv.innerHTML = data.clock.toFixed(5) + " Sec. " +
 								 (data.frequency/1000.0).toFixed(2) + " kHz " +
 								 data.neurons[following.id].type 
 			
@@ -264,17 +174,14 @@ d3.json("data", function(error, graph) {
 				}
 			}
 
-			// for( var i=0 ; i<data.edges.length ; i++ ) {			
-			// 	var e = document.getElementById( data.edges[i].id ) 
-			// 	if( e ) {				
-			// 		e.style.stroke = weightColor( data.edges[i].weight )  			
-			// 	}
-			// }
-			
-			c.width = c.width;	// clear screern ( of the chart area - not the graph )		
+
+			c.width = c.width;	// clear screen ( of the chart area - not the graph )
 			
 			const dx = c.width / data.history.length
-			
+
+			const scaley = 100.0 / ( data.max - data.min )
+			const offy   = data.min
+
 			// Draw the chart at the top of the screen
 			// chart od output values & which outputs are activated
 			const outputColors = d3.scaleLinear()
@@ -283,16 +190,14 @@ d3.json("data", function(error, graph) {
 			
 			ctx.beginPath() ;
 			ctx.strokeStyle = "steelblue"  
-			ctx.moveTo( 0, 125-(100*history[i]) );
+			ctx.moveTo( 0, 130-(data.history[0]-offy)*scaley );
 			for( var i=1 ; i<data.history.length ; i++ ) {
-				var v = data.history[i] 
-				ctx.lineTo( i*dx, 125-(100*v) ) ;
+				ctx.lineTo( i*dx, 130-(data.history[i]-offy)*scaley ) ;
 			}
 			ctx.stroke();
 			
 			ctx.beginPath() ;
 			ctx.strokeStyle = "white"  
-			// ctx.lineWidth = 0.75 
 			for( var i=1 ; i<data.spikeHistory.length ; i++ ) {
 				if( data.spikeHistory[i] ) {
 					ctx.moveTo( i*dx, 20 )
