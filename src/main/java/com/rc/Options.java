@@ -22,9 +22,9 @@ public class Options {
 	public static int EPOCHS           = 10 ;
 	public static int BATCH_SIZE       = 300 ;
 	public static int SIMULATIONS      = 100 ;
-	public static double TICK_PERIOD   = 5e-4 ;   // each clock tick in seconds
+	public static double TICK_PERIOD   = .3 ;   // each clock tick in milliseconds
 	public static double MUTATION      = 0.01 ;
-	public static long DELAY_INTERVAL  = 25 ; 
+	public static long DELAY_INTERVAL  = 50 ;   // absolute time between sends to GUI
 
 	public static boolean train 		= false ;
 	public static boolean evolve 		= false ;
@@ -82,7 +82,7 @@ public class Options {
 		if( options.has( "batch" ) ) 			{ BATCH_SIZE = (int) options.valueOf("batch") ; }
 		if( options.has( "mutation" ) ) 		{ MUTATION = (double) options.valueOf("mutation") ; }
 		if( options.has( "update-delay" ) ) 	{ DELAY_INTERVAL = (long) options.valueOf("update-delay") ; }
-		if( options.has( "period" ) ) 		{ TICK_PERIOD = (int) options.valueOf("period") ; }
+		if( options.has( "period" ) ) 		{ TICK_PERIOD = (int) options.valueOf("period milliseconds") ; }
 
 		clearFile = options.has("clear") ;
 		evolve    = options.has("evolve") ;

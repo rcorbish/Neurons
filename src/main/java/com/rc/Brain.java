@@ -339,30 +339,6 @@ public class Brain  {
 		for( int i=0 ; i<neurons.length; i++ ) {
 			neurons[i].step( newPotentials[i], clock ) ;
 		}
-
-/*
-		for( int i=0 ; i<neurons.length; i++ ) {
-		    Neuron n = neurons[i] ;
-			if( n.checkForSpike(clock) ) {
-				// nothing yet
-			}
-		}
-
-		int ix = rng.nextInt( numNeurons() ) ;
-		for( int i=0 ; i<neurons.length; i++, ix++ ) {
-		    if( ix>=numNeurons() ) ix = 0 ;
-		    Neuron n = neurons[ix] ;
-			if( n.checkForSpike(clock) ) {
-			    List<Neuron> closeToSpiker = neuronsCloseTo( n, WINNER_TAKE_ALL_RADIUS ) ;
-			    for( Neuron n2 : closeToSpiker ) {
-			        double d = distanceBetween( n, n2 ) ;
-			        if( rng.nextDouble() < (1.0/d) ) {
-                        n2.reset();
-                    }
-                }
-            }
-		}
-*/
 	}
 
 
@@ -628,8 +604,8 @@ public class Brain  {
 				int ix = outputHistory.length-offset-1 ;
 				rc.history[i] =  tmp[i] ;
 				rc.spikeHistory[ix] = outputSpikeHistory[i] ;
-                mn = Math.min( mn, tmp[i] ) ;
-                mx = Math.max( mx, tmp[i] ) ;
+				if( mn>-300) mn = Math.min( mn, tmp[i] ) ;
+                if( mn<300) mx = Math.max( mx, tmp[i] ) ;
 			}
 		} else {
 			for( int i=0 ; i<outputHistory.length ; i++ ) {

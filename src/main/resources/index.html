@@ -153,24 +153,22 @@ d3.json("data", function(error, graph) {
 		ws.onmessage = function (evt) {
 			var data = JSON.parse( evt.data )
 
-			scoreDiv.innerHTML = data.clock.toFixed(5) + " Sec. " +
+			scoreDiv.innerHTML = data.clock.toFixed(2) + " mS " +
 								 (data.frequency/1000.0).toFixed(2) + " kHz " +
 								 data.neurons[following.id].type 
 			
+			<!--const neuronFrequency = d3.scaleLinear()-->
+			<!--.domain( [ 20, 150, 1000 ] )-->
+			<!--.range([ "#000000", "#00a0a0", "#ff00ff"]);-->
 			const neuronFrequency = d3.scaleLinear()
-			.domain( [ 20, 150, 1000 ] )
+			.domain( [ -70, -50, 00 ] )
 			.range([ "#000000", "#00a0a0", "#ff00ff"]);
 
 			for( var i=0 ; i<data.neurons.length ; i++ ) {			
 				var n = document.getElementById( data.neurons[i].id )
 				if( n ) {				
-					n.style.fill = neuronFrequency( data.neurons[i].frequency ) 
-				
-					n = document.getElementById( 'txt-' + data.neurons[i].id )
-					if( n ) {								
-						var freq = data.neurons[i].frequency 						
-						n.textContent = freq>0 ? freq.toFixed(0) + "\u3390" : "" 
-					}
+					<!--n.style.fill = neuronFrequency( data.neurons[i].frequency )-->
+					n.style.fill = neuronFrequency( data.neurons[i].potential )
 				}
 			}
 

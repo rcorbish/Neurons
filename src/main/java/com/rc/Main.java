@@ -60,7 +60,7 @@ public class Main {
 				// Display a pattern for a few cycles, then change
 				patternCount-- ;
 				if( patternCount<0) {
-					patternCount = 5 ;
+					patternCount = 50 ;
 
 					//patternIndex = rng.nextInt(TestPatterns.length) ;
 					patternIndex = Options.train ? 

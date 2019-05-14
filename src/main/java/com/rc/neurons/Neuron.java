@@ -14,6 +14,7 @@ import com.rc.Brain;
  * params A,B,C & D .
  *
  * @link http://www.izhikevich.org/human_brain_simulation/Blue_Brain.htm
+ * @link http://www.izhikevich.org/publications/spikes.htm
  */
 abstract public class Neuron  {
 
@@ -74,11 +75,11 @@ abstract public class Neuron  {
 		this.threshold = -30 ;   			// spike triggered when internal potential hit this value
 		this.spikeValue = 30 ; 	    		// height of spike pulse
 
-		this.learningRate = 0.0001 ;		// how fast to adjust weights
-        this.learningRateTauLTP = 0.2 ;     // exp decay of learning wrt time between spikes
-        this.learningRateTauLTD = 0.4 ;     // ... for depression
-        this.learningWindowLTP = 0.025 ;    // ms for LTP window
-        this.learningWindowLTD = 0.050 ;    // mS for LTD window
+		this.learningRate = 0.03 ;		    // how fast to adjust weights
+        this.learningRateTauLTP = 2 ;       // exp decay of learning wrt time between spikes
+        this.learningRateTauLTD = 4 ;       // ... for depression
+        this.learningWindowLTP = 20 ;       // ms for LTP window
+        this.learningWindowLTD = 50 ;       // mS for LTD window
 
 		this.currentPotential = -50 ;
 		this.lastSpikeIndex = 0 ;
@@ -91,12 +92,11 @@ abstract public class Neuron  {
 			reset() ;
 		} else {
 			// convert potential in mV to current 
-			double i = potential * 2.0 ;
+			double i = potential * 3.0 ;
 			//--------------------------------------------
 			// ODE params are in millivolts & milliseconds
-			// for now do this ...
 			//
-			double dt = (clock - lastStepClock) * 1000.0;
+			double dt = (clock - lastStepClock)  ;
 
 			double cp = currentPotential ;
 
@@ -104,11 +104,7 @@ abstract public class Neuron  {
 			this.u += dt * this.a * ( this.b * cp - this.u ) ;
 			this.currentPotential += dt * v ;
 
-//            if( !Double.isFinite( currentPotential ) ) {
-//                log.error( "Bad data " );
-//            }
-
-			checkForSpike(clock) ;
+			checkForSpike( clock ) ;
 		}
 		lastStepClock = clock ;
 	}
@@ -121,9 +117,6 @@ abstract public class Neuron  {
 		// Reset ODE params on a spike
 		this.currentPotential = c  ;
 		this.u += this.d ;
-//        if( !Double.isFinite( currentPotential ) ) {
-//            log.error( "Bad data " );
-//        }
 	}
 
 
@@ -138,10 +131,6 @@ abstract public class Neuron  {
 
 	
 	public void spike( double clock ) {
-//		if( !Double.isFinite( currentPotential ) ) {
-//			log.error( "Bad data " );
-//		}
-//		this.spikeValue = currentPotential ;
 		lastSpikeIndex++ ;
 		if( lastSpikeIndex >= lastSpikes.length ) {
 			lastSpikeIndex = 0 ;
@@ -156,16 +145,14 @@ abstract public class Neuron  {
 			double lst = lastSpikeTime() ;
 			Neuron sources[] = brain.getInputsTo( id ) ;
 			for( Neuron src : sources ) {
-				double dt = src.lastSpikeTime() - lst ;
-				if( dt < 0 && dt > -learningWindowLTD ) {
-                    double dw = learningRate * Math.exp( -dt / learningRateTauLTD ) ;
-					brain.addTraining( src.id, id, -dw ) ;
-				} else if ( dt==0 ) {
-					brain.addTraining( src.id, id, -learningRate / 10.0 ) ;
-                } else if (dt < learningWindowLTP ) {
-                    double dw = learningRate * Math.exp( (learningWindowLTP-dt) / learningRateTauLTP ) ;
-					brain.addTraining( src.id, id, dw ) ;
-				}
+                double dt = lst - src.lastSpikeTime() ;
+                if( dt < learningWindowLTD && dt <= 0 ) {
+                    double dw = learningRate * Math.exp( dt / learningRateTauLTD ) ;
+                    brain.addTraining( src.id, id, dw ) ;
+                } else if ( -dt < learningWindowLTP && dt > 0  ) {
+                    double dw = learningRate * Math.exp( -dt / learningRateTauLTP ) ;
+                    brain.addTraining( src.id, id, dw ) ;
+                }
 			}
 		}
 	}
@@ -176,7 +163,7 @@ abstract public class Neuron  {
 		// remove any very old spikes from history
 		// they won't count towards frequency calc.
 		for( int i=0 ; i<lastSpikes.length ; i++ ) {
-			if( (clock - lastSpikes[i]) > .02 ) {
+			if( (clock - lastSpikes[i]) > 200 ) {
 				lastSpikes[i] = 0 ;
 			}
 		}
@@ -194,7 +181,7 @@ abstract public class Neuron  {
 		// freq = spikes / second
 		double dt = clock - earliestSpike ;
 		if( dt < 1e-9 ) dt = 1e-9 ;  // zero would be bad ( i.e x/0 )
-		frequency = numSpikes / dt ;
+		frequency = numSpikes / (dt/1000.0) ;
 	}
 	
 	
