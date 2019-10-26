@@ -57,6 +57,32 @@ body {
 	padding: 0 ;
 	overflow: hidden ;
 }
+
+#output-chart {
+	position:absolute ;
+	right: 0 ;
+	top: 120px ;
+	width: 120px ;
+	bottom: 0 ;
+	border: none ;
+	padding: 0 ;
+	overflow: hidden ;
+	background-color: #021505 ;
+}
+
+
+#input-chart {
+	position:absolute ;
+	left: 0 ;
+	top: 120px ;
+	width: 120px ;
+	bottom: 0 ;
+	border: none ;
+	padding: 0 ;
+	overflow: hidden ;
+	background-color: #021505 ;
+}
+
 .liquid {
 	position: absolute ;
 	left: 0 ;
@@ -84,8 +110,10 @@ body {
 	<a href="synapse-graph" target="synapses">graph</a>
 </div>
 
-<canvas id="chart"  width='1200' height='150'></canvas>
+<canvas id="chart" width=1200 height=150></canvas>
 <div id='liquid' class='liquid'></div>
+<canvas id="output-chart" width=256 height=1600 ></canvas>
+<canvas id="input-chart" width=256 height=1600 ></canvas>
 
 <script type="text/javascript" charset="utf-8">
 
@@ -93,10 +121,6 @@ body {
     var height = 600 ;
     var following = null ;
 	
-
-	const weightColor = d3.scaleLinear()
-				.domain([-1, 0, 1])
-				.range(["red", "white", "green"]);
 
 	var svg = d3.select("#liquid").append("svg") 
 		.attr("width", '100%')
@@ -120,9 +144,7 @@ d3.json("data", function(error, graph) {
 				.attr( "r", function(d) { return d.inhibitor ? r/1.6 : r } )
 				.attr( "stroke", "none" ) 
 				.attr( "stroke-width", "2" )
-				.attr( "fill", function(d) { 
-					return "silver" ;
-				}) 
+				.attr( "fill", "silver" ) 
 				.attr( "cx", function(d) { return (d.fx+1) * dx} )
 				.attr( "cy", function(d) { return (d.fy+1) * dy} )
 				.on( "click", function(d) { 
@@ -135,9 +157,17 @@ d3.json("data", function(error, graph) {
 
 
 	
-	var c = document.getElementById("chart");
-	var ctx = c.getContext("2d");
+  const c = document.getElementById("chart");
+	const ctx = c.getContext("2d");
 	ctx.fillStyle = "#FF0000";
+
+	const c2 = document.getElementById("output-chart");
+	const ctxOutput = c2.getContext("2d");
+	ctxOutput.fillStyle = "#002000";
+
+	const c3 = document.getElementById("input-chart");
+	const ctxInput = c3.getContext("2d");
+	ctxInput.fillStyle = "#002000";
 
 	var ws = null ;
 	var intervalTimer = null ;
@@ -157,9 +187,6 @@ d3.json("data", function(error, graph) {
 								 (data.frequency/1000.0).toFixed(2) + " kHz " +
 								 data.neurons[following.id].type 
 			
-			<!--const neuronFrequency = d3.scaleLinear()-->
-			<!--.domain( [ 20, 150, 1000 ] )-->
-			<!--.range([ "#000000", "#00a0a0", "#ff00ff"]);-->
 			const neuronFrequency = d3.scaleLinear()
 			.domain( [ -70, -50, 00 ] )
 			.range([ "#000000", "#00a0a0", "#ff00ff"]);
@@ -167,24 +194,53 @@ d3.json("data", function(error, graph) {
 			for( var i=0 ; i<data.neurons.length ; i++ ) {			
 				var n = document.getElementById( data.neurons[i].id )
 				if( n ) {				
-					<!--n.style.fill = neuronFrequency( data.neurons[i].frequency )-->
 					n.style.fill = neuronFrequency( data.neurons[i].potential )
 				}
 			}
 
 
-			c.width = c.width;	// clear screen ( of the chart area - not the graph )
-			
-			const dx = c.width / data.history.length
+			c.width = c.width;	// clear screen ( of the chart area )
+			c2.width = c2.width;	// clear screen ( of the output chart area )
+			c3.width = c3.width;	// clear screen ( of the output chart area )
 
+			for ( var h=0 ; h<data.outputs.length ; h++ ) {
+				ctxOutput.beginPath() ;
+				ctxOutput.strokeStyle = "lime"
+				var hist = data.outputs[h] 
+				var ix = data.outputIndex[h]
+				var offyh = h*70
+				if( offyh.length>1500) break // limit num of chartsd drawn
+				ctxOutput.moveTo( 0, offyh-(hist[ix]) )
+				for( var i=1 ; i<hist.length ; i++ ) {
+					ix++ 
+					if( ix>=hist.length ) ix=0 
+					ctxOutput.lineTo( i, offyh-(hist[ix]) )
+				}
+				ctxOutput.stroke();
+			}			
+
+			for ( var h=0 ; h<data.inputs.length ; h++ ) {
+				ctxInput.beginPath() ;
+				ctxInput.strokeStyle = "lime"
+				var hist = data.inputs[h] 
+				var ix = data.inputIndex[h]
+				var offyh = h*70
+				if( offyh.length>1500) break // limit num of chartsd drawn
+				ctxInput.moveTo( 0, offyh-(hist[ix]) )
+				for( var i=1 ; i<hist.length ; i++ ) {
+					ix++ 
+					if( ix>=hist.length ) ix=0 
+					ctxInput.lineTo( i, offyh-(hist[ix]) )
+				}
+				ctxInput.stroke();
+			}			
+
+			const dx = c.width / data.history.length
 			const scaley = 100.0 / ( data.max - data.min )
 			const offy   = data.min
 
 			// Draw the chart at the top of the screen
 			// chart od output values & which outputs are activated
-			const outputColors = d3.scaleLinear()
-				.domain([ 1.0, 2.0 ] )
-				.range([ "orange", "steelblue"]);
 			
 			ctx.beginPath() ;
 			ctx.strokeStyle = "steelblue"  
@@ -209,9 +265,7 @@ d3.json("data", function(error, graph) {
 		ws.onopen = function() {
 			stopTimer() ;
 			console.log("Connected.")
-			if( following ) {
-				sendToServer( "follow " + following.id ) ;	
-			}
+			sendToServer( buildStateMessage() ) ;	
 		};
 		
 		// called when socket connection closed
@@ -292,6 +346,28 @@ d3.json("data", function(error, graph) {
 			requestFourier( "off" ) 
 		})
 	})
+
+	function buildStateMessage() {
+		const patternId = document.getElementById( "pattern-id" )
+		const train = document.getElementById( "train" )
+		const fourier = document.getElementById( "fourier" )
+		const fourierSpikes = document.getElementById( "fourier-spike" )
+		const fourierOff = document.getElementById( "fourier-off" )
+
+		fmode = 'X'   // regular - non FFT
+		if ( fourier.checked ) {
+			fmode = 'F' 
+		}
+		if( fourierSpikes.checked ) {
+			fmode = 'S' 
+		}
+
+		return "state " + following.id +
+			  " " + patternId.value +
+			  " " + ( train.checked ? "Y" : "N" ) + 
+			  " " + ( fmode=='F' ? "Y" : "N" ) +
+			  " " + ( fmode=='S' ? "Y" : "N" ) ;
+	}
 </script>
 
 </body>

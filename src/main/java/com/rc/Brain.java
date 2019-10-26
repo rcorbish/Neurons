@@ -33,7 +33,7 @@ public class Brain  {
 
 	private final static int EPOCH_LENGTH = 100 ;
     private final static double WINNER_TAKE_ALL_RADIUS = 2 ;
-    private final static double CONNECTION_DENSITY = 0.75 ;
+    private final static double CONNECTION_DENSITY = 0.70 ;
 
     // Used to calc rands with the following stats
 	private final static double WEIGHT_MEAN = 0.4 ;
@@ -50,8 +50,8 @@ public class Brain  {
 	private final int numColumns ;
 	private final int numRows ;
 	private final Neuron neurons[] ;			// neurons in each layer
-	private final Neuron inputNeurons[] ;			// neurons in each layer
-	private final Neuron outputNeurons[] ;			// neurons in each layer
+	private final InputNeuron inputNeurons[] ;			// neurons in each layer
+	private final OutputNeuron outputNeurons[] ;			// neurons in each layer
 
 	private double clock ;
 	private int epoch ;
@@ -80,8 +80,8 @@ public class Brain  {
 		int numNeurons = numRows * numColumns ;
         this.neurons = new Neuron[numNeurons] ;
 
-        this.inputNeurons = new Neuron[ g.getInt(2) ] ;
-        this.outputNeurons = new Neuron[ g.getInt(3) ] ;
+        this.inputNeurons = new InputNeuron[ g.getInt(2) ] ;
+        this.outputNeurons = new OutputNeuron[ g.getInt(3) ] ;
 
         int ix = 4 ;
 
@@ -96,7 +96,9 @@ public class Brain  {
         }
         this.connectionProbability = 1.0 + g.getDouble( ix++ ) ;
 
-        // overwrite the inputs in the liquid
+		// TODO put this back - it's important
+		/*
+		// overwrite the inputs in the liquid
         int dy = getRows() / getNumInputs() ;
         int inputIndex = 0 ;
         for( int i=0 ; i<this.inputNeurons.length ; i++, inputIndex+=dy ) {
@@ -110,6 +112,7 @@ public class Brain  {
         for( int i=0 ; i<this.outputNeurons.length ; i++, outputIndex-=dy ) {
             this.outputNeurons[i] = this.neurons[outputIndex] ;
         }
+		*/
 
         this.synapses = new DMatrixSparseCSC( neurons.length, neurons.length,0) ;
         this.training = new DMatrixSparseCSC( neurons.length, neurons.length,0) ;
@@ -191,31 +194,28 @@ public class Brain  {
 		this.numRows = rows ;
 
 		this.neurons = new Neuron[rows*cols] ;
-		this.inputNeurons = new Neuron[numInputs] ;
-		this.outputNeurons = new Neuron[numOutputs] ;
+		this.inputNeurons = new InputNeuron[numInputs] ;
+		this.outputNeurons = new OutputNeuron[numOutputs] ;
 
 		// fill liquid with neurons
         for( int i=0 ; i<this.neurons.length ; i++ ) {
-            this.neurons[i] = NeuronFactory.getNeuron( i ) ;
+			this.neurons[i] = NeuronFactory.getNeuron( i ) ;
         }
 
         // overwrite the inputs in the liquid
-		int dy = rows / numInputs ;
-		dy = 1 ;
 		int start = ( rows - numInputs ) >> 1 ;
 		int ix = start ;
-		for( int i=0 ; i<this.inputNeurons.length ; i++, ix+=dy ) {
+		for( int i=0 ; i<this.inputNeurons.length ; i++, ix++ ) {
             this.inputNeurons[i] = new InputNeuron( ix ) ;
 			this.neurons[ix] = this.inputNeurons[i] ;
 		}
 
 		// overwrite the outputs in the liquid
-        dy = rows / numOutputs ;
-		dy = 1 ;
-		ix = cols * rows - dy ;
+		start = ( rows - numOutputs ) >> 1 ;
+		ix = (cols-1) * rows + start ;
 
-		for( int i=0 ; i<this.outputNeurons.length ; i++, ix-=dy ) {
-			this.outputNeurons[i] = new NeuronRS( ix ) ;
+		for( int i=0 ; i<this.outputNeurons.length ; i++, ix++ ) {
+			this.outputNeurons[i] = new OutputNeuron( ix ) ;
 			this.neurons[ix] = this.outputNeurons[i] ;
 		}
 
@@ -238,7 +238,7 @@ public class Brain  {
         int fromRow = 0 ;
 
         for( int from=0 ; from<numNeurons() ; from++ ) {
-
+			fromColumn = from / numRows ;
             int toColumn = fromColumn+1 ;
             int toRow = 0 ;
 
@@ -247,7 +247,7 @@ public class Brain  {
                                     (fromColumn - toColumn) * (fromColumn - toColumn) +
                                     (fromRow - toRow) * (fromRow - toRow)
                                 ) ;
-                if( dist > 0 && fromColumn <= toColumn ) {   // no self connections
+                if( dist > 0 ) {   // no self connections
 					double p = gammaPDF( dist / connectionProbability ) ;
 					if( rng.nextDouble() < p ) {
 						synapses.set( to, from, getRandomWeight() ) ;
@@ -434,10 +434,15 @@ public class Brain  {
      *
 	 */
 	public void train( int y ) {
+
+		for( int i=0 ; i<this.outputNeurons.length ; i++ ) {
+			this.outputNeurons[i].setSupervisedFiring( i==y ) ;
+		}
+
 		for( int i=0 ; i<neurons.length; i++ ) {
 			neurons[i].train( this, training ) ;
 		}
-	
+		
 		epoch++ ;
 		if( epoch == EPOCH_LENGTH ) {
 			epoch = 0 ;
@@ -626,6 +631,19 @@ public class Brain  {
 		for( int i=0 ; i<neurons.length; i++ ) {
 			rc.neurons.add( new NeuronState( neurons[i], clock ) ) ;
 		}
+		rc.outputs = new double[outputNeurons.length][] ;
+		rc.outputIndex = new int[outputNeurons.length] ;
+		for( int i=0 ; i<rc.outputs.length ; i++ ) {
+			rc.outputs[i] = outputNeurons[i].getHistory() ;
+			rc.outputIndex[i] = outputNeurons[i].getHistoryIndex() ;
+		}
+
+		rc.inputs = new double[inputNeurons.length][] ;
+		rc.inputIndex = new int[inputNeurons.length] ;
+		for( int i=0 ; i<rc.inputs.length ; i++ ) {
+			rc.inputIndex[i] = inputNeurons[i].getHistoryIndex() ;
+			rc.inputs[i] = inputNeurons[i].getHistory() ;
+		}
 		
 		return rc ;
 	}
@@ -637,13 +655,10 @@ public class Brain  {
         rc.cols = numColumns ;
         rc.rows = numRows ;
 	    rc.nodes = 	getNodes() ;
-
 		return rc ;
 	}
 
 	private Node [] getNodes() {
-
-		int layerWidth = 800 / 110 ;  // cols ?
 
         Node rc[] = new Node[ neurons.length ] ;
 
@@ -837,7 +852,11 @@ class Potentials {
 	public double history[] ;
 	public boolean spikeHistory[] ;
     public double min ;
-    public double max ;
+	public double max ;
+	public int outputIndex[] ;
+	public int inputIndex[] ;
+	double outputs[][] ;
+	double inputs[][] ;
 }
 
 class NeuronState {
@@ -865,5 +884,5 @@ class Node {
 class Nodes {
 	int rows ;
 	int cols ;
-    Node [] nodes ;
+	Node [] nodes ;
 }

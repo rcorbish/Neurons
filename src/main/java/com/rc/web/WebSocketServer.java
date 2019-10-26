@@ -29,7 +29,6 @@ public class WebSocketServer  {
 	
 	private int following = -1 ;
 	private int pattern = 0 ;
-	private boolean training = false ;
 
 	public WebSocketServer( Brain brain ) {
 		this.brain = brain ;
@@ -75,6 +74,13 @@ public class WebSocketServer  {
 			setFourierMode( message.endsWith("on") ) ;
 		} else if ( message.startsWith( "fourierSpike " ) ) {
 			setFourierSpikeMode( message.endsWith("on") ) ;
+		} else if ( message.startsWith( "state " ) ) {
+			String flags[] = message.substring( 6 ).split( "\\s" ) ;
+			setFollowing( Integer.parseInt( flags[0] ) ) ;
+			setPattern( Integer.parseInt( flags[1] ) ) ;
+			setTrainingMode( flags[2].equalsIgnoreCase( "Y" ) ) ;
+			setFourierMode( flags[3].equalsIgnoreCase( "Y" )  ) ;
+			setFourierSpikeMode( flags[4].equalsIgnoreCase( "Y" ) ) ;
 		}
 	}	
 

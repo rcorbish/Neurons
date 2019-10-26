@@ -10,7 +10,8 @@ public enum NeuronType {
     RS( "regular spiking", NeuronRS.class ),
     RZ( "resonator", NeuronRZ.class ),
     TC( "thalmo-cortical", NeuronTC.class ),
-    IN( "input", InputNeuron.class )
+    IN( "input", InputNeuron.class ),
+    OUT( "output", OutputNeuron.class )
     ;
 
     private final Class<? extends Neuron> clazz ;

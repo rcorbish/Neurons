@@ -41,22 +41,25 @@ abstract public class Neuron  {
     private 	  	double		frequency ;
     private         double 	    spikeValue  ;
 
+	private int historyIndex ;
+	private final double history[] ;
+
     //-------------------------------------------
 	// genome static data
-	private final int 		id ;
+	protected final int 	id ;
 
 	protected final double	a ;
 	protected final double	b ;
 	protected final double	c ;		// resting potential
 	protected final double	d ;		
 
-	private final double 	threshold  ;
+	protected final double 	threshold  ;
 
-    private final double 	learningRate ;
-    private final double 	learningRateTauLTP ;
-    private final double 	learningRateTauLTD ;
-    private final double 	learningWindowLTP ;     // pre->post = long term potentiation
-    private final double 	learningWindowLTD ;     // post->pre = long term depression
+    protected final double 	learningRate ;
+    protected final double 	learningRateTauLTP ;
+    protected final double 	learningRateTauLTD ;
+    protected final double 	learningWindowLTP ;     // pre->post = long term potentiation
+    protected final double 	learningWindowLTD ;     // post->pre = long term depression
 
     //-------------------------------------------
 
@@ -79,11 +82,14 @@ abstract public class Neuron  {
         this.learningRateTauLTP = 2 ;       // exp decay of learning wrt time between spikes
         this.learningRateTauLTD = 4 ;       // ... for depression
         this.learningWindowLTP = 20 ;       // ms for LTP window
-        this.learningWindowLTD = 50 ;       // mS for LTD window
+        this.learningWindowLTD = 40 ;       // mS for LTD window
 
 		this.currentPotential = -50 ;
 		this.lastSpikeIndex = 0 ;
 		this.lastSpikes = new double[NUM_SPIKES_TO_RECORD] ;
+
+		history = new double[256]  ;
+		historyIndex = 0 ;
 	}
 
 
@@ -107,6 +113,12 @@ abstract public class Neuron  {
 			checkForSpike( clock ) ;
 		}
 		lastStepClock = clock ;
+
+		history[historyIndex] = this.getPotential() ;
+		historyIndex++ ;
+		if( historyIndex >= history.length ) {
+			historyIndex = 0 ;
+		}
 	}
 
 
@@ -146,11 +158,11 @@ abstract public class Neuron  {
 			Neuron sources[] = brain.getInputsTo( id ) ;
 			for( Neuron src : sources ) {
                 double dt = lst - src.lastSpikeTime() ;
-                if( dt < learningWindowLTD && dt <= 0 ) {
-                    double dw = learningRate * Math.exp( dt / learningRateTauLTD ) ;
-                    brain.addTraining( src.id, id, dw ) ;
-                } else if ( -dt < learningWindowLTP && dt > 0  ) {
-                    double dw = learningRate * Math.exp( -dt / learningRateTauLTP ) ;
+                if( dt <= 0 && -dt < learningWindowLTD  ) {
+                    double dw = learningRate * Math.exp( -dt / learningRateTauLTD ) ;
+                    brain.addTraining( src.id, id, -dw ) ;
+                } else if ( dt>0 && dt < learningWindowLTP  ) {
+                    double dw = learningRate * Math.exp( dt / learningRateTauLTP ) ;
                     brain.addTraining( src.id, id, dw ) ;
                 }
 			}
@@ -197,6 +209,13 @@ abstract public class Neuron  {
 
 	public double lastSpikeTime() { 
 		return  lastSpikes[ lastSpikeIndex ] ;
+	}
+
+	public double[] getHistory() {
+		return history ;
+	}
+	public int getHistoryIndex() {
+		return historyIndex ;
 	}
 
 	public int getId() { return id ; }

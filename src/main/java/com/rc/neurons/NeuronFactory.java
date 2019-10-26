@@ -18,7 +18,7 @@ public class NeuronFactory {
 	
 	static public Neuron getNeuron( int id ) {
 		double r  = rng.nextDouble() ;
-		
+		r = 0 ;
 		r -= rsProb ;  if( r<0 ) return new NeuronRS(id) ;
 		r -= fsProb ;  if( r<0 ) return new NeuronFS(id) ;
 		r -= rzProb ;  if( r<0 ) return new NeuronRZ(id) ;
